@@ -1,0 +1,111 @@
+.code-panel {
+  width: clamp(280px, 35%, 440px);
+  border-left: 1px solid #2a2a2e;
+  background: #131316;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  animation: slide-in 0.2s ease;
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.code-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 14px;
+  border-bottom: 1px solid #2a2a2e;
+  background: #18181b;
+  flex-shrink: 0;
+}
+
+.code-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ccc;
+}
+
+.code-panel-icon {
+  font-size: 15px;
+  color: #4285f4;
+  font-family: monospace;
+  font-weight: 700;
+}
+
+.code-panel-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.cp-btn {
+  background: #2a2a2e;
+  border: 1px solid #3a3a44;
+  color: #aaa;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  padding: 4px 11px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.cp-btn:hover {
+  background: #333340;
+  color: #e0e0e0;
+}
+
+.cp-btn-primary {
+  background: #1a2d4a;
+  border-color: #2a4470;
+  color: #7ab4ff;
+}
+
+.cp-btn-primary:hover {
+  background: #1e3455;
+  color: #9dcaff;
+}
+
+.code-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #333 transparent;
+}
+
+.code-block {
+  margin: 0;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: #c9d1d9;
+  white-space: pre;
+  tab-size: 2;
+}
+
+/* Responsive: on narrow screens, code panel stacks below chat */
+@media (max-width: 700px) {
+  .code-panel {
+    width: 100%;
+    height: 42%;
+    border-left: none;
+    border-top: 1px solid #2a2a2e;
+    animation: slide-up 0.2s ease;
+  }
+
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}

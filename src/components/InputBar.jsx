@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef } from 'react'
 import './InputBar.css'
 
 export default function InputBar({ onSend, isLoading }) {
@@ -8,6 +8,7 @@ export default function InputBar({ onSend, isLoading }) {
   const [preview, setPreview] = useState(null) // { type, content, file?, blob? }
 
   const fileInputRef = useRef(null)
+  const textareaRef = useRef(null)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
   const timerRef = useRef(null)
@@ -150,10 +151,18 @@ export default function InputBar({ onSend, isLoading }) {
 
         {/* text input */}
         <textarea
+          ref={textareaRef}
           className="text-input"
           placeholder="Message Gemini…"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value)
+            const ta = textareaRef.current
+            if (ta) {
+              ta.style.height = 'auto'
+              ta.style.height = Math.min(ta.scrollHeight, 140) + 'px'
+            }
+          }}
           onKeyDown={handleKeyDown}
           disabled={isLoading || isRecording || preview !== null}
           rows={1}
