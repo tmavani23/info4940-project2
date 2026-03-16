@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Emotion Sketch Studio - Debug</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css" />
+  <script src="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="brand">Emotion Sketch Studio — Debug</div>
+    <div class="controls">
+      <span class="badge" id="phaseBadge">Phase: Discovery</span>
+      <button class="secondary" id="togglePhase">Switch Phase</button>
+      <button class="ghost" id="toggleLearning">Learning Mode: Off</button>
+      <button class="secondary" id="newSession">New Session</button>
+      <button class="secondary" id="refreshState">Refresh</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Conversation</h2>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input">
+        <textarea id="chatInput" rows="3" placeholder="Share your story, emotion, or feedback..."></textarea>
+        <div class="suggestions" id="suggestions"></div>
+        <input type="file" id="fileInput" multiple />
+        <div class="split-actions">
+          <button id="sendMessage">Send</button>
+          <button class="secondary" id="useLatestCode">Use Latest Code</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Profiles + Code</h2>
+      <div class="profile-grid">
+        <div>
+          <label class="tag">Emotion Profile</label>
+          <textarea id="emotionProfile" rows="4" placeholder="Summarize the emotion profile..."></textarea>
+        </div>
+        <div>
+          <label class="tag">Artistic Profile</label>
+          <textarea id="artisticProfile" rows="3" placeholder="Describe style, palette, motion..."></textarea>
+        </div>
+        <div class="split-actions">
+          <button class="secondary" id="saveProfiles">Save Profiles</button>
+          <button class="ghost" id="branchFromCurrent">Branch From Current</button>
+        </div>
+        <div>
+          <label class="tag">p5.js Code</label>
+          <textarea id="codeEditor" class="code-area" placeholder="p5.js code will appear here..."></textarea>
+        </div>
+        <div class="split-actions">
+          <button id="runSketch">Run Sketch</button>
+          <button class="secondary" id="saveSnapshot">Save Snapshot</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Preview + History</h2>
+      <iframe id="preview" class="preview-frame" title="p5 preview"></iframe>
+      <div class="graph" id="historyGraph"></div>
+      <div class="detail-box" id="nodeDetails">Select a version to see details.</div>
+      <div class="split-actions">
+        <button class="secondary" id="revertNode" disabled>Revert & Branch</button>
+        <button class="ghost" id="setCurrent" disabled>Set As Current</button>
+      </div>
+    </section>
+  </main>
+
+  <section class="panel" style="margin: 0 24px 32px;">
+    <h2>State Inspector</h2>
+    <pre id="stateJson" style="white-space: pre-wrap; font-family: var(--mono); font-size: 0.8rem;"></pre>
+  </section>
+
+  <footer>
+    Debug view shows the full stored state and attachment metadata.
+  </footer>
+
+  <script src="/static/app.js"></script>
+  <script src="/static/debug.js"></script>
+</body>
+</html>
