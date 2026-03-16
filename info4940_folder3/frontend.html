@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Pretzel-Flavored HumANS</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0e14;--s1:#161625;--s2:#1f1f35;--s3:#2a2a45;
+  --bdr:#33335a;--txt:#e0e0f4;--muted:#7e7ea8;
+  --accent:#7c6ff7;--accent2:#9c8fff;
+  --p1:#e8a742;--p2:#42bce8;--danger:#e85252;
+  --radius:10px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--txt);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+button{cursor:pointer;border:1px solid var(--bdr);border-radius:6px;background:var(--s2);color:var(--txt);padding:6px 14px;font-size:13px;transition:.15s}
+button:hover{background:var(--s3);border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{background:var(--accent2)}
+button.danger{border-color:var(--danger);color:var(--danger)}
+button.danger:hover{background:rgba(232,82,82,.12)}
+button:disabled{opacity:.35;cursor:default}
+
+/* Header */
+header{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:var(--s1);border-bottom:1px solid var(--bdr);flex-shrink:0}
+header h1{font-size:15px;font-weight:600}
+.hdr-right{display:flex;gap:8px;align-items:center}
+.phase-badge{padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.phase-badge.p1{background:rgba(232,167,66,.15);color:var(--p1)}
+.phase-badge.p2{background:rgba(66,188,232,.15);color:var(--p2)}
+
+/* Layout */
+.main{display:flex;flex:1;min-height:0}
+.col{display:flex;flex-direction:column;min-height:0}
+.chat-col{width:38%;border-right:1px solid var(--bdr)}
+.code-col{width:34%;border-right:1px solid var(--bdr)}
+.right-col{width:28%}
+
+/* Messages */
+.messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:90%;padding:9px 13px;border-radius:var(--radius);font-size:13.5px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.msg.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:2px}
+.msg.ai{align-self:flex-start;background:var(--s2);border-bottom-left-radius:2px}
+.msg.system{align-self:center;background:rgba(255,255,255,0.06);color:var(--txt);font-size:12px;font-style:italic;border:1px solid var(--bdr);padding:8px 14px;text-align:center;line-height:1.5}
+.msg.system strong{color:var(--accent);font-style:normal}
+
+/* Suggested buttons */
+.suggestions{display:flex;gap:6px;padding:6px 14px;flex-wrap:wrap}
+.suggestions button{font-size:12px;padding:5px 10px;background:var(--s1);border:1px dashed var(--bdr);color:var(--muted)}
+.suggestions button:hover{color:var(--txt);border-color:var(--accent)}
+
+/* Input */
+.input-area{padding:10px 14px;border-top:1px solid var(--bdr);background:var(--s1);display:flex;flex-direction:column;gap:6px}
+.file-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.file-row label{font-size:11px;color:var(--muted);cursor:pointer;padding:3px 8px;border:1px dashed var(--bdr);border-radius:5px}
+.file-row label:hover{border-color:var(--accent)}
+.file-row input[type=file]{display:none}
+.file-tag{font-size:10px;background:var(--s2);padding:2px 7px;border-radius:4px;display:flex;align-items:center;gap:3px}
+.file-tag .rm{cursor:pointer;color:var(--danger);font-weight:bold}
+.msg-row{display:flex;gap:6px}
+.msg-row textarea{flex:1;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;padding:8px 10px;color:var(--txt);font-size:13px;resize:none;min-height:38px;max-height:100px;font-family:inherit}
+.msg-row textarea:focus{outline:none;border-color:var(--accent)}
+
+/* Code editor */
+.code-col textarea{flex:1;background:var(--bg);color:#c8d6e5;border:none;padding:14px;font-family:"SF Mono","Fira Code",Consolas,monospace;font-size:12.5px;line-height:1.6;resize:none;tab-size:2}
+.code-col textarea:focus{outline:none}
+.code-actions{display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--bdr);background:var(--s1);flex-wrap:wrap}
+.code-actions input{flex:1;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;padding:5px 8px;color:var(--txt);font-size:12px;min-width:100px}
+.code-actions input:focus{outline:none;border-color:var(--accent)}
+
+/* Right panel — tabs */
+.right-tabs{display:flex;border-bottom:1px solid var(--bdr);background:var(--s1);flex-shrink:0}
+.right-tabs button{border:none;border-radius:0;background:transparent;padding:8px 14px;font-size:12px;color:var(--muted);border-bottom:2px solid transparent}
+.right-tabs button.active{color:var(--txt);border-bottom-color:var(--accent)}
+.tab-body{flex:1;position:relative;min-height:0}
+.tab-pane{position:absolute;inset:0;display:none;overflow:auto}
+.tab-pane.active{display:flex;flex-direction:column}
+
+/* Preview */
+.preview-pane iframe{width:100%;flex:1;border:none;background:#fff}
+
+/* Version graph */
+.graph-pane{padding:14px;overflow-y:auto}
+.graph-controls{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.graph-controls select{background:var(--s2);color:var(--txt);border:1px solid var(--bdr);border-radius:5px;padding:4px 8px;font-size:12px}
+.graph-svg{width:100%;min-height:200px}
+
+.commit-node{cursor:pointer}
+.commit-node circle{transition:fill .15s}
+.commit-node:hover circle{fill:var(--accent2) !important}
+.commit-label{font-size:11px;fill:var(--txt);font-family:inherit}
+.commit-branch{font-size:9px;fill:var(--muted);font-family:inherit}
+.graph-edge{stroke:var(--bdr);stroke-width:2;fill:none}
+
+/* Tooltip */
+.tooltip{position:fixed;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;padding:10px 14px;font-size:12px;max-width:340px;z-index:999;pointer-events:none;display:none;white-space:pre-wrap;line-height:1.5;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Pretzel-Flavored HumANS</h1>
+  <div class="hdr-right">
+    <span id="badge" class="phase-badge p1">Phase 1: Discovery</span>
+    <button id="btnPhase">Switch Phase</button>
+    <button id="btnReset" class="danger">Reset</button>
+  </div>
+</header>
+
+<div class="main">
+  <!-- Chat -->
+  <div class="col chat-col">
+    <div class="messages" id="msgs"></div>
+    <div class="suggestions" id="suggestions"></div>
+    <div class="input-area">
+      <div class="file-row">
+        <label>📷 Image<input type="file" id="imgIn" accept="image/*"/></label>
+        <span id="imgTag" class="file-tag" style="display:none"><span id="imgName"></span><span class="rm" id="imgClear">✕</span></span>
+        <label>🎵 Audio<input type="file" id="audIn" accept="audio/*"/></label>
+        <span id="audTag" class="file-tag" style="display:none"><span id="audName"></span><span class="rm" id="audClear">✕</span></span>
+      </div>
+      <div class="msg-row">
+        <textarea id="chatIn" rows="1" placeholder="Describe your emotion or give feedback…"></textarea>
+        <button id="btnSend" class="primary">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Code -->
+  <div class="col code-col">
+    <textarea id="codeEd" spellcheck="false" placeholder="// p5.js code appears here…"></textarea>
+    <div class="code-actions">
+      <input id="codeFb" placeholder="Describe edit (optional)…"/>
+      <button id="btnSync">Sync to AI</button>
+      <button id="btnRun" class="primary">Run ▶</button>
+    </div>
+  </div>
+
+  <!-- Right: Preview + Version Graph -->
+  <div class="col right-col">
+    <div class="right-tabs">
+      <button class="active" data-tab="preview">Preview</button>
+      <button data-tab="versions">Version History</button>
+    </div>
+    <div class="tab-body">
+      <div class="tab-pane preview-pane active" id="tab-preview">
+        <iframe id="previewFrame"></iframe>
+      </div>
+      <div class="tab-pane graph-pane" id="tab-versions">
+        <div class="graph-controls">
+          <button id="btnRefreshGraph">Refresh</button>
+          <span style="font-size:11px;color:var(--muted)">
+            <span style="color:#e8a742">●</span> Emotion
+            <span style="color:#42bce8;margin-left:6px">●</span> Code
+            <span style="color:#52e88a;margin-left:6px">●</span> Artistic
+          </span>
+        </div>
+        <svg id="graphSvg" class="graph-svg"></svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const API = "http://localhost:5001/api";
+let sessionId = null, phase = "emotional_discovery";
+let imgData = null, imgMime = null, audData = null, audMime = null;
+let selectedCommitId = null;
+let revertedContext = null; // set when user clicks a commit to revert
+let lastKnownCode = "";    // tracks AI/revert-set code to detect user edits
+
+const $ = id => document.getElementById(id);
+const msgs = $("msgs"), chatIn = $("chatIn"), badge = $("badge");
+const codeEd = $("codeEd"), codeFb = $("codeFb"), previewFrame = $("previewFrame");
+const tooltip = $("tooltip");
+
+// ── Tabs ──
+document.querySelectorAll(".right-tabs button").forEach(b=>{
+  b.addEventListener("click",()=>{
+    document.querySelectorAll(".right-tabs button").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll(".tab-pane").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    $("tab-"+b.dataset.tab).classList.add("active");
+    if(b.dataset.tab==="versions") refreshGraph();
+  });
+});
+
+// ── File handling ──
+function readB64(file){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(file)})}
+$("imgIn").onchange=async e=>{const f=e.target.files[0];if(!f)return;imgData=await readB64(f);imgMime=f.type;$("imgName").textContent=f.name;$("imgTag").style.display="flex"};
+$("audIn").onchange=async e=>{const f=e.target.files[0];if(!f)return;audData=await readB64(f);audMime=f.type;$("audName").textContent=f.name;$("audTag").style.display="flex"};
+$("imgClear").onclick=()=>{imgData=imgMime=null;$("imgIn").value="";$("imgTag").style.display="none"};
+$("audClear").onclick=()=>{audData=audMime=null;$("audIn").value="";$("audTag").style.display="none"};
+
+// ── UI helpers ──
+function addMsg(text,role,html=false){
+  const d=document.createElement("div");d.className="msg "+role;
+  if(html) d.innerHTML=text; else d.textContent=text;
+  msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
+}
+function setBadge(){
+  if(phase==="emotional_discovery"){badge.textContent="Phase 1: Discovery";badge.className="phase-badge p1"}
+  else{badge.textContent="Phase 2: Code Gen";badge.className="phase-badge p2"}
+  renderSuggestions();
+}
+function setLoading(on){$("btnSend").disabled=on;$("btnSend").textContent=on?"…":"Send"}
+
+// ── Suggested messages ──
+const SUGGESTIONS = {
+  emotional_discovery: [
+    "I already have a good sense of the emotion — help me implement",
+    "Here are some emojis that describe how I feel: ",
+    "Let me share an image that captures the mood",
+    "let's code",
+  ],
+  code_generation: [
+    "I want to refine/explore my emotions more",
+    "Change the colors to feel more warm",
+    "Make the motion slower and more meditative",
+    "back to feelings",
+  ],
+};
+function renderSuggestions(){
+  const box=$("suggestions");box.innerHTML="";
+  (SUGGESTIONS[phase]||[]).forEach(txt=>{
+    const b=document.createElement("button");b.textContent=txt;
+    b.onclick=()=>{chatIn.value=txt;chatIn.focus()};
+    box.appendChild(b);
+  });
+}
+
+// ── POST /api/chat ──
+async function sendChat(){
+  const text=chatIn.value.trim();if(!text)return;
+  const att=[];if(imgData)att.push("📷");if(audData)att.push("🎵");
+  addMsg(text+(att.length?" ["+att.join(" ")+"]":""),"user");
+  chatIn.value="";setLoading(true);
+  const body={message:text};
+  if(sessionId)body.session_id=sessionId;
+  if(imgData){body.image=imgData;body.image_mime=imgMime}
+  if(audData){body.audio=audData;body.audio_mime=audMime}
+  if(revertedContext)body.reverted_context=revertedContext;
+  revertedContext=null;
+  $("imgClear").click();$("audClear").click();
+  try{
+    const r=await fetch(API+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(!r.ok){addMsg("Error: "+(d.error||r.statusText),"system");return}
+    sessionId=d.session_id;phase=d.phase;setBadge();
+    if(d.needs_confirmation)addMsg("Emotion not confirmed yet — please confirm before coding.","system");
+    else if(d.phase_switched)addMsg("Phase switched → "+d.phase,"system");
+    addMsg(d.reply,"ai");
+    if(d.code){codeEd.value=d.code;lastKnownCode=d.code;runP5(d.code)}
+  }catch(e){addMsg("Network error: "+e.message,"system")}
+  finally{setLoading(false)}
+}
+
+// ── Phase switch ──
+$("btnPhase").onclick=async()=>{
+  const np=phase==="emotional_discovery"?"code_generation":"emotional_discovery";
+  if(!sessionId){addMsg("Send a message first.","system");return}
+  try{
+    const r=await fetch(API+"/switch-phase",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({session_id:sessionId,phase:np})});
+    const d=await r.json();
+    if(!r.ok){
+      if(d.needs_confirmation)addMsg("Please confirm your emotional profile before switching to code generation.","system");
+      else addMsg("Error: "+d.error,"system");
+      return;
+    }
+    phase=d.new_phase;setBadge();addMsg("Phase: "+d.old_phase+" → "+d.new_phase,"system");
+  }catch(e){addMsg("Network error: "+e.message,"system")}
+};
+
+// ── Reset ──
+$("btnReset").onclick=async()=>{
+  try{await fetch(API+"/reset",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({session_id:sessionId})})}catch(e){}
+  sessionId=null;phase="emotional_discovery";setBadge();codeEd.value="";lastKnownCode="";previewFrame.srcdoc="";
+  msgs.innerHTML="";addMsg("Session reset. Start fresh!","system");
+};
+
+// ── Sync code edits ──
+$("btnSync").onclick=async()=>{
+  if(!sessionId){addMsg("No session yet.","system");return}
+  const code=codeEd.value.trim();if(!code){addMsg("Code editor empty.","system");return}
+  const fb=codeFb.value.trim()||"User edited code directly";
+  try{
+    const r=await fetch(API+"/update-code",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({session_id:sessionId,code,feedback:fb})});
+    const d=await r.json();if(!r.ok){addMsg("Error: "+d.error,"system");return}
+    lastKnownCode=code;
+    addMsg("Code synced to AI & saved as commit."+(codeFb.value.trim()?' Feedback: "'+codeFb.value.trim()+'"':""),"system");
+    codeFb.value="";
+    refreshGraph();
+  }catch(e){addMsg("Network error: "+e.message,"system")}
+};
+
+// ── p5 preview ──
+function runP5(code){
+  previewFrame.srcdoc=`<!DOCTYPE html><html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"><\/script><style>html,body{margin:0;padding:0;overflow:hidden;background:#111}</style></head><body><script>${code}<\/script></body></html>`;
+}
+$("btnRun").onclick=async()=>{
+  const code=codeEd.value.trim();
+  if(!code)return;
+  runP5(code);
+  // Auto-commit if the user edited the code themselves
+  if(sessionId && code!==lastKnownCode && lastKnownCode){
+    lastKnownCode=code;
+    try{
+      await fetch(API+"/update-code",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({session_id:sessionId,code,feedback:"User edited code directly"})});
+      addMsg("Your code edit has been saved as a new commit.","system");
+      refreshGraph();
+    }catch(e){console.error(e)}
+  }
+};
+
+// ── Keyboard ──
+chatIn.onkeydown=e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat()}};
+chatIn.oninput=()=>{chatIn.style.height="auto";chatIn.style.height=Math.min(chatIn.scrollHeight,100)+"px"};
+$("btnSend").onclick=sendChat;
+
+// ── Version Graph (unified timeline) ──
+const TYPE_COLORS={emotion:"#e8a742",code:"#42bce8",artistic:"#52e88a"};
+const BRANCH_COLORS=["#7c6ff7","#e8a742","#42bce8","#e85252","#52e88a","#e842c8","#8ae852"];
+let lastGraphData=null;
+
+async function refreshGraph(){
+  if(!sessionId)return;
+  try{
+    const r=await fetch(API+"/history?session_id="+sessionId);
+    const g=await r.json();
+    if(g.error){console.error(g.error);return}
+    lastGraphData=g;
+    renderGraph(g);
+  }catch(e){console.error(e)}
+}
+
+function renderGraph(graph){
+  const svg=$("graphSvg");svg.innerHTML="";
+  const commits=graph.commits||[];
+  if(!commits.length){svg.setAttribute("height","60");svg.innerHTML='<text x="20" y="35" fill="#7e7ea8" font-size="13">No commits yet.</text>';return}
+
+  const branchNames=[...new Set(commits.map(c=>c.branch))];
+  const branchX={};branchNames.forEach((b,i)=>{branchX[b]=60+i*160});
+
+  const nodeH=56;
+  const svgW=Math.max(340,branchNames.length*160+100);
+  const svgH=commits.length*nodeH+60;
+  svg.setAttribute("width",svgW);svg.setAttribute("height",svgH);
+  svg.setAttribute("viewBox",`0 0 ${svgW} ${svgH}`);
+
+  const posMap={};
+  commits.forEach((c,i)=>{posMap[c.id]={x:branchX[c.branch],y:30+i*nodeH}});
+
+  // edges
+  commits.forEach(c=>{
+    if(c.parent_id && posMap[c.parent_id] && posMap[c.id]){
+      const from=posMap[c.parent_id],to=posMap[c.id];
+      const path=document.createElementNS("http://www.w3.org/2000/svg","path");
+      if(from.x===to.x) path.setAttribute("d",`M${from.x},${from.y} L${to.x},${to.y}`);
+      else{const mid=(from.y+to.y)/2;path.setAttribute("d",`M${from.x},${from.y} C${from.x},${mid} ${to.x},${mid} ${to.x},${to.y}`);}
+      path.setAttribute("class","graph-edge");
+      const bi=branchNames.indexOf(c.branch);
+      path.setAttribute("stroke",BRANCH_COLORS[bi%BRANCH_COLORS.length]);
+      path.setAttribute("stroke-opacity","0.45");
+      svg.appendChild(path);
+    }
+  });
+
+  // nodes — colored by TYPE (emotion/code/artistic)
+  commits.forEach(c=>{
+    const p=posMap[c.id];if(!p)return;
+    const typeCol=TYPE_COLORS[c.type]||"#888";
+    const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.setAttribute("class","commit-node");g.setAttribute("data-id",c.id);
+
+    const isHead=graph.branches[c.branch]===c.id;
+    const isSel=selectedCommitId===c.id;
+
+    const circle=document.createElementNS("http://www.w3.org/2000/svg","circle");
+    circle.setAttribute("cx",p.x);circle.setAttribute("cy",p.y);
+    circle.setAttribute("r",isSel?"9":isHead?"8":"6");
+    circle.setAttribute("fill",isSel?"#fff":typeCol);
+    circle.setAttribute("stroke",isSel?"var(--accent)":isHead?"#fff":"none");
+    circle.setAttribute("stroke-width",isSel?"3":"2");
+    g.appendChild(circle);
+
+    // Type icon
+    const icon=document.createElementNS("http://www.w3.org/2000/svg","text");
+    icon.setAttribute("x",p.x-3);icon.setAttribute("y",p.y+3);
+    icon.setAttribute("font-size","8");icon.setAttribute("fill","#000");icon.setAttribute("font-weight","bold");
+    icon.textContent=c.type==="emotion"?"E":c.type==="code"?"C":"A";
+    g.appendChild(icon);
+
+    // Commit title — descriptive summary
+    const label=document.createElementNS("http://www.w3.org/2000/svg","text");
+    label.setAttribute("x",p.x+14);label.setAttribute("y",p.y-2);
+    label.setAttribute("class","commit-label");
+    const typeTag={emotion:"Emotion",code:"Code",artistic:"Artistic"}[c.type]||c.type;
+    label.textContent=c.summary.slice(0,55)+(c.summary.length>55?"…":"");
+    g.appendChild(label);
+
+    // Sub-label: branch + id
+    const brt=document.createElementNS("http://www.w3.org/2000/svg","text");
+    brt.setAttribute("x",p.x+14);brt.setAttribute("y",p.y+11);
+    brt.setAttribute("class","commit-branch");
+    brt.textContent=c.branch+" • "+c.id.slice(0,8);
+    g.appendChild(brt);
+
+    g.onmouseenter=e=>{
+      tooltip.style.display="block";
+      const typeLabel={emotion:"Emotion",code:"Code",artistic:"Artistic"}[c.type]||c.type;
+      let tip=`${typeLabel} — ${c.summary}\n\nCommit: ${c.id}\nBranch: ${c.branch}`;
+      if(c.data){
+        const preview=JSON.stringify(c.data,null,2);
+        tip+=`\n\nData:\n${preview.slice(0,400)}${preview.length>400?"…":""}`;
+      }
+      tooltip.textContent=tip;
+      tooltip.style.left=(e.clientX+12)+"px";tooltip.style.top=(e.clientY+12)+"px";
+    };
+    g.onmousemove=e=>{tooltip.style.left=(e.clientX+12)+"px";tooltip.style.top=(e.clientY+12)+"px"};
+    g.onmouseleave=()=>{tooltip.style.display="none"};
+
+    // Click: checkout + auto-branch, get era state, apply everything
+    g.onclick=async()=>{
+      selectedCommitId=c.id;
+      const isHead=graph.branches[c.branch]===c.id;
+
+      if(!isHead && sessionId){
+        const branchName=c.branch+"-v"+c.id.slice(0,4);
+        try{
+          const r=await fetch(API+"/checkout",{method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({session_id:sessionId,commit_id:c.id,new_branch:branchName})});
+          const d=await r.json();
+          if(r.ok){
+            const era=d.era_state||{};
+            if(d.phase){phase=d.phase;setBadge()}
+            if(era.code && era.code.code){codeEd.value=era.code.code;lastKnownCode=era.code.code;runP5(era.code.code)}
+            revertedContext={
+              commit_id:c.id, commit_type:c.type, branch:branchName,
+              emotion:era.emotion, artistic:era.artistic, code:era.code,
+            };
+            // Natural language revert message
+            const typeNames={emotion:"emotional profile",code:"code version",artistic:"artistic direction"};
+            const typeName=typeNames[c.type]||c.type;
+            const summarySnip=c.summary.length>60?c.summary.slice(0,57)+"…":c.summary;
+            let msg=`<strong>Reverted to a previous ${typeName}</strong><br>"${summarySnip}"`;
+            const loaded=[];
+            if(era.emotion) loaded.push("emotional profile");
+            if(era.code) loaded.push("latest code");
+            if(era.artistic) loaded.push("artistic direction");
+            if(loaded.length) msg+=`<br><br>Loaded: ${loaded.join(", ")}`;
+
+            if(c.type==="emotion"){
+              // Don't auto-set phase — show choice buttons
+              msg+=`<br><br>What would you like to do?`;
+              addMsg(msg,"system",true);
+              // Add choice buttons
+              const choiceDiv=document.createElement("div");
+              choiceDiv.className="msg system";
+              choiceDiv.style.cssText="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:10px";
+              const btnDiscover=document.createElement("button");
+              btnDiscover.textContent="Refine this emotion";
+              btnDiscover.className="primary";
+              btnDiscover.style.cssText="padding:6px 16px;border-radius:16px;font-size:12px;cursor:pointer";
+              btnDiscover.onclick=()=>{
+                phase="emotional_discovery";setBadge();
+                choiceDiv.remove();
+                addMsg("Switched to <strong>Discovery</strong> mode — refine your emotions.","system",true);
+              };
+              const btnCode=document.createElement("button");
+              btnCode.textContent="Modify the code";
+              btnCode.style.cssText="padding:6px 16px;border-radius:16px;font-size:12px;cursor:pointer;background:var(--accent);color:#fff;border:1px solid var(--accent)";
+              btnCode.onclick=()=>{
+                phase="code_generation";setBadge();
+                choiceDiv.remove();
+                addMsg("Switched to <strong>Code Generation</strong> mode — keep building.","system",true);
+              };
+              choiceDiv.appendChild(btnDiscover);
+              choiceDiv.appendChild(btnCode);
+              msgs.appendChild(choiceDiv);msgs.scrollTop=msgs.scrollHeight;
+            } else {
+              msg+=`<br>You're now in <strong>Code Generation</strong> mode — keep building.`;
+              msg+=`<br><em>Your next message will continue from this point.</em>`;
+              addMsg(msg,"system",true);
+            }
+            refreshGraph();
+            return;
+          }
+        }catch(e){console.error(e)}
+      } else {
+        if(c.type==="code"||c.type==="artistic") {phase="code_generation";setBadge()}
+        const typeNames={emotion:"emotional profile",code:"code version",artistic:"artistic direction"};
+        const label=typeNames[c.type]||c.type;
+        const summarySnip=c.summary.length>60?c.summary.slice(0,57)+"…":c.summary;
+        addMsg(`<strong>Viewing current ${label}</strong><br>"${summarySnip}"`,"system",true);
+        if(c.type==="code" && c.data && c.data.code){codeEd.value=c.data.code;lastKnownCode=c.data.code;runP5(c.data.code)}
+      }
+      if(lastGraphData) renderGraph(lastGraphData);
+    };
+
+    svg.appendChild(g);
+  });
+
+  // branch headers
+  branchNames.forEach((b,i)=>{
+    const t=document.createElementNS("http://www.w3.org/2000/svg","text");
+    t.setAttribute("x",branchX[b]);t.setAttribute("y",16);t.setAttribute("text-anchor","middle");
+    t.setAttribute("fill",BRANCH_COLORS[i%BRANCH_COLORS.length]);t.setAttribute("font-size","11");t.setAttribute("font-weight","bold");
+    t.textContent=b+(graph.current_branch===b?" ●":"");
+    svg.appendChild(t);
+  });
+}
+
+$("btnRefreshGraph").onclick=refreshGraph;
+
+// Init
+addMsg("Welcome! Describe an emotion or lived experience you'd like to turn into a p5.js sketch.","system");
+setBadge();
+</script>
+</body>
+</html>
