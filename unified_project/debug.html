@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>HumANS — Debug Interface</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a10;--s1:#12121e;--s2:#1a1a2e;--bdr:#2a2a44;--txt:#d4d4ee;--muted:#6e6e90;--accent:#7c6ff7;--green:#4ade80;--yellow:#facc15;--red:#f87171;--radius:8px}
+body{font-family:"SF Mono","Fira Code",Consolas,monospace;background:var(--bg);color:var(--txt);padding:16px;overflow-y:auto;font-size:12.5px;line-height:1.6}
+h1{font-size:16px;margin-bottom:12px;color:var(--accent)}
+h2{font-size:13px;margin:16px 0 8px;color:var(--yellow);text-transform:uppercase;letter-spacing:1px}
+.controls{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.controls input{background:var(--s2);border:1px solid var(--bdr);border-radius:5px;padding:5px 10px;color:var(--txt);font-family:inherit;font-size:12px;width:280px}
+.controls input:focus{outline:none;border-color:var(--accent)}
+button{cursor:pointer;border:1px solid var(--bdr);border-radius:5px;background:var(--s2);color:var(--txt);padding:5px 12px;font-size:12px;font-family:inherit}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--s1);border:1px solid var(--bdr);border-radius:var(--radius);padding:12px;overflow:auto;max-height:400px}
+.card.full{grid-column:1/-1}
+pre{white-space:pre-wrap;word-break:break-all;font-size:11.5px;line-height:1.5}
+.tag{display:inline-block;padding:1px 7px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase}
+.tag.p1{background:rgba(250,204,21,.15);color:var(--yellow)}
+.tag.p2{background:rgba(66,188,232,.15);color:#42bce8}
+.chat-msg{margin-bottom:8px;padding:6px 10px;border-radius:6px}
+.chat-msg.user{background:rgba(124,111,247,.12);border-left:3px solid var(--accent)}
+.chat-msg.ai{background:rgba(74,222,128,.08);border-left:3px solid var(--green)}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+.status-dot.on{background:var(--green)}.status-dot.off{background:var(--red)}
+.graph-section{margin-top:6px}
+.commit-row{display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--bdr);align-items:baseline}
+.commit-id{color:var(--accent);min-width:60px}
+.commit-branch{color:var(--yellow);min-width:60px}
+.commit-summary{color:var(--txt);flex:1}
+.commit-time{color:var(--muted);font-size:10px;min-width:70px;text-align:right}
+#autoStatus{color:var(--muted);font-size:11px}
+</style>
+</head>
+<body>
+
+<h1>Pretzel-Flavored HumANS — Debug Interface</h1>
+
+<div class="controls">
+  <input id="sidIn" placeholder="Session ID (paste or auto-filled)"/>
+  <button class="primary" id="btnFetch">Fetch State</button>
+  <button id="btnAuto">Auto-refresh: OFF</button>
+  <span id="autoStatus"></span>
+</div>
+
+<div id="content">
+  <p style="color:var(--muted)">Enter a session ID and click Fetch, or send a message in the frontend to start.</p>
+</div>
+
+<script>
+const API = "http://localhost:5001/api";
+let autoInterval = null;
+
+const $ = id => document.getElementById(id);
+
+$("btnFetch").onclick = () => fetchDebug();
+$("sidIn").onkeydown = e => { if (e.key === "Enter") fetchDebug() };
+
+$("btnAuto").onclick = () => {
+  if (autoInterval) {
+    clearInterval(autoInterval);
+    autoInterval = null;
+    $("btnAuto").textContent = "Auto-refresh: OFF";
+    $("autoStatus").textContent = "";
+  } else {
+    autoInterval = setInterval(fetchDebug, 2000);
+    $("btnAuto").textContent = "Auto-refresh: ON";
+    $("autoStatus").textContent = "Polling every 2s";
+  }
+};
+
+async function fetchDebug() {
+  const sid = $("sidIn").value.trim();
+  if (!sid) { $("content").innerHTML = '<p style="color:var(--red)">Enter a session ID</p>'; return; }
+  try {
+    const r = await fetch(API + "/debug?session_id=" + encodeURIComponent(sid));
+    const d = await r.json();
+    if (d.error) { $("content").innerHTML = `<p style="color:var(--red)">${d.error}</p>`; return; }
+    renderDebug(d);
+  } catch (e) {
+    $("content").innerHTML = `<p style="color:var(--red)">Fetch failed: ${e.message}</p>`;
+  }
+}
+
+function ts(t) { return new Date(t * 1000).toLocaleTimeString() }
+
+function renderDebug(d) {
+  let html = '';
+
+  // Session overview
+  html += '<h2>Session Overview</h2><div class="grid">';
+  html += '<div class="card"><pre>';
+  html += `Session ID:    ${d.session_id}\n`;
+  html += `Phase:         <span class="tag ${d.phase === 'emotional_discovery' ? 'p1' : 'p2'}">${d.phase}</span>\n`;
+  html += `Messages:      ${d.message_count}\n`;
+  html += `Has code:      ${d.latest_code ? 'yes (' + d.latest_code.length + ' chars)' : 'no'}\n`;
+  html += '</pre></div>';
+
+  // Profiles
+  html += '<div class="card"><pre>';
+  html += '<strong>Emotion Profile:</strong>\n';
+  html += d.emotion_profile && Object.keys(d.emotion_profile).length
+    ? JSON.stringify(d.emotion_profile, null, 2)
+    : '(empty)';
+  html += '\n\n<strong>Artistic Profile:</strong>\n';
+  html += d.artistic_profile && Object.keys(d.artistic_profile).length
+    ? JSON.stringify(d.artistic_profile, null, 2)
+    : '(empty)';
+  html += '</pre></div></div>';
+
+  // Chat history
+  html += '<h2>Chat History (' + d.chat_history.length + ' messages)</h2>';
+  html += '<div class="card full" style="max-height:500px">';
+  if (!d.chat_history.length) html += '<p style="color:var(--muted)">No messages yet.</p>';
+  d.chat_history.forEach((m, i) => {
+    const cls = m.role === 'user' ? 'user' : 'ai';
+    const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+    const preview = content.length > 800 ? content.slice(0, 800) + '\n…[truncated]' : content;
+    html += `<div class="chat-msg ${cls}"><strong>#${i + 1} ${m.role.toUpperCase()}</strong><br>${escHtml(preview)}</div>`;
+  });
+  html += '</div>';
+
+  // Latest code
+  html += '<h2>Latest Code</h2>';
+  html += '<div class="card full" style="max-height:300px"><pre>';
+  html += d.latest_code ? escHtml(d.latest_code) : '(no code yet)';
+  html += '</pre></div>';
+
+  // Unified version graph
+  const g = d.version_graph;
+  if (g) {
+    html += '<h2>Unified Version Graph</h2>';
+    html += '<div class="card full"><div class="graph-section">';
+    html += `<pre style="margin-bottom:6px;color:var(--muted)">Branches: ${JSON.stringify(g.branches)}  |  Current: ${g.current_branch}</pre>`;
+    const typeColors = {emotion:'var(--yellow)',code:'#42bce8',artistic:'#4ade80'};
+    if (!g.commits || !g.commits.length) {
+      html += '<p style="color:var(--muted)">No commits.</p>';
+    } else {
+      g.commits.forEach(c => {
+        const tc = typeColors[c.type] || 'var(--muted)';
+        html += '<div class="commit-row">';
+        html += `<span class="commit-id">${c.id}</span>`;
+        html += `<span style="color:${tc};min-width:60px;font-weight:bold">${c.type}</span>`;
+        html += `<span class="commit-branch">${c.branch}</span>`;
+        html += `<span class="commit-summary">${escHtml(c.summary)}</span>`;
+        html += `<span class="commit-time">${ts(c.timestamp)}</span>`;
+        html += '</div>';
+        html += `<details style="margin-left:68px;margin-bottom:4px"><summary style="color:var(--muted);cursor:pointer;font-size:11px">data</summary><pre style="font-size:10.5px;color:var(--muted)">${escHtml(JSON.stringify(c.data, null, 2).slice(0, 1000))}</pre></details>`;
+      });
+    }
+    html += '</div></div>';
+  }
+
+  $("content").innerHTML = html;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>

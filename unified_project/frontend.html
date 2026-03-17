@@ -1,0 +1,2004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Unified p5 Emotion Chatbot</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css" />
+<style>
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #0f1013;
+  --surface: #16181e;
+  --surface-2: #1e222c;
+  --surface-3: #262b38;
+  --border: #32384a;
+  --text: #e6e9f2;
+  --muted: #97a0b6;
+  --accent: #5f8df7;
+  --accent-2: #7ea5ff;
+  --ok: #4dd4a6;
+  --danger: #ef5d74;
+  --radius: 14px;
+}
+
+body {
+  height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: radial-gradient(1200px 700px at 0% 0%, #1a1e2a 0%, var(--bg) 55%);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: relative;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(14, 16, 22, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 5;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.brand-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), #9f83ff);
+}
+
+.header-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.phase-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #c7d4ff;
+  background: rgba(95, 141, 247, 0.15);
+  border: 1px solid rgba(95, 141, 247, 0.35);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+button {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 7px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--surface-3);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+}
+
+button.ghost {
+  background: transparent;
+}
+
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1.05fr 1.05fr 1.2fr;
+  gap: 14px;
+  padding: 14px;
+}
+
+.panel {
+  background: rgba(22, 24, 30, 0.88);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.pane-expand-btn {
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  background: #131823;
+  border-color: #44506b;
+  color: #c9d5f7;
+}
+
+.chat-pane {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.message {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.message.user {
+  flex-direction: row-reverse;
+}
+
+.message.system {
+  justify-content: center;
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.assistant-avatar {
+  background: linear-gradient(135deg, var(--accent), #9f83ff);
+  color: white;
+}
+
+.user-avatar {
+  background: #3a4157;
+}
+
+.bubble {
+  max-width: min(78%, 520px);
+  padding: 10px 13px;
+  border-radius: 13px;
+  line-height: 1.5;
+  font-size: 14px;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.assistant .bubble {
+  background: #202532;
+  border-bottom-left-radius: 4px;
+}
+
+.user .bubble {
+  background: #2f4477;
+  border-bottom-right-radius: 4px;
+}
+
+.system .bubble {
+  max-width: min(90%, 640px);
+  background: rgba(95, 141, 247, 0.08);
+  border: 1px dashed rgba(95, 141, 247, 0.45);
+  color: #c8d7ff;
+}
+
+.bubble img {
+  max-width: 100%;
+  border-radius: 10px;
+}
+
+.bubble audio {
+  width: 260px;
+}
+
+.empty-hint {
+  margin: auto;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  max-width: 300px;
+  line-height: 1.6;
+}
+
+.input-wrap {
+  border-top: 1px solid var(--border);
+  background: #171b24;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1;
+}
+
+.template-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.template-chip {
+  background: #131823;
+  border: 1px dashed #45506a;
+  color: #aab7d7;
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: 999px;
+}
+
+.template-chip:hover:not(:disabled) {
+  color: #d6e1ff;
+  border-color: var(--accent);
+  background: #1a2233;
+}
+
+.template-chip.decision {
+  border-style: solid;
+  border-color: #5f8df7;
+  color: #dbe6ff;
+  background: #1a2440;
+}
+
+.preview-strip {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #1d2230;
+  padding: 8px 10px;
+}
+
+.preview-strip.active {
+  display: flex;
+}
+
+.preview-strip img {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.preview-strip audio {
+  height: 34px;
+}
+
+.preview-name {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.remove-preview {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.input-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #1e2431;
+  padding: 6px 7px 6px 9px;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+}
+
+.icon-btn:hover:not(:disabled) {
+  color: var(--text);
+  background: #2b3244;
+}
+
+.icon-btn.recording {
+  color: var(--danger);
+}
+
+.record-timer {
+  font-size: 12px;
+  color: var(--danger);
+  font-variant-numeric: tabular-nums;
+}
+
+.chat-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+  font-family: inherit;
+  resize: none;
+  max-height: 120px;
+}
+
+.chat-input:focus {
+  outline: none;
+}
+
+.chat-input::placeholder {
+  color: #69728b;
+}
+
+.send-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: none;
+  background: #35405a;
+  color: #7f8cad;
+  display: grid;
+  place-items: center;
+}
+
+.send-btn.active {
+  background: var(--accent);
+  color: white;
+}
+
+.chat-bottom {
+  padding-top: 4px;
+}
+
+.history-trigger {
+  width: 100%;
+  border-radius: 999px;
+  background: #0f1219;
+  border-color: #3b4358;
+}
+
+.profile-pane {
+  overflow-y: auto;
+}
+
+.profile-content {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-content label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.profile-content textarea,
+.profile-content input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: #1c2130;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.profile-content textarea:focus,
+.profile-content input:focus,
+.code-editor:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.profile-content textarea {
+  min-height: 100px;
+}
+
+.readonly {
+  background: #171b27;
+  color: #cad4ec;
+}
+
+.confidence-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.confidence-bar {
+  flex: 1;
+  height: 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #171b27;
+  overflow: hidden;
+}
+
+.confidence-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  transition: width 0.2s ease, background 0.2s ease;
+}
+
+.confidence-text {
+  min-width: 58px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.confidence-hint {
+  font-size: 11px;
+  color: #c9d3ed;
+  line-height: 1.45;
+  min-height: 0;
+}
+
+.gaps-text {
+  font-size: 13px;
+  color: #cad4ec;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.profile-divider {
+  margin: 4px 0;
+  border: none;
+  border-top: 1px dashed #45506a;
+}
+
+.right-pane {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 14px;
+  min-height: 0;
+}
+
+.preview-wrap {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.preview-frame {
+  flex: 1;
+  border: none;
+  border-radius: 0;
+  background: #0d0f15;
+  width: 100%;
+  height: 100%;
+}
+
+.code-wrap {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  flex: 1;
+}
+
+.code-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  background: #171b24;
+}
+
+.code-tab {
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 11px;
+  background: #131823;
+  border-color: #414c67;
+  color: #aebad8;
+}
+
+.code-tab.active {
+  background: #2b4c8f;
+  border-color: #5f8df7;
+  color: #ffffff;
+}
+
+.code-tab-panel {
+  flex: 1;
+  min-height: 0;
+  display: none;
+  flex-direction: column;
+}
+
+.code-tab-panel.active {
+  display: flex;
+}
+
+.code-editor-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.code-editor {
+  flex: 1;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  background: #141824;
+  color: #cdd7f2;
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.55;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  resize: none;
+  width: 100%;
+  height: 100%;
+}
+
+.CodeMirror {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  font-size: 12px;
+  line-height: 1.55;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  background: #141824;
+  color: #cdd7f2;
+}
+
+.CodeMirror-gutters {
+  border-right: 1px solid #2a3040;
+  background: #111521;
+}
+
+.console-log {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 12px;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  background: #121722;
+}
+
+.console-entry {
+  border: 1px solid #2b354c;
+  background: #191f2d;
+  border-radius: 8px;
+  padding: 7px 9px;
+  margin-bottom: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.console-entry.error {
+  border-color: #7a3948;
+  background: #2b1820;
+  color: #ffd8e1;
+}
+
+.console-entry.warn {
+  border-color: #6a5828;
+  background: #2a2316;
+  color: #ffe7af;
+}
+
+.console-entry.info {
+  border-color: #30466f;
+  background: #1a2438;
+  color: #cddcff;
+}
+
+.console-empty {
+  color: #8f9ab7;
+  font-size: 12px;
+}
+
+.console-time {
+  font-size: 10px;
+  color: #9aa5c4;
+  margin-right: 8px;
+}
+
+.code-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  background: #171b24;
+}
+
+.history-pane {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  background: #171b24;
+  border-right: 1px solid var(--border);
+  transform: translateX(-102%);
+  transition: transform 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  z-index: 8;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.app.history-open .history-pane {
+  transform: translateX(0);
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.fullscreen-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 12, 18, 0.72);
+  backdrop-filter: blur(3px);
+  z-index: 30;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.fullscreen-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pane-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 40 !important;
+  width: auto !important;
+  max-width: none !important;
+  height: auto !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+}
+
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-head h3 {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.close-history {
+  border: 1px solid var(--border);
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #0e121a;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.history-graph {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px;
+}
+
+.history-graph svg {
+  width: 100%;
+}
+
+.history-footer {
+  border-top: 1px solid var(--border);
+  padding: 12px;
+}
+
+.history-footer button {
+  width: 100%;
+  border-radius: 999px;
+  padding: 10px 14px;
+}
+
+.graph-edge {
+  fill: none;
+  stroke-width: 2.1px;
+  opacity: 0.65;
+}
+
+.graph-node {
+  cursor: pointer;
+}
+
+.graph-label {
+  fill: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.graph-meta {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.version-pill {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+@media (max-width: 1200px) {
+  .workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    overflow-y: auto;
+  }
+
+  .panel {
+    min-height: 380px;
+  }
+
+  .right-pane {
+    grid-template-rows: 1fr 1fr;
+  }
+
+  .history-pane {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+</style>
+</head>
+<body>
+<div class="app" id="appRoot">
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span>Emotion Sketch Studio</span>
+      <span id="versionPill" class="version-pill">Version: -</span>
+    </div>
+    <div class="header-controls">
+      <span id="phaseBadge" class="phase-badge">Phase: Emotional Discovery</span>
+      <button id="newSessionBtn" class="ghost">New Session</button>
+      <button id="resetBtn" class="ghost">Reset</button>
+    </div>
+  </header>
+
+  <div id="fullscreenBackdrop" class="fullscreen-backdrop" hidden></div>
+
+  <main class="workspace">
+    <section id="chatPanel" class="panel chat-pane pane-expandable" data-pane-id="chat">
+      <div class="panel-header">
+        <h2 class="panel-title">Chat</h2>
+        <button class="pane-expand-btn" type="button" data-pane-target="chat">Expand</button>
+      </div>
+      <div id="messages" class="messages"></div>
+
+      <div class="input-wrap">
+        <div id="previewStrip" class="preview-strip">
+          <img id="previewImage" alt="attachment preview" style="display:none" />
+          <audio id="previewAudio" controls style="display:none"></audio>
+          <span id="previewName" class="preview-name"></span>
+          <button id="removePreviewBtn" class="remove-preview" title="Remove">✕</button>
+        </div>
+
+        <div id="templateRow" class="template-row"></div>
+
+        <div class="input-bar">
+          <button id="imageBtn" class="icon-btn" title="Attach image" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+          </button>
+          <input id="imageInput" type="file" accept="image/*" style="display:none" />
+
+          <button id="recordBtn" class="icon-btn" title="Record audio" type="button">
+            <svg id="micIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+          </button>
+          <span id="recordTimer" class="record-timer" style="display:none">00:00</span>
+
+          <textarea id="chatInput" class="chat-input" rows="1" placeholder="Share a memory, feeling, image, or feedback..."></textarea>
+
+          <button id="sendBtn" class="send-btn" type="button" title="Send">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+
+        <div class="chat-bottom">
+          <button id="historyBtn" class="history-trigger" type="button">View Version History</button>
+        </div>
+      </div>
+
+      <aside id="historyPane" class="history-pane">
+        <div class="history-head">
+          <h3>Edit History</h3>
+          <button id="closeHistoryBtn" class="close-history" type="button">×</button>
+        </div>
+        <div id="historyGraph" class="history-graph">
+          <svg id="historySvg"></svg>
+        </div>
+        <div class="history-footer">
+          <button id="restoreBtn" class="primary" type="button" disabled>Restore to this version</button>
+        </div>
+      </aside>
+    </section>
+
+    <section id="profilePanel" class="panel profile-pane pane-expandable" data-pane-id="profile">
+      <div class="panel-header">
+        <h2 class="panel-title">Profile</h2>
+        <button class="pane-expand-btn" type="button" data-pane-target="profile">Expand</button>
+      </div>
+      <div class="profile-content">
+        <label for="emotionProfile">Emotion Profile</label>
+        <textarea id="emotionProfile"></textarea>
+
+        <label>Emotion Confidence</label>
+        <div class="confidence-wrap" aria-live="polite">
+          <div id="confidenceBar" class="confidence-bar">
+            <div id="confidenceFill" class="confidence-fill"></div>
+          </div>
+          <span id="confidenceText" class="confidence-text">N/A</span>
+        </div>
+        <p id="confidenceHint" class="confidence-hint"></p>
+
+        <label>Emotion Gaps</label>
+        <p id="emotionGapsText" class="gaps-text">No major gaps identified.</p>
+
+        <hr class="profile-divider" />
+
+        <label for="artisticProfile">Artistic Profile</label>
+        <textarea id="artisticProfile"></textarea>
+      </div>
+    </section>
+
+    <section class="right-pane">
+      <section id="previewPanel" class="panel pane-expandable" data-pane-id="preview">
+        <div class="panel-header">
+          <h2 class="panel-title">Preview</h2>
+          <button class="pane-expand-btn" type="button" data-pane-target="preview">Expand</button>
+        </div>
+        <div class="preview-wrap">
+          <iframe id="previewFrame" class="preview-frame" title="p5.js Preview" sandbox="allow-scripts"></iframe>
+        </div>
+      </section>
+
+      <section id="codePanel" class="panel pane-expandable" data-pane-id="code">
+        <div class="panel-header">
+          <h2 class="panel-title">Code</h2>
+          <button class="pane-expand-btn" type="button" data-pane-target="code">Expand</button>
+        </div>
+        <div class="code-wrap">
+          <div class="code-tabs">
+            <button id="codeTabBtn" class="code-tab active" type="button">Code</button>
+            <button id="consoleTabBtn" class="code-tab" type="button">Console / Status</button>
+          </div>
+          <div id="codeTabPanel" class="code-tab-panel active">
+            <div class="code-editor-shell">
+              <textarea id="codeEditor" class="code-editor" spellcheck="false" placeholder="// No code yet. Chat to generate a sketch."></textarea>
+            </div>
+            <div class="code-actions">
+              <button id="runBtn" type="button">Run</button>
+              <button id="saveVersionBtn" class="primary" type="button">Save Version</button>
+            </div>
+          </div>
+          <div id="consoleTabPanel" class="code-tab-panel">
+            <div id="consoleLog" class="console-log">
+              <div class="console-empty">No status messages yet.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+</main>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script>
+const API = "/api";
+const BRANCH_COLORS = ["#5f8df7", "#e8a742", "#4dd4a6", "#e76891", "#8e79ff", "#66d5d5", "#f5c44d"];
+const ART_DECISION_ACCEPT = "Art Direction Decision: Accept";
+const ART_DECISION_MODIFY = "Art Direction Decision: Modify";
+const ART_DECISION_MORE = "Art Direction Decision: More options";
+const ART_DECISION_OPTION_PREFIX = "Art Direction Decision: Option ";
+const TEMPLATE_MESSAGES = {
+  emotional_discovery: [
+    "I have already a good sense of emotions I want to express, help me implement.",
+    "The setting was...",
+    "2-3 emojis that fit: ...",
+    "A song that matches this feeling is...",
+    "I already have a good sense of the emotion — help me implement",
+    "Here are some emojis that describe how I feel: ",
+  ],
+  code_generation: [
+    "I want to refine/explore my emotions more.",
+    "Make the motion slower and more floating.",
+    "Use a softer color palette with more negative space.",
+    "Can we try a different visual metaphor?",
+    "Change the colors to feel more warm",
+    "back to feelings",
+  ],
+};
+const INITIAL_ART_DIRECTION_DECISION_TEMPLATES = [
+  { label: "Accept Direction", text: ART_DECISION_ACCEPT, autoSend: true, decision: true },
+  { label: "Modify Direction", text: ART_DECISION_MODIFY, autoSend: true, decision: true },
+  { label: "More Options", text: ART_DECISION_MORE, autoSend: true, decision: true },
+];
+
+let sessionId = null;
+let appState = null;
+let historyData = null;
+let selectedHistoryVersionId = null;
+let historyPreviewVersionId = null;
+let isHistoryOpen = false;
+let expandedPaneId = null;
+
+let pendingMedia = null; // {type, dataUrl, mime, name, previewUrl}
+let recorder = null;
+let recorderStream = null;
+let recordingTimer = null;
+let recordingSeconds = 0;
+let isRecording = false;
+let isSending = false;
+let codeEditorView = null;
+let activeCodeTab = "code";
+let consoleEntries = [];
+
+const $ = (id) => document.getElementById(id);
+
+function escapeHtml(text) {
+  return (text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function formatPhase(phase) {
+  if (phase === "code_generation") return "Phase: Code Generation";
+  return "Phase: Emotional Discovery";
+}
+
+function formatVersionPill(version) {
+  if (!version) return "Version: -";
+  return `Version: ${version.id} (${version.branch})`;
+}
+
+function templateToDescriptor(item) {
+  if (typeof item === "string") {
+    return { label: item, text: item, autoSend: false, decision: false };
+  }
+  return {
+    label: item.label || item.text || "",
+    text: item.text || item.label || "",
+    autoSend: !!item.autoSend,
+    decision: !!item.decision,
+  };
+}
+
+function buildAlternativeDecisionTemplates(alternatives) {
+  const count = Math.min(3, Array.isArray(alternatives) ? alternatives.length : 0);
+  const templates = [];
+  for (let i = 1; i <= count; i += 1) {
+    templates.push({
+      label: `Option ${i}`,
+      text: `${ART_DECISION_OPTION_PREFIX}${i}`,
+      autoSend: true,
+      decision: true,
+    });
+  }
+  templates.push({ label: "More options", text: ART_DECISION_MORE, autoSend: true, decision: true });
+  templates.push({ label: "Modify", text: ART_DECISION_MODIFY, autoSend: true, decision: true });
+  return templates;
+}
+
+function sendTemplateMessage(text) {
+  const input = $("chatInput");
+  input.value = text;
+  input.focus();
+  updateSendButtonState();
+  sendChat();
+}
+
+function renderTemplateRow(phase, pendingArtDecision) {
+  const row = $("templateRow");
+  if (!row) return;
+  row.innerHTML = "";
+  const hasDecisionChoices = !!(pendingArtDecision && !pendingArtDecision.awaiting_modify_details);
+  let templates = TEMPLATE_MESSAGES[phase] || TEMPLATE_MESSAGES.emotional_discovery;
+  if (hasDecisionChoices) {
+    const alternatives = Array.isArray(pendingArtDecision.alternatives)
+      ? pendingArtDecision.alternatives.filter(Boolean)
+      : [];
+    templates = alternatives.length
+      ? buildAlternativeDecisionTemplates(alternatives)
+      : INITIAL_ART_DIRECTION_DECISION_TEMPLATES;
+  }
+  templates.map(templateToDescriptor).forEach((template) => {
+    const btn = document.createElement("button");
+    btn.className = "template-chip";
+    if (template.decision) {
+      btn.classList.add("decision");
+    }
+    btn.type = "button";
+    btn.textContent = template.label;
+    btn.addEventListener("click", () => {
+      if (template.autoSend) {
+        sendTemplateMessage(template.text);
+        return;
+      }
+      const input = $("chatInput");
+      input.value = template.text;
+      input.focus();
+      input.style.height = "auto";
+      input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
+      updateSendButtonState();
+    });
+    row.appendChild(btn);
+  });
+}
+
+function renderConfidence(confidence) {
+  const fill = $("confidenceFill");
+  const text = $("confidenceText");
+  const hint = $("confidenceHint");
+  if (!fill || !text) return;
+  const key = (confidence || "").toLowerCase();
+  const settings = {
+    na: { pct: 0, color: "#4a5166", label: "N/A" },
+    "n/a": { pct: 0, color: "#4a5166", label: "N/A" },
+    low: { pct: 28, color: "#55c29f", label: "LOW" },
+    medium: { pct: 62, color: "#f0b454", label: "MEDIUM" },
+    high: { pct: 92, color: "#ef6f88", label: "HIGH" },
+  };
+  const s = settings[key] || settings.na;
+  fill.style.width = `${s.pct}%`;
+  fill.style.background = s.color;
+  text.textContent = s.label;
+  if (!hint) return;
+  if (key === "low") {
+    hint.textContent = "The AI assistant's confidence in understanding your emotions is low. You can still ask it to implement, but it is more likely to produce an inaccurate emotional expression. It is recommended to explore emotions a bit more first.";
+    return;
+  }
+  hint.textContent = "";
+}
+
+function renderGaps(gaps) {
+  const el = $("emotionGapsText");
+  if (!el) return;
+  const list = Array.isArray(gaps) ? gaps.filter(Boolean) : [];
+  if (!list.length) {
+    el.textContent = "No major gaps identified.";
+    return;
+  }
+  el.textContent = list.map((gap) => `• ${gap}`).join("\n");
+}
+
+function initializeCodeEditor() {
+  const textArea = $("codeEditor");
+  if (!textArea || !window.CodeMirror) return;
+  codeEditorView = window.CodeMirror.fromTextArea(textArea, {
+    mode: "javascript",
+    lineNumbers: true,
+    theme: "material-darker",
+    indentUnit: 2,
+    tabSize: 2,
+    lineWrapping: true,
+    autofocus: false,
+  });
+  codeEditorView.setSize("100%", "100%");
+  codeEditorView.on("change", () => {
+    updateSendButtonState();
+  });
+}
+
+function getCodeValue() {
+  if (codeEditorView) return codeEditorView.getValue();
+  const textArea = $("codeEditor");
+  return textArea ? textArea.value : "";
+}
+
+function setCodeValue(code) {
+  const next = code || "";
+  if (codeEditorView) {
+    const current = codeEditorView.getValue();
+    if (current !== next) {
+      codeEditorView.setValue(next);
+    }
+    codeEditorView.refresh();
+    return;
+  }
+  const textArea = $("codeEditor");
+  if (textArea) textArea.value = next;
+}
+
+function refreshCodeEditorLayout() {
+  if (codeEditorView) {
+    codeEditorView.refresh();
+  }
+}
+
+function setCodeTab(tab) {
+  activeCodeTab = tab === "console" ? "console" : "code";
+  const codeBtn = $("codeTabBtn");
+  const consoleBtn = $("consoleTabBtn");
+  const codePanel = $("codeTabPanel");
+  const consolePanel = $("consoleTabPanel");
+  const isConsole = activeCodeTab === "console";
+  if (codeBtn) codeBtn.classList.toggle("active", !isConsole);
+  if (consoleBtn) consoleBtn.classList.toggle("active", isConsole);
+  if (codePanel) codePanel.classList.toggle("active", !isConsole);
+  if (consolePanel) consolePanel.classList.toggle("active", isConsole);
+  if (!isConsole) {
+    refreshCodeEditorLayout();
+  }
+}
+
+function renderConsoleLog() {
+  const el = $("consoleLog");
+  if (!el) return;
+  if (!consoleEntries.length) {
+    el.innerHTML = '<div class="console-empty">No status messages yet.</div>';
+    return;
+  }
+  el.innerHTML = "";
+  consoleEntries.forEach((entry) => {
+    const row = document.createElement("div");
+    row.className = `console-entry ${entry.level}`;
+    const time = document.createElement("span");
+    time.className = "console-time";
+    time.textContent = entry.time;
+    const msg = document.createElement("span");
+    msg.textContent = entry.message;
+    row.appendChild(time);
+    row.appendChild(msg);
+    el.appendChild(row);
+  });
+  el.scrollTop = el.scrollHeight;
+}
+
+function appendConsoleLog(level, message) {
+  const lvl = level === "error" || level === "warn" ? level : "info";
+  const text = (message || "").trim();
+  if (!text) return;
+  const now = new Date();
+  const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  consoleEntries.push({ level: lvl, message: text, time });
+  if (consoleEntries.length > 160) {
+    consoleEntries = consoleEntries.slice(-160);
+  }
+  renderConsoleLog();
+}
+
+function captureLlmStatusFromChatResponse(data) {
+  const reply = data && data.reply ? data.reply : null;
+  const gaps = reply && Array.isArray(reply.emotion_gaps) ? reply.emotion_gaps : [];
+  gaps.forEach((gap) => {
+    const g = (gap || "").toLowerCase();
+    if (g.includes("llm call failed")) {
+      appendConsoleLog("error", gap);
+    }
+  });
+}
+
+function fileToDataUrl(fileOrBlob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(fileOrBlob);
+  });
+}
+
+function updateExpandButtons() {
+  document.querySelectorAll(".pane-expand-btn").forEach((btn) => {
+    const target = btn.dataset.paneTarget;
+    const isExpanded = expandedPaneId === target;
+    btn.textContent = isExpanded ? "Close" : "Expand";
+    btn.setAttribute("aria-pressed", isExpanded ? "true" : "false");
+  });
+}
+
+function closeFullscreenPane() {
+  if (!expandedPaneId) return;
+  const pane = document.querySelector(`.pane-expandable[data-pane-id="${expandedPaneId}"]`);
+  if (pane) {
+    pane.classList.remove("pane-fullscreen");
+  }
+  expandedPaneId = null;
+  const backdrop = $("fullscreenBackdrop");
+  if (backdrop) {
+    backdrop.classList.remove("active");
+    backdrop.hidden = true;
+  }
+  refreshCodeEditorLayout();
+  updateExpandButtons();
+}
+
+function openFullscreenPane(paneId) {
+  if (!paneId) return;
+  if (expandedPaneId === paneId) {
+    closeFullscreenPane();
+    return;
+  }
+  closeFullscreenPane();
+  const pane = document.querySelector(`.pane-expandable[data-pane-id="${paneId}"]`);
+  if (!pane) return;
+  pane.classList.add("pane-fullscreen");
+  expandedPaneId = paneId;
+  const backdrop = $("fullscreenBackdrop");
+  if (backdrop) {
+    backdrop.hidden = false;
+    requestAnimationFrame(() => backdrop.classList.add("active"));
+  }
+  refreshCodeEditorLayout();
+  updateExpandButtons();
+}
+
+function updateSendButtonState() {
+  const text = $("chatInput").value.trim();
+  const canSend = (!!text || !!pendingMedia) && !isRecording && !isSending;
+  $("sendBtn").classList.toggle("active", canSend);
+  $("sendBtn").disabled = !canSend;
+}
+
+function showPendingMedia() {
+  const strip = $("previewStrip");
+  const img = $("previewImage");
+  const audio = $("previewAudio");
+  const name = $("previewName");
+
+  img.style.display = "none";
+  audio.style.display = "none";
+  img.src = "";
+  audio.src = "";
+  name.textContent = "";
+
+  if (!pendingMedia) {
+    strip.classList.remove("active");
+    updateSendButtonState();
+    return;
+  }
+
+  strip.classList.add("active");
+  name.textContent = pendingMedia.name || (pendingMedia.type === "audio" ? "Audio clip" : "Image");
+  if (pendingMedia.type === "image") {
+    img.style.display = "block";
+    img.src = pendingMedia.dataUrl;
+  } else {
+    audio.style.display = "block";
+    audio.src = pendingMedia.previewUrl || pendingMedia.dataUrl;
+  }
+  updateSendButtonState();
+}
+
+function clearPendingMedia() {
+  if (pendingMedia && pendingMedia.previewUrl) {
+    URL.revokeObjectURL(pendingMedia.previewUrl);
+  }
+  pendingMedia = null;
+  showPendingMedia();
+}
+
+function formatTimer(totalSeconds) {
+  const mm = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+  const ss = String(totalSeconds % 60).padStart(2, "0");
+  return `${mm}:${ss}`;
+}
+
+async function startRecording() {
+  try {
+    recorderStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const chunks = [];
+    recorder = new MediaRecorder(recorderStream);
+    isRecording = true;
+    $("recordBtn").classList.add("recording");
+    $("recordTimer").style.display = "inline";
+    recordingSeconds = 0;
+    $("recordTimer").textContent = "00:00";
+    recordingTimer = setInterval(() => {
+      recordingSeconds += 1;
+      $("recordTimer").textContent = formatTimer(recordingSeconds);
+    }, 1000);
+
+    recorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        chunks.push(event.data);
+      }
+    };
+
+    recorder.onstop = async () => {
+      try {
+        clearInterval(recordingTimer);
+        recordingTimer = null;
+        $("recordBtn").classList.remove("recording");
+        $("recordTimer").style.display = "none";
+        if (recorderStream) {
+          recorderStream.getTracks().forEach((track) => track.stop());
+          recorderStream = null;
+        }
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        const dataUrl = await fileToDataUrl(blob);
+        const previewUrl = URL.createObjectURL(blob);
+        pendingMedia = {
+          type: "audio",
+          dataUrl,
+          mime: "audio/webm",
+          name: "Recorded audio",
+          previewUrl,
+        };
+        showPendingMedia();
+      } catch (error) {
+        alert("Audio processing failed. Please try recording again.");
+      } finally {
+        recorder = null;
+        isRecording = false;
+        updateSendButtonState();
+      }
+    };
+
+    recorder.start();
+    updateSendButtonState();
+  } catch (error) {
+    isRecording = false;
+    recorder = null;
+    updateSendButtonState();
+    alert("Microphone access is required to record audio.");
+  }
+}
+
+function stopRecording() {
+  if (!recorder) {
+    isRecording = false;
+    updateSendButtonState();
+    return;
+  }
+  if (recorder.state !== "inactive") {
+    recorder.stop();
+  } else {
+    recorder = null;
+    isRecording = false;
+    updateSendButtonState();
+  }
+}
+
+function renderMessages(messages) {
+  const container = $("messages");
+  container.innerHTML = "";
+
+  if (!messages || !messages.length) {
+    const hint = document.createElement("div");
+    hint.className = "empty-hint";
+    hint.textContent = "Share a personal moment, upload an image, or record audio to begin.";
+    container.appendChild(hint);
+    return;
+  }
+
+  messages.forEach((msg) => {
+    if (msg.type === "system") {
+      const row = document.createElement("div");
+      row.className = "message system";
+      row.innerHTML = `<div class="bubble">${escapeHtml(msg.content)}</div>`;
+      container.appendChild(row);
+      return;
+    }
+
+    const row = document.createElement("div");
+    row.className = `message ${msg.role}`;
+
+    const avatar = document.createElement("div");
+    avatar.className = `avatar ${msg.role === "assistant" ? "assistant-avatar" : "user-avatar"}`;
+    avatar.textContent = msg.role === "assistant" ? "✦" : "👤";
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    if (msg.type === "image") {
+      bubble.innerHTML = `<img src="${msg.content}" alt="uploaded image" />`;
+    } else if (msg.type === "audio") {
+      bubble.innerHTML = `<audio controls src="${msg.content}"></audio>`;
+    } else {
+      bubble.textContent = msg.content || "";
+    }
+
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+    container.appendChild(row);
+  });
+
+  container.scrollTop = container.scrollHeight;
+}
+
+function runPreview(code) {
+  const iframe = $("previewFrame");
+  if (!code || !code.trim()) {
+    iframe.srcdoc = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    html,body{height:100%;margin:0;}
+    body{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#0d0f15;
+      color:#9ca7c4;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      font-size:14px;
+    }
+  </style>
+</head>
+<body>No sketch yet.</body>
+</html>`;
+    return;
+  }
+  const safeCode = (code || "").replace(/<\/script>/gi, "<\\/script>");
+  iframe.srcdoc = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"><\/script>
+  <style>html,body{margin:0;padding:0;background:#0d0f15;overflow:hidden;}canvas{display:block;}</style>
+  <script>
+    window.addEventListener("error", function(e) {
+      parent.postMessage({ type: "p5-error", message: e.message || "Unknown error" }, "*");
+    });
+  <\/script>
+</head>
+<body>
+  <script>${safeCode}<\/script>
+</body>
+</html>`;
+}
+
+function loadVersionToPanes(version) {
+  if (!version) return;
+  $("emotionProfile").value = version.emotion_profile || "";
+  $("artisticProfile").value = version.artistic_profile || "";
+  renderConfidence(version.emotion_confidence || "");
+  renderGaps(version.emotion_gaps || []);
+  setCodeValue(version.code || "");
+  runPreview(version.code || "");
+}
+
+function getVersionById(versionId) {
+  if (!appState || !appState.versions) return null;
+  return appState.versions.find((v) => v.id === versionId) || null;
+}
+
+function renderState(state) {
+  appState = state;
+  sessionId = state.session_id;
+  $("phaseBadge").textContent = formatPhase(state.phase);
+  $("versionPill").textContent = formatVersionPill(state.current_version);
+  renderTemplateRow(state.phase, state.pending_artistic_decision);
+  renderMessages(state.messages || []);
+  if (!isHistoryOpen || !historyPreviewVersionId) {
+    loadVersionToPanes(state.current_version);
+  }
+}
+
+function wrapGraphText(text, maxCharsPerLine) {
+  const clean = (text || "").replace(/\s+/g, " ").trim();
+  if (!clean) return ["Version update"];
+  const words = clean.split(" ");
+  const lines = [];
+  let line = "";
+  words.forEach((word) => {
+    let token = word;
+    while (token.length > maxCharsPerLine) {
+      if (line) {
+        lines.push(line);
+        line = "";
+      }
+      lines.push(token.slice(0, maxCharsPerLine));
+      token = token.slice(maxCharsPerLine);
+    }
+    if (!token) return;
+    if (!line) {
+      line = token;
+      return;
+    }
+    if (line.length + 1 + token.length <= maxCharsPerLine) {
+      line += ` ${token}`;
+      return;
+    }
+    lines.push(line);
+    line = token;
+  });
+  if (line) lines.push(line);
+  return lines;
+}
+
+function renderHistoryGraph(data) {
+  historyData = data;
+  const svg = $("historySvg");
+  svg.innerHTML = "";
+  const versions = data.nodes || [];
+  if (!versions.length) {
+    svg.setAttribute("height", 120);
+    svg.innerHTML = '<text x="16" y="44" fill="#97a0b6" font-size="13">No versions yet.</text>';
+    return;
+  }
+
+  const sorted = [...versions].sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
+  const branches = [...new Set(sorted.map((v) => v.branch || "main"))];
+  const xByBranch = {};
+  branches.forEach((branch, index) => {
+    xByBranch[branch] = 30 + index * 26;
+  });
+
+  const maxBranchX = Math.max(...Object.values(xByBranch));
+  const labelX = maxBranchX + 52;
+  const lineHeight = 18;
+  const maxCharsPerLine = 54;
+  const rowMinHeight = 56;
+  const rowPadding = 18;
+  const yStart = 22;
+  const pos = {};
+  const layout = [];
+  let currentY = yStart;
+  let longestTextLen = 0;
+  sorted.forEach((version) => {
+    const summary = (version.summary || "Version update").trim();
+    const summaryLines = wrapGraphText(summary, maxCharsPerLine);
+    summaryLines.forEach((line) => {
+      if (line.length > longestTextLen) longestTextLen = line.length;
+    });
+    const metaText = `${version.branch} • ${version.id}`;
+    if (metaText.length > longestTextLen) longestTextLen = metaText.length;
+
+    const textBlockHeight = summaryLines.length * lineHeight + 12;
+    const rowHeight = Math.max(rowMinHeight, textBlockHeight + rowPadding);
+    const centerY = currentY + rowHeight / 2;
+    const x = xByBranch[version.branch || "main"];
+    pos[version.id] = { x, y: centerY };
+    layout.push({ version, summaryLines, rowHeight, centerY });
+    currentY += rowHeight;
+  });
+  const width = Math.max(620, Math.ceil(labelX + longestTextLen * 6.7 + 28));
+  const height = Math.max(280, Math.ceil(currentY + 18));
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("height", height);
+
+  sorted.forEach((version) => {
+    if (!version.parent_id || !pos[version.parent_id]) return;
+    const from = pos[version.parent_id];
+    const to = pos[version.id];
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const midY = (from.y + to.y) / 2;
+    path.setAttribute("d", `M ${from.x} ${from.y} C ${from.x} ${midY}, ${to.x} ${midY}, ${to.x} ${to.y}`);
+    path.setAttribute("class", "graph-edge");
+    const colorIndex = branches.indexOf(version.branch || "main") % BRANCH_COLORS.length;
+    path.setAttribute("stroke", BRANCH_COLORS[colorIndex]);
+    svg.appendChild(path);
+  });
+
+  layout.forEach((entry) => {
+    const { version, summaryLines } = entry;
+    const point = pos[version.id];
+    if (!point) return;
+
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.setAttribute("class", "graph-node");
+
+    const selected = selectedHistoryVersionId === version.id;
+    const isHead = data.branch_heads && data.branch_heads[version.branch] === version.id;
+
+    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    dot.setAttribute("cx", point.x);
+    dot.setAttribute("cy", point.y);
+    dot.setAttribute("r", selected ? "8.5" : isHead ? "7" : "5.5");
+    dot.setAttribute("fill", selected ? "#ffffff" : "#76a2ff");
+    dot.setAttribute("stroke", selected ? "#5f8df7" : "none");
+    dot.setAttribute("stroke-width", selected ? "3" : "0");
+    group.appendChild(dot);
+
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    const firstLineY = point.y - ((summaryLines.length - 1) * lineHeight) / 2 - 2;
+    label.setAttribute("x", labelX);
+    label.setAttribute("y", firstLineY);
+    label.setAttribute("class", "graph-label");
+    summaryLines.forEach((line, index) => {
+      const span = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+      span.setAttribute("x", String(labelX));
+      if (index > 0) span.setAttribute("dy", String(lineHeight));
+      span.textContent = line;
+      label.appendChild(span);
+    });
+    group.appendChild(label);
+
+    const meta = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    meta.setAttribute("x", labelX);
+    meta.setAttribute("y", firstLineY + summaryLines.length * lineHeight + 10);
+    meta.setAttribute("class", "graph-meta");
+    meta.textContent = `${version.branch} • ${version.id}`;
+    group.appendChild(meta);
+
+    group.addEventListener("click", () => {
+      selectedHistoryVersionId = version.id;
+      historyPreviewVersionId = version.id;
+      const selectedVersion = getVersionById(version.id);
+      if (selectedVersion) {
+        loadVersionToPanes(selectedVersion);
+      }
+      $("restoreBtn").disabled = false;
+      renderHistoryGraph(data);
+    });
+
+    svg.appendChild(group);
+  });
+}
+
+async function fetchState() {
+  const query = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : "";
+  const response = await fetch(`${API}/state${query}`);
+  const data = await response.json();
+  renderState(data);
+}
+
+async function fetchHistory() {
+  if (!sessionId) return;
+  const response = await fetch(`${API}/history?session_id=${encodeURIComponent(sessionId)}`);
+  const data = await response.json();
+  renderHistoryGraph(data);
+}
+
+async function sendChat() {
+  if (isSending || isRecording) return;
+  const text = $("chatInput").value.trim();
+  if (!text && !pendingMedia) return;
+
+  const payload = { session_id: sessionId, message: text };
+  if (pendingMedia) {
+    if (pendingMedia.type === "image") {
+      payload.image = pendingMedia.dataUrl;
+      payload.image_mime = pendingMedia.mime || "image/png";
+    } else {
+      payload.audio = pendingMedia.dataUrl;
+      payload.audio_mime = pendingMedia.mime || "audio/webm";
+    }
+  }
+
+  isSending = true;
+  updateSendButtonState();
+  try {
+    const response = await fetch(`${API}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      appendConsoleLog("error", data.error || "Chat request failed.");
+      alert(data.error || "Chat request failed.");
+      return;
+    }
+    captureLlmStatusFromChatResponse(data);
+    const raw = typeof data.raw_response === "string" ? data.raw_response.toLowerCase() : "";
+    if (raw.includes("couldn") && raw.includes("reach the model")) {
+      appendConsoleLog("warn", "LLM service was unavailable for this turn. A fallback response was used.");
+    }
+
+    $("chatInput").value = "";
+    $("chatInput").style.height = "auto";
+    clearPendingMedia();
+    renderState(data.state);
+    if (isHistoryOpen) {
+      await fetchHistory();
+    }
+  } catch (error) {
+    appendConsoleLog("error", `Network error: ${error.message}`);
+    alert(`Network error: ${error.message}`);
+  } finally {
+    isSending = false;
+    updateSendButtonState();
+  }
+}
+
+async function saveVersion() {
+  if (!sessionId) return;
+  const payload = {
+    session_id: sessionId,
+    emotion_profile: $("emotionProfile").value,
+    artistic_profile: $("artisticProfile").value,
+    code: getCodeValue(),
+  };
+
+  const response = await fetch(`${API}/save-version`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    appendConsoleLog("error", data.error || "Could not save version.");
+    alert(data.error || "Could not save version.");
+    return;
+  }
+  renderState(data.state);
+  if (isHistoryOpen) {
+    await fetchHistory();
+  }
+}
+
+async function restoreSelectedVersion() {
+  if (!selectedHistoryVersionId || !sessionId) return;
+  const response = await fetch(`${API}/restore-version`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session_id: sessionId,
+      version_id: selectedHistoryVersionId,
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    appendConsoleLog("error", data.error || "Could not restore version.");
+    alert(data.error || "Could not restore version.");
+    return;
+  }
+  historyPreviewVersionId = null;
+  renderState(data.state);
+  closeHistory();
+}
+
+function openHistory() {
+  if (!appState) return;
+  isHistoryOpen = true;
+  $("appRoot").classList.add("history-open");
+  selectedHistoryVersionId = appState.current_version ? appState.current_version.id : null;
+  historyPreviewVersionId = selectedHistoryVersionId;
+  $("restoreBtn").disabled = !selectedHistoryVersionId;
+  fetchHistory();
+}
+
+function closeHistory() {
+  isHistoryOpen = false;
+  $("appRoot").classList.remove("history-open");
+  historyPreviewVersionId = null;
+  selectedHistoryVersionId = null;
+  $("restoreBtn").disabled = true;
+  if (appState && appState.current_version) {
+    loadVersionToPanes(appState.current_version);
+  }
+}
+
+async function startNewSession() {
+  const response = await fetch(`${API}/new-session`, { method: "POST" });
+  const data = await response.json();
+  if (!response.ok) {
+    appendConsoleLog("error", data.error || "Could not create a new session.");
+    alert(data.error || "Could not create a new session.");
+    return;
+  }
+  historyPreviewVersionId = null;
+  renderState(data.state);
+}
+
+async function resetSession() {
+  const response = await fetch(`${API}/reset`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    appendConsoleLog("error", data.error || "Could not reset session.");
+    alert(data.error || "Could not reset session.");
+    return;
+  }
+  historyPreviewVersionId = null;
+  renderState(data.state);
+}
+
+window.addEventListener("message", (event) => {
+  if (!event.data || event.data.type !== "p5-error") return;
+  const msg = `Preview error: ${event.data.message || "Unknown error"}`;
+  appendConsoleLog("error", msg);
+  const row = document.createElement("div");
+  row.className = "message system";
+  row.innerHTML = `<div class="bubble">${escapeHtml(msg)}</div>`;
+  $("messages").appendChild(row);
+  $("messages").scrollTop = $("messages").scrollHeight;
+});
+
+function bindById(id, eventName, handler) {
+  const el = $(id);
+  if (!el) {
+    console.error(`Missing element: #${id}`);
+    return;
+  }
+  el.addEventListener(eventName, handler);
+}
+
+function initializeApp() {
+  initializeCodeEditor();
+  renderConsoleLog();
+  setCodeTab("code");
+
+  document.querySelectorAll(".pane-expand-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      openFullscreenPane(btn.dataset.paneTarget);
+    });
+  });
+
+  bindById("fullscreenBackdrop", "click", closeFullscreenPane);
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeFullscreenPane();
+    }
+  });
+
+  window.addEventListener("resize", () => {
+    refreshCodeEditorLayout();
+  });
+
+  bindById("chatInput", "input", () => {
+    const ta = $("chatInput");
+    ta.style.height = "auto";
+    ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
+    updateSendButtonState();
+  });
+
+  bindById("chatInput", "keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      sendChat();
+    }
+  });
+
+  bindById("sendBtn", "click", (event) => {
+    event.preventDefault();
+    sendChat();
+  });
+
+  bindById("removePreviewBtn", "click", clearPendingMedia);
+  bindById("imageBtn", "click", () => $("imageInput").click());
+
+  bindById("imageInput", "change", async (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const dataUrl = await fileToDataUrl(file);
+    clearPendingMedia();
+    pendingMedia = {
+      type: "image",
+      dataUrl,
+      mime: file.type || "image/png",
+      name: file.name || "Image",
+    };
+    showPendingMedia();
+    event.target.value = "";
+  });
+
+  bindById("recordBtn", "click", async () => {
+    if (recorder) {
+      stopRecording();
+      return;
+    }
+    clearPendingMedia();
+    await startRecording();
+  });
+
+  bindById("runBtn", "click", () => {
+    runPreview(getCodeValue() || "");
+  });
+  bindById("codeTabBtn", "click", () => setCodeTab("code"));
+  bindById("consoleTabBtn", "click", () => setCodeTab("console"));
+  bindById("saveVersionBtn", "click", saveVersion);
+  bindById("historyBtn", "click", openHistory);
+  bindById("closeHistoryBtn", "click", closeHistory);
+  bindById("restoreBtn", "click", restoreSelectedVersion);
+  bindById("newSessionBtn", "click", startNewSession);
+  bindById("resetBtn", "click", resetSession);
+
+  fetchState()
+    .then(() => {
+      updateSendButtonState();
+      updateExpandButtons();
+      refreshCodeEditorLayout();
+    })
+    .catch((error) => {
+      console.error("Initial state fetch failed:", error);
+      updateSendButtonState();
+      updateExpandButtons();
+      refreshCodeEditorLayout();
+    });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initializeApp);
+} else {
+  initializeApp();
+}
+</script>
+</body>
+</html>
