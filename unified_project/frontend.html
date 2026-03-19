@@ -259,6 +259,35 @@ button.ghost {
   line-height: 1.6;
 }
 
+.chat-loading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.chat-loading .bubble {
+  padding: 12px 16px;
+  background: #202532;
+  border-bottom-left-radius: 4px;
+  border-radius: 13px;
+  font-size: 14px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.chat-loading-dots span {
+  animation: chatLoadingDot 1.4s ease-in-out infinite both;
+}
+
+.chat-loading-dots span:nth-child(1) { animation-delay: 0s; }
+.chat-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.chat-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes chatLoadingDot {
+  0%, 80%, 100% { opacity: 0.3; }
+  40% { opacity: 1; }
+}
+
 .input-wrap {
   border-top: 1px solid var(--border);
   background: #171b24;
@@ -804,6 +833,192 @@ button.ghost {
   border-radius: 999px;
 }
 
+.instructions-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.instructions-modal.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.instructions-modal[hidden] {
+  display: none !important;
+}
+
+.instructions-modal:not([hidden]).visible {
+  display: flex;
+}
+
+.instructions-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 12, 18, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+.instructions-content {
+  position: relative;
+  z-index: 1;
+  max-width: 520px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+}
+
+.instructions-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.instructions-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.instructions-close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  line-height: 1;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.instructions-close:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.instructions-body {
+  padding: 16px 20px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.instructions-body p {
+  margin: 0 0 12px;
+}
+
+.instructions-body p:last-of-type {
+  margin-bottom: 0;
+}
+
+.instructions-body h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 18px 0 8px;
+  color: #c9d4f0;
+}
+
+.instructions-body h3:first-child {
+  margin-top: 0;
+}
+
+.instructions-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.instructions-nav a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.instructions-nav a:hover {
+  color: var(--accent-2);
+  text-decoration: underline;
+}
+
+.instructions-quick-start {
+  margin-bottom: 12px;
+}
+
+.instructions-quick-start ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.instructions-quick-start li {
+  margin-bottom: 6px;
+}
+
+.instructions-toggle {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 12px;
+}
+
+.instructions-toggle:hover {
+  color: var(--accent-2);
+  text-decoration: underline;
+}
+
+.instructions-full-guide {
+  display: none;
+}
+
+.instructions-full-guide.visible {
+  display: block;
+}
+
+.instructions-body ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.instructions-body li {
+  margin-bottom: 6px;
+}
+
+.instructions-footer {
+  padding: 14px 20px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.instructions-footer .primary {
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
 @media (max-width: 1200px) {
   .workspace {
     grid-template-columns: 1fr;
@@ -838,8 +1053,65 @@ button.ghost {
       <span id="phaseBadge" class="phase-badge">Phase: Emotional Discovery</span>
       <button id="newSessionBtn" class="ghost">New Session</button>
       <button id="resetBtn" class="ghost">Reset</button>
+      <button id="helpBtn" class="ghost" title="View instructions">?</button>
     </div>
   </header>
+
+  <div id="instructionsModal" class="instructions-modal" role="dialog" aria-labelledby="instructionsTitle" aria-modal="true" hidden>
+    <div class="instructions-backdrop"></div>
+    <div class="instructions-content">
+      <div class="instructions-header">
+        <h2 id="instructionsTitle">Welcome to Emotion Sketch Studio</h2>
+        <button id="closeInstructionsBtn" class="instructions-close" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="instructions-body">
+        <nav class="instructions-nav" aria-label="Jump to section">
+          <a href="#how-it-works" class="instructions-jump">How it works</a>
+          <a href="#profile" class="instructions-jump">Profile</a>
+          <a href="#version-history" class="instructions-jump">Version history</a>
+          <a href="#tips" class="instructions-jump">Tips</a>
+        </nav>
+
+        <div class="instructions-quick-start">
+          <h3>Quick start</h3>
+          <ul>
+            <li><strong>Share</strong> a memory or feeling in Chat (text, image, or audio).</li>
+            <li><strong>Explore</strong> with follow-up questions: use template chips to reply.</li>
+            <li><strong>Create</strong> by saying "help me implement" or similar when ready.</li>
+            <li><strong>Refine</strong> in the Code panel: Run, Save Version, and use Version History.</li>
+            <li><strong>Edit</strong> the Profile panel to adjust emotion or artistic direction, then Save Version.</li>
+          </ul>
+        </div>
+
+        <button id="toggleFullGuide" class="instructions-toggle" type="button">View full guide</button>
+
+        <div id="instructionsFullGuide" class="instructions-full-guide">
+          <h3 id="how-it-works">How it works</h3>
+          <p><strong>Step 1: Share</strong><br>In the Chat panel, describe a memory or feeling in your own words. You can also attach an image (📷) to show a mood or scene, or record audio (🎤) to describe it verbally.</p>
+          <p><strong>Step 2: Explore</strong><br>The assistant will ask follow-up questions to understand your emotions. Use the template chips above the input to jump-start replies (e.g., "The setting was…", "2–3 emojis that fit…").</p>
+          <p><strong>Step 3: Create</strong><br>When you're ready, say something like "help me implement" or "I have a good sense of the emotion." The assistant will generate p5.js code that appears in the Code panel.</p>
+          <p><strong>Step 4: Refine</strong><br>Edit the code directly in the Code panel. Click <strong>Run</strong> to preview changes. Click <strong>Save Version</strong> to keep a snapshot of your current code and profile. Use <strong>Version History</strong> to browse and restore earlier versions.</p>
+
+          <h3 id="profile">Profile panel</h3>
+          <p>The Profile panel shows the assistant's understanding of your emotions and artistic direction. You can edit it directly: <strong>Emotion Profile</strong> (the assistant's summary of your emotions) and <strong>Artistic Profile</strong> (the visual direction for your sketch). Your edits are saved when you click <strong>Save Version</strong> in the Code panel—that creates a new version that includes your profile changes.</p>
+
+          <h3 id="version-history">Version history</h3>
+          <p>Click <strong>View Version History</strong> to open the edit history graph. You can browse all saved versions and how they connect, click a version to preview its code and profile without restoring, and use <strong>Restore to this version</strong> to bring back that version's code and profile. Use this to try different directions and return to earlier ideas.</p>
+
+          <h3 id="tips">Tips</h3>
+          <ul>
+            <li>You can switch between exploring emotions and generating code at any time.</li>
+            <li>The Profile panel shows the assistant's confidence in understanding your emotions.</li>
+            <li>If something feels off, say so—the assistant is designed to correct and iterate.</li>
+            <li>When the assistant proposes a new visual direction, you can Accept, Modify, or ask for More options.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="instructions-footer">
+        <button id="gotItBtn" class="primary" type="button">Got it</button>
+      </div>
+    </div>
+  </div>
 
   <div id="fullscreenBackdrop" class="fullscreen-backdrop" hidden></div>
 
@@ -984,6 +1256,7 @@ button.ghost {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
 <script>
 const API = "/api";
+const STORAGE_KEY_INSTRUCTIONS = "emotion-sketch-seen-instructions";
 const BRANCH_COLORS = ["#5f8df7", "#e8a742", "#4dd4a6", "#e76891", "#8e79ff", "#66d5d5", "#f5c44d"];
 const ART_DECISION_ACCEPT = "Art Direction Decision: Accept";
 const ART_DECISION_MODIFY = "Art Direction Decision: Modify";
@@ -1277,6 +1550,32 @@ function fileToDataUrl(fileOrBlob) {
   });
 }
 
+function hasSeenInstructions() {
+  return localStorage.getItem(STORAGE_KEY_INSTRUCTIONS) === "true";
+}
+
+function markInstructionsSeen() {
+  localStorage.setItem(STORAGE_KEY_INSTRUCTIONS, "true");
+}
+
+function showInstructionsModal() {
+  const modal = $("instructionsModal");
+  if (!modal) return;
+  modal.hidden = false;
+  modal.classList.add("visible");
+  modal.setAttribute("aria-hidden", "false");
+  $("gotItBtn")?.focus();
+}
+
+function hideInstructionsModal() {
+  const modal = $("instructionsModal");
+  if (!modal) return;
+  modal.hidden = true;
+  modal.classList.remove("visible");
+  modal.setAttribute("aria-hidden", "true");
+  $("helpBtn")?.focus();
+}
+
 function updateExpandButtons() {
   document.querySelectorAll(".pane-expand-btn").forEach((btn) => {
     const target = btn.dataset.paneTarget;
@@ -1320,6 +1619,28 @@ function openFullscreenPane(paneId) {
   }
   refreshCodeEditorLayout();
   updateExpandButtons();
+}
+
+function showChatLoading() {
+  const container = $("messages");
+  const existing = document.getElementById("chatLoadingIndicator");
+  if (!container || existing) return;
+  container.querySelector(".empty-hint")?.remove();
+  const row = document.createElement("div");
+  row.id = "chatLoadingIndicator";
+  row.className = "message chat-loading";
+  row.innerHTML = `
+    <div class="avatar assistant-avatar">✦</div>
+    <div class="bubble">
+      Thinking<span class="chat-loading-dots"><span>.</span><span>.</span><span>.</span></span>
+    </div>
+  `;
+  container.appendChild(row);
+  container.scrollTop = container.scrollHeight;
+}
+
+function hideChatLoading() {
+  document.getElementById("chatLoadingIndicator")?.remove();
 }
 
 function updateSendButtonState() {
@@ -1749,6 +2070,7 @@ async function sendChat() {
 
   isSending = true;
   updateSendButtonState();
+  showChatLoading();
   try {
     const response = await fetch(`${API}/chat`, {
       method: "POST",
@@ -1778,6 +2100,7 @@ async function sendChat() {
     appendConsoleLog("error", `Network error: ${error.message}`);
     alert(`Network error: ${error.message}`);
   } finally {
+    hideChatLoading();
     isSending = false;
     updateSendButtonState();
   }
@@ -1914,7 +2237,12 @@ function initializeApp() {
 
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
-      closeFullscreenPane();
+      const modal = $("instructionsModal");
+      if (modal && !modal.hidden) {
+        hideInstructionsModal();
+      } else {
+        closeFullscreenPane();
+      }
     }
   });
 
@@ -1979,6 +2307,40 @@ function initializeApp() {
   bindById("restoreBtn", "click", restoreSelectedVersion);
   bindById("newSessionBtn", "click", startNewSession);
   bindById("resetBtn", "click", resetSession);
+  bindById("helpBtn", "click", showInstructionsModal);
+  bindById("gotItBtn", "click", () => {
+    markInstructionsSeen();
+    hideInstructionsModal();
+  });
+  bindById("closeInstructionsBtn", "click", hideInstructionsModal);
+  document.querySelector(".instructions-backdrop")?.addEventListener("click", hideInstructionsModal);
+
+  bindById("toggleFullGuide", "click", () => {
+    const guide = $("instructionsFullGuide");
+    const btn = $("toggleFullGuide");
+    if (guide?.classList.toggle("visible")) {
+      btn.textContent = "Show less";
+    } else {
+      btn.textContent = "View full guide";
+    }
+  });
+
+  document.querySelectorAll(".instructions-jump").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      const guide = $("instructionsFullGuide");
+      const btn = $("toggleFullGuide");
+      if (guide && !guide.classList.contains("visible")) {
+        guide.classList.add("visible");
+        if (btn) btn.textContent = "Show less";
+      }
+      const id = link.getAttribute("href")?.slice(1);
+      const target = id ? document.getElementById(id) : null;
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+
+  requestAnimationFrame(() => showInstructionsModal());
 
   fetchState()
     .then(() => {
