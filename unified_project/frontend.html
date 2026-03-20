@@ -237,6 +237,60 @@ button.ghost {
   border-bottom-left-radius: 4px;
 }
 
+.assistant .bubble p,
+.assistant .bubble ul,
+.assistant .bubble ol,
+.assistant .bubble h3,
+.assistant .bubble h4 {
+  margin: 0;
+}
+
+.assistant .bubble p + p,
+.assistant .bubble p + ul,
+.assistant .bubble p + ol,
+.assistant .bubble ul + p,
+.assistant .bubble ol + p,
+.assistant .bubble h3 + p,
+.assistant .bubble h4 + p,
+.assistant .bubble ul + ul,
+.assistant .bubble ol + ol {
+  margin-top: 8px;
+}
+
+.assistant .bubble ul,
+.assistant .bubble ol {
+  padding-left: 18px;
+}
+
+.assistant .bubble li + li {
+  margin-top: 4px;
+}
+
+.assistant .bubble h3,
+.assistant .bubble h4 {
+  font-size: 13px;
+  color: #f2f5ff;
+  letter-spacing: 0.01em;
+}
+
+.assistant .bubble strong {
+  font-weight: 700;
+  color: #08111f;
+  background: linear-gradient(135deg, #d8e6ff, #8fb6ff);
+  padding: 1px 6px;
+  border-radius: 5px;
+  box-shadow: 0 0 0 1px rgba(201, 222, 255, 0.28), 0 2px 10px rgba(95, 141, 247, 0.28);
+}
+
+.assistant .bubble code {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  background: rgba(12, 16, 24, 0.72);
+  border: 1px solid rgba(88, 101, 136, 0.45);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+
 .user .bubble {
   background: #2f4477;
   border-bottom-right-radius: 4px;
@@ -1416,6 +1470,73 @@ function escapeHtml(text) {
     .replace(/>/g, "&gt;");
 }
 
+function renderPlainText(text) {
+  return escapeHtml(text).replace(/\n/g, "<br>");
+}
+
+function renderInlineMarkdown(text) {
+  return (text || "")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+function renderAssistantMarkdown(text) {
+  const lines = escapeHtml(text || "").replace(/\r\n?/g, "\n").split("\n");
+  const html = [];
+  let listType = null;
+
+  const closeList = () => {
+    if (listType) {
+      html.push(`</${listType}>`);
+      listType = null;
+    }
+  };
+
+  lines.forEach((rawLine) => {
+    const line = rawLine.trim();
+    if (!line) {
+      closeList();
+      return;
+    }
+
+    const heading = line.match(/^(#{1,4})\s+(.*)$/);
+    if (heading) {
+      closeList();
+      const level = Math.min(4, heading[1].length + 2);
+      html.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
+      return;
+    }
+
+    const unordered = line.match(/^[-*]\s+(.*)$/);
+    if (unordered) {
+      if (listType !== "ul") {
+        closeList();
+        listType = "ul";
+        html.push("<ul>");
+      }
+      html.push(`<li>${renderInlineMarkdown(unordered[1])}</li>`);
+      return;
+    }
+
+    const ordered = line.match(/^\d+\.\s+(.*)$/);
+    if (ordered) {
+      if (listType !== "ol") {
+        closeList();
+        listType = "ol";
+        html.push("<ol>");
+      }
+      html.push(`<li>${renderInlineMarkdown(ordered[1])}</li>`);
+      return;
+    }
+
+    closeList();
+    html.push(`<p>${renderInlineMarkdown(line)}</p>`);
+  });
+
+  closeList();
+  return html.join("") || `<p>${renderPlainText(text || "")}</p>`;
+}
+
 function formatPhase(phase) {
   if (phase === "code_generation") return "Phase: Code Generation";
   return "Phase: Emotional Discovery";
@@ -2038,6 +2159,8 @@ function createMessageRow(msg, options = {}) {
     bubble.innerHTML = `<img src="${msg.content}" alt="uploaded image" />`;
   } else if (msg.type === "audio") {
     bubble.innerHTML = `<audio controls src="${msg.content}"></audio>`;
+  } else if (msg.role === "assistant") {
+    bubble.innerHTML = renderAssistantMarkdown(msg.content || "");
   } else {
     bubble.textContent = msg.content || "";
   }
@@ -2206,7 +2329,7 @@ function renderMessages(messages) {
     if (msg.type === "system") {
       const row = document.createElement("div");
       row.className = "message system";
-      row.innerHTML = `<div class="bubble">${escapeHtml(msg.content)}</div>`;
+      row.innerHTML = `<div class="bubble">${renderPlainText(msg.content || "")}</div>`;
       container.appendChild(row);
       return;
     }

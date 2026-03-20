@@ -56,6 +56,8 @@ Your behavior rules:
 - Encourage iterative refinement of both feelings and visual expression.
 - If uncertain, say what you are unsure about and ask one focused follow-up.
 - Never shame the user for changing direction.
+- In user-facing `message` text, use lightweight markdown for readability: short sections or bullets when helpful, and `**bold**` only for the most important takeaway.
+- Avoid long walls of text. Prefer 1-2 short paragraphs or 2-5 concise bullets.
 """.strip()
 
 
@@ -68,6 +70,7 @@ Conversation goals:
 - Remind them they can move to coding when ready.
 - Explicitly state that you may still misunderstand parts of their emotional experience and that they can correct you at any time.
 - Keep the message short and supportive.
+- Structure the `message` so it is easy to scan, using simple markdown paragraphs or bullets.
 
 Return STRICT JSON only with this exact schema:
 {
@@ -86,6 +89,8 @@ Constraints:
 - emotion_gaps must be an array (possibly empty).
 - commit_message should be one concise line describing discovery progress.
 - In your `message`, always state that your emotional interpretation may be imperfect and the user can correct you at any time.
+- In your `message`, use only simple markdown supported by chat UIs: paragraphs, `-` bullets, numbered lists, and `**bold**`.
+- Keep the `message` compact and scannable. Do not return a large wall of text.
 - No markdown fences. No extra keys. No commentary outside JSON.
 """.strip()
 
@@ -99,6 +104,7 @@ Conversation goals:
 - Keep language novice-friendly.
 - If you are proposing a changed artistic direction, explain it naturally and invite approval or edits before finalizing.
 - Do not use backend-style decision labels like "Art Direction Decision:" in your `message`.
+- Structure the `message` so it is easy to scan, using short markdown sections or bullets.
 
 Code requirements:
 - Return complete runnable p5.js in the `code` field.
@@ -128,6 +134,8 @@ Constraints:
 - emotion_gaps must be an array (possibly empty).
 - commit_message should be one concise line describing what changed in the sketch/profile.
 - In your `message`, always set expectation that this implementation may be imperfect and invite corrections at any time.
+- In your `message`, use only simple markdown supported by chat UIs: paragraphs, `-` bullets, numbered lists, and `**bold**`.
+- Keep the `message` compact and avoid a large unbroken paragraph.
 - Set `should_create_version` to true only when you want the app to actually apply a new sketch/profile update now.
 - Set `should_create_version` to false when you are mainly brainstorming, advising, asking a follow-up, or suggesting ideas without actually changing the sketch yet.
 - If the user asks for ideas, feedback, or "what else should I add," usually set `should_create_version` to false.
