@@ -1103,7 +1103,7 @@ button.ghost {
             <li>You can switch between exploring emotions and generating code at any time.</li>
             <li>The Profile panel shows the assistant's confidence in understanding your emotions.</li>
             <li>If something feels off, say so—the assistant is designed to correct and iterate.</li>
-            <li>When the assistant proposes a new visual direction, you can Accept, Modify, or ask for More options.</li>
+            <li>When the assistant proposes a new visual direction, you can Accept, ask for More options, or use Modify to describe the art direction you want in your own words.</li>
           </ul>
         </div>
       </div>
@@ -1282,7 +1282,7 @@ const TEMPLATE_MESSAGES = {
 };
 const INITIAL_ART_DIRECTION_DECISION_TEMPLATES = [
   { label: "Accept Direction", text: ART_DECISION_ACCEPT, autoSend: true, decision: true },
-  { label: "Modify Direction", text: ART_DECISION_MODIFY, autoSend: true, decision: true },
+  { label: "Modify / Describe Idea", text: ART_DECISION_MODIFY, autoSend: true, decision: true },
   { label: "More Options", text: ART_DECISION_MORE, autoSend: true, decision: true },
 ];
 
@@ -1348,7 +1348,7 @@ function buildAlternativeDecisionTemplates(alternatives) {
     });
   }
   templates.push({ label: "More options", text: ART_DECISION_MORE, autoSend: true, decision: true });
-  templates.push({ label: "Modify", text: ART_DECISION_MODIFY, autoSend: true, decision: true });
+  templates.push({ label: "Modify / Describe Idea", text: ART_DECISION_MODIFY, autoSend: true, decision: true });
   return templates;
 }
 
