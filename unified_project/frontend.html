@@ -191,6 +191,10 @@ button.ghost {
   gap: 10px;
 }
 
+.message.optimistic.user {
+  animation: messageSendIn 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
 .message.user {
   flex-direction: row-reverse;
 }
@@ -263,33 +267,69 @@ button.ghost {
   line-height: 1.6;
 }
 
-.chat-loading {
+.chat-loading,
+.chat-typing {
   display: flex;
   align-items: flex-start;
   gap: 10px;
 }
 
-.chat-loading .bubble {
+.chat-loading .bubble,
+.chat-typing .bubble {
   padding: 12px 16px;
   background: #202532;
   border-bottom-left-radius: 4px;
   border-radius: 13px;
-  font-size: 14px;
-  color: var(--muted);
-  text-align: center;
+  min-width: 64px;
 }
 
-.chat-loading-dots span {
-  animation: chatLoadingDot 1.4s ease-in-out infinite both;
+.chat-typing .bubble {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.chat-loading-dots span:nth-child(1) { animation-delay: 0s; }
-.chat-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
-.chat-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+.typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 
-@keyframes chatLoadingDot {
-  0%, 80%, 100% { opacity: 0.3; }
-  40% { opacity: 1; }
+.typing-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #95a7d8;
+  opacity: 0.28;
+  animation: typingBubblePulse 1.2s ease-in-out infinite;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: 0s; }
+.typing-dots span:nth-child(2) { animation-delay: 0.18s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes messageSendIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes typingBubblePulse {
+  0%, 80%, 100% {
+    opacity: 0.28;
+    transform: translateY(0) scale(0.88);
+    box-shadow: 0 0 0 rgba(126, 165, 255, 0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1);
+    box-shadow: 0 0 14px rgba(126, 165, 255, 0.55);
+  }
 }
 
 .input-wrap {
@@ -1364,6 +1404,8 @@ let consoleEntries = [];
 let tourStepIndex = -1;
 let tourRepositionTimer = null;
 let tourHideTimer = null;
+let pendingOutgoingMessage = null;
+let pendingAssistantTyping = false;
 
 const $ = (id) => document.getElementById(id);
 
@@ -1931,25 +1973,92 @@ function openFullscreenPane(paneId) {
 }
 
 function showChatLoading() {
-  const container = $("messages");
-  const existing = document.getElementById("chatLoadingIndicator");
-  if (!container || existing) return;
-  container.querySelector(".empty-hint")?.remove();
-  const row = document.createElement("div");
-  row.id = "chatLoadingIndicator";
-  row.className = "message chat-loading";
-  row.innerHTML = `
-    <div class="avatar assistant-avatar">✦</div>
-    <div class="bubble">
-      Thinking<span class="chat-loading-dots"><span>.</span><span>.</span><span>.</span></span>
-    </div>
-  `;
-  container.appendChild(row);
-  container.scrollTop = container.scrollHeight;
+  pendingAssistantTyping = true;
+  renderMessages(appState && Array.isArray(appState.messages) ? appState.messages : []);
 }
 
 function hideChatLoading() {
-  document.getElementById("chatLoadingIndicator")?.remove();
+  pendingAssistantTyping = false;
+  renderMessages(appState && Array.isArray(appState.messages) ? appState.messages : []);
+}
+
+function clonePendingMediaForDraft(media) {
+  if (!media) return null;
+  return {
+    type: media.type,
+    dataUrl: media.dataUrl,
+    mime: media.mime,
+    name: media.name,
+  };
+}
+
+function buildOptimisticMessage(text, media) {
+  if (text) {
+    return { role: "user", type: "text", content: text };
+  }
+  if (media && media.type === "image") {
+    return { role: "user", type: "image", content: media.dataUrl };
+  }
+  if (media && media.type === "audio") {
+    return { role: "user", type: "audio", content: media.dataUrl };
+  }
+  return null;
+}
+
+function restoreComposerDraft(text, media) {
+  $("chatInput").value = text || "";
+  $("chatInput").style.height = "auto";
+  $("chatInput").style.height = `${Math.min($("chatInput").scrollHeight, 120)}px`;
+  pendingMedia = media ? { ...media } : null;
+  showPendingMedia();
+  updateSendButtonState();
+}
+
+function clearComposerDraft() {
+  $("chatInput").value = "";
+  $("chatInput").style.height = "auto";
+  clearPendingMedia();
+  updateSendButtonState();
+}
+
+function createMessageRow(msg, options = {}) {
+  const row = document.createElement("div");
+  row.className = `message ${msg.role || ""}`.trim();
+  if (options.optimistic) {
+    row.classList.add("optimistic");
+  }
+
+  const avatar = document.createElement("div");
+  avatar.className = `avatar ${msg.role === "assistant" ? "assistant-avatar" : "user-avatar"}`;
+  avatar.textContent = msg.role === "assistant" ? "✦" : "👤";
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  if (msg.type === "image") {
+    bubble.innerHTML = `<img src="${msg.content}" alt="uploaded image" />`;
+  } else if (msg.type === "audio") {
+    bubble.innerHTML = `<audio controls src="${msg.content}"></audio>`;
+  } else {
+    bubble.textContent = msg.content || "";
+  }
+
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+  return row;
+}
+
+function createTypingIndicatorRow() {
+  const row = document.createElement("div");
+  row.className = "message chat-typing assistant";
+  row.innerHTML = `
+    <div class="avatar assistant-avatar">✦</div>
+    <div class="bubble" aria-label="AI is typing">
+      <span class="typing-dots" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </span>
+    </div>
+  `;
+  return row;
 }
 
 function updateSendButtonState() {
@@ -2082,8 +2191,10 @@ function stopRecording() {
 function renderMessages(messages) {
   const container = $("messages");
   container.innerHTML = "";
+  const actualMessages = Array.isArray(messages) ? messages : [];
+  const hasPendingUi = !!pendingOutgoingMessage || pendingAssistantTyping;
 
-  if (!messages || !messages.length) {
+  if (!actualMessages.length && !hasPendingUi) {
     const hint = document.createElement("div");
     hint.className = "empty-hint";
     hint.textContent = "Share a personal moment, upload an image, or record audio to begin.";
@@ -2091,7 +2202,7 @@ function renderMessages(messages) {
     return;
   }
 
-  messages.forEach((msg) => {
+  actualMessages.forEach((msg) => {
     if (msg.type === "system") {
       const row = document.createElement("div");
       row.className = "message system";
@@ -2099,28 +2210,16 @@ function renderMessages(messages) {
       container.appendChild(row);
       return;
     }
-
-    const row = document.createElement("div");
-    row.className = `message ${msg.role}`;
-
-    const avatar = document.createElement("div");
-    avatar.className = `avatar ${msg.role === "assistant" ? "assistant-avatar" : "user-avatar"}`;
-    avatar.textContent = msg.role === "assistant" ? "✦" : "👤";
-
-    const bubble = document.createElement("div");
-    bubble.className = "bubble";
-    if (msg.type === "image") {
-      bubble.innerHTML = `<img src="${msg.content}" alt="uploaded image" />`;
-    } else if (msg.type === "audio") {
-      bubble.innerHTML = `<audio controls src="${msg.content}"></audio>`;
-    } else {
-      bubble.textContent = msg.content || "";
-    }
-
-    row.appendChild(avatar);
-    row.appendChild(bubble);
-    container.appendChild(row);
+    container.appendChild(createMessageRow(msg));
   });
+
+  if (pendingOutgoingMessage) {
+    container.appendChild(createMessageRow(pendingOutgoingMessage, { optimistic: true }));
+  }
+
+  if (pendingAssistantTyping) {
+    container.appendChild(createTypingIndicatorRow());
+  }
 
   container.scrollTop = container.scrollHeight;
 }
@@ -2368,6 +2467,8 @@ async function sendChat() {
   if (isSending || isRecording) return;
   const text = $("chatInput").value.trim();
   if (!text && !pendingMedia) return;
+  const draftMedia = clonePendingMediaForDraft(pendingMedia);
+  const optimisticMessage = buildOptimisticMessage(text, draftMedia);
 
   const payload = { session_id: sessionId, message: text };
   if (pendingMedia) {
@@ -2381,7 +2482,8 @@ async function sendChat() {
   }
 
   isSending = true;
-  updateSendButtonState();
+  pendingOutgoingMessage = optimisticMessage;
+  clearComposerDraft();
   showChatLoading();
   try {
     const response = await fetch(`${API}/chat`, {
@@ -2391,6 +2493,10 @@ async function sendChat() {
     });
     const data = await response.json();
     if (!response.ok) {
+      pendingOutgoingMessage = null;
+      pendingAssistantTyping = false;
+      restoreComposerDraft(text, draftMedia);
+      renderMessages(appState && Array.isArray(appState.messages) ? appState.messages : []);
       appendConsoleLog("error", data.error || "Chat request failed.");
       alert(data.error || "Chat request failed.");
       return;
@@ -2401,14 +2507,17 @@ async function sendChat() {
       appendConsoleLog("warn", "LLM service was unavailable for this turn. A fallback response was used.");
     }
 
-    $("chatInput").value = "";
-    $("chatInput").style.height = "auto";
-    clearPendingMedia();
+    pendingOutgoingMessage = null;
+    pendingAssistantTyping = false;
     renderState(data.state);
     if (isHistoryOpen) {
       await fetchHistory();
     }
   } catch (error) {
+    pendingOutgoingMessage = null;
+    pendingAssistantTyping = false;
+    restoreComposerDraft(text, draftMedia);
+    renderMessages(appState && Array.isArray(appState.messages) ? appState.messages : []);
     appendConsoleLog("error", `Network error: ${error.message}`);
     alert(`Network error: ${error.message}`);
   } finally {
