@@ -1017,6 +1017,24 @@ button.ghost {
   font-weight: 700;
 }
 
+.history-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-help {
+  border: 1px solid var(--border);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #121722;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+}
+
 .close-history {
   border: 1px solid var(--border);
   width: 38px;
@@ -1190,6 +1208,32 @@ button.ghost {
   margin: 0;
 }
 
+.tour-body-extra {
+  margin-top: 4px;
+}
+
+.tour-branch-demo {
+  padding: 12px;
+  border: 1px solid #33405a;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #141a25, #101621);
+  overflow: hidden;
+}
+
+.tour-branch-demo svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 136px;
+}
+
+.tour-branch-caption {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #c8d5f3;
+}
+
 .tour-actions {
   display: flex;
   align-items: center;
@@ -1357,7 +1401,10 @@ button.ghost {
       <aside id="historyPane" class="history-pane">
         <div class="history-head">
           <h3>Edit History</h3>
-          <button id="closeHistoryBtn" class="close-history" type="button">×</button>
+          <div class="history-head-actions">
+            <button id="historyHelpBtn" class="history-help" type="button" title="Version history tutorial">?</button>
+            <button id="closeHistoryBtn" class="close-history" type="button">×</button>
+          </div>
         </div>
         <div id="historyGraph" class="history-graph">
           <svg id="historySvg"></svg>
@@ -1449,6 +1496,7 @@ button.ghost {
 <script>
 const API = "/api";
 const STORAGE_KEY_INSTRUCTIONS = "emotion-sketch-seen-instructions";
+const STORAGE_KEY_HISTORY_TUTORIAL = "emotion-sketch-seen-history-tutorial";
 const BRANCH_COLORS = ["#5f8df7", "#e8a742", "#4dd4a6", "#e76891", "#8e79ff", "#66d5d5", "#f5c44d"];
 const ART_DECISION_ACCEPT = "Art Direction Decision: Accept";
 const ART_DECISION_MODIFY = "Art Direction Decision: Modify";
@@ -1478,6 +1526,23 @@ const TOUR_WELCOME_COPY = [
   "This studio helps you turn emotions, memories, and lived experiences into expressive p5.js sketches with an AI collaborator.",
   "Take a quick tour to see how the chat, profile, preview, and versioning tools work together.",
 ];
+const HISTORY_BRANCH_TOUR_HTML = `
+  <div class="tour-branch-demo">
+    <svg viewBox="0 0 320 122" aria-hidden="true">
+      <path d="M42 38 C88 38, 122 38, 156 38" fill="none" stroke="#76a2ff" stroke-width="3" stroke-linecap="round"></path>
+      <path d="M156 38 C192 38, 224 38, 258 38" fill="none" stroke="#76a2ff" stroke-width="3" stroke-linecap="round"></path>
+      <path d="M156 38 C194 45, 220 68, 258 90" fill="none" stroke="#4dd4a6" stroke-width="3" stroke-linecap="round"></path>
+      <circle cx="42" cy="38" r="7" fill="#76a2ff"></circle>
+      <circle cx="156" cy="38" r="7" fill="#ffffff" stroke="#76a2ff" stroke-width="3"></circle>
+      <circle cx="258" cy="38" r="7" fill="#76a2ff"></circle>
+      <circle cx="258" cy="90" r="7" fill="#4dd4a6"></circle>
+      <text x="22" y="18" fill="#9fb1d8" font-size="11" font-weight="600">Original branch</text>
+      <text x="294" y="23" text-anchor="end" fill="#9fb1d8" font-size="11" font-weight="600">Keep going here</text>
+      <text x="294" y="112" text-anchor="end" fill="#9fe3c7" font-size="11" font-weight="600">New branch after restore</text>
+    </svg>
+    <div class="tour-branch-caption"><strong>Example:</strong> if you restore an older version and keep working from there, the app creates a new branch instead of overwriting the original path.</div>
+  </div>
+`;
 const TOUR_STEPS = [
   {
     target: "#chatPanel",
@@ -1586,6 +1651,57 @@ const TOUR_STEPS = [
     ],
   },
 ];
+const HISTORY_TOUR_STEPS = [
+  {
+    target: "#historyPane",
+    placement: "right",
+    padding: 16,
+    title: "Version History Overview",
+    body: [
+      "Whenever the system changes its understanding of your emotion, artistic style, or code, it automatically saves a version of that emotion, artistic profile, and sketch.",
+      "This is where you can browse that saved version history.",
+    ],
+  },
+  {
+    target: "#historyGraph",
+    placement: "right",
+    padding: 14,
+    title: "Preview A Version",
+    body: [
+      "Click any node in the graph to preview that version.",
+      "The emotion profile, artistic profile, code, and preview will update to match it, but you have not restored it yet. This is only a preview.",
+    ],
+  },
+  {
+    target: "#restoreBtn",
+    placement: "top",
+    padding: 14,
+    title: "Restore A Previous Version",
+    body: [
+      "If you do want to go back to an earlier version, first click the node you want, then use Restore to this version.",
+    ],
+  },
+  {
+    target: "#historyGraph",
+    placement: "right",
+    padding: 14,
+    title: "Branches Keep Earlier Work Safe",
+    body: [
+      "If you restore an older version and then keep making changes, the app creates a branch.",
+      "That means your earlier path is still preserved, and you can return to the original branch later at any time.",
+    ],
+    html: HISTORY_BRANCH_TOUR_HTML,
+  },
+  {
+    target: "#closeHistoryBtn",
+    placement: "left",
+    padding: 12,
+    title: "Close Without Restoring",
+    body: [
+      "If you are just previewing and do not want to restore anything, click this X to leave version history.",
+    ],
+  },
+];
 
 let sessionId = null;
 let appState = null;
@@ -1610,6 +1726,7 @@ let tourRepositionTimer = null;
 let tourHideTimer = null;
 let pendingOutgoingMessage = null;
 let pendingAssistantTyping = false;
+let activeTourKind = "app";
 let isDownloadMenuOpen = false;
 let previewExportRequests = new Map();
 
@@ -2098,6 +2215,47 @@ function markInstructionsSeen() {
   localStorage.setItem(STORAGE_KEY_INSTRUCTIONS, "true");
 }
 
+function hasSeenHistoryTutorial() {
+  return localStorage.getItem(STORAGE_KEY_HISTORY_TUTORIAL) === "true";
+}
+
+function markHistoryTutorialSeen() {
+  localStorage.setItem(STORAGE_KEY_HISTORY_TUTORIAL, "true");
+}
+
+function getTourConfig(kind = activeTourKind) {
+  if (kind === "history") {
+    return {
+      kind: "history",
+      introTitle: "",
+      introCopy: null,
+      introLabel: "Version History",
+      steps: HISTORY_TOUR_STEPS,
+      focusId: "historyHelpBtn",
+    };
+  }
+  return {
+    kind: "app",
+    introTitle: "Welcome to Emotion Sketch Studio",
+    introCopy: TOUR_WELCOME_COPY,
+    introLabel: "Welcome",
+    steps: TOUR_STEPS,
+    focusId: "helpBtn",
+  };
+}
+
+function hasSeenTour(kind = activeTourKind) {
+  return kind === "history" ? hasSeenHistoryTutorial() : hasSeenInstructions();
+}
+
+function markTourSeen(kind = activeTourKind) {
+  if (kind === "history") {
+    markHistoryTutorialSeen();
+    return;
+  }
+  markInstructionsSeen();
+}
+
 function isTourOpen() {
   const overlay = $("tourOverlay");
   return !!(overlay && !overlay.hidden && overlay.getAttribute("aria-hidden") !== "true");
@@ -2114,7 +2272,7 @@ function clearTourTimers() {
   }
 }
 
-function setTourBody(paragraphs) {
+function setTourBody(paragraphs, html = "") {
   const body = $("tourBody");
   if (!body) return;
   body.innerHTML = "";
@@ -2124,6 +2282,12 @@ function setTourBody(paragraphs) {
     p.textContent = line;
     body.appendChild(p);
   });
+  if (html) {
+    const extra = document.createElement("div");
+    extra.className = "tour-body-extra";
+    extra.innerHTML = html;
+    body.appendChild(extra);
+  }
 }
 
 function getTourTarget(step) {
@@ -2242,7 +2406,7 @@ function positionTourCard(targetRect, preferredPlacement) {
 
 function positionActiveTourStep() {
   if (!isTourOpen() || tourStepIndex < 0) return;
-  const step = TOUR_STEPS[tourStepIndex];
+  const step = getTourConfig().steps[tourStepIndex];
   const target = getTourTarget(step);
   if (!target) {
     hideTourSpotlight();
@@ -2269,6 +2433,8 @@ function positionActiveTourStep() {
 }
 
 function renderTourStep() {
+  const config = getTourConfig();
+  const steps = config.steps;
   const overlay = $("tourOverlay");
   const stepLabel = $("tourStepLabel");
   const title = $("tourTitle");
@@ -2276,37 +2442,48 @@ function renderTourStep() {
   const backBtn = $("tourBackBtn");
   if (!overlay || !stepLabel || !title || !nextBtn || !backBtn) return;
 
-  if (tourStepIndex < 0) {
+  if (tourStepIndex < 0 && config.introCopy) {
     overlay.classList.add("welcome-mode");
-    stepLabel.textContent = "Welcome";
-    title.textContent = "Welcome to Emotion Sketch Studio";
-    setTourBody(TOUR_WELCOME_COPY);
+    stepLabel.textContent = config.introLabel;
+    title.textContent = config.introTitle;
+    setTourBody(config.introCopy);
     nextBtn.textContent = "Enter";
     backBtn.textContent = "Back";
+    backBtn.disabled = false;
     hideTourSpotlight();
     positionTourCard(null, "center");
     requestAnimationFrame(() => nextBtn.focus());
     return;
   }
 
-  const step = TOUR_STEPS[tourStepIndex];
+  const step = steps[tourStepIndex];
+  if (!step) {
+    closeTutorial({ markSeen: true, focusHelp: true });
+    return;
+  }
   overlay.classList.remove("welcome-mode");
-  stepLabel.textContent = `Step ${tourStepIndex + 1} of ${TOUR_STEPS.length}`;
+  stepLabel.textContent = `Step ${tourStepIndex + 1} of ${steps.length}`;
   title.textContent = step.title;
-  setTourBody(step.body);
-  nextBtn.textContent = tourStepIndex === TOUR_STEPS.length - 1 ? "Finish" : "Next";
+  setTourBody(step.body, step.html || "");
+  nextBtn.textContent = tourStepIndex === steps.length - 1 ? "Finish" : "Next";
   backBtn.textContent = "Back";
+  backBtn.disabled = !config.introCopy && tourStepIndex === 0;
   requestAnimationFrame(() => {
     positionActiveTourStep();
     nextBtn.focus();
   });
 }
 
-function openTutorial() {
-  closeHistory();
+function openTutorial(kind = "app") {
+  activeTourKind = kind;
+  if (kind === "app") {
+    closeHistory();
+  }
   closeFullscreenPane();
+  closeDownloadMenu();
   clearTourTimers();
-  tourStepIndex = -1;
+  const config = getTourConfig(kind);
+  tourStepIndex = config.introCopy ? -1 : 0;
   const overlay = $("tourOverlay");
   if (!overlay) return;
   overlay.hidden = false;
@@ -2318,12 +2495,14 @@ function openTutorial() {
 }
 
 function closeTutorial(options = {}) {
+  const closingKind = activeTourKind;
+  const config = getTourConfig(closingKind);
   const { markSeen = false, focusHelp = true } = options;
   clearTourTimers();
   const overlay = $("tourOverlay");
   if (!overlay) return;
   if (markSeen) {
-    markInstructionsSeen();
+    markTourSeen(closingKind);
   }
   overlay.classList.remove("visible");
   overlay.setAttribute("aria-hidden", "true");
@@ -2335,19 +2514,21 @@ function closeTutorial(options = {}) {
   }, 220);
   if (focusHelp) {
     requestAnimationFrame(() => {
-      $("helpBtn")?.focus();
+      $(config.focusId)?.focus();
     });
   }
 }
 
 function nextTourStep() {
-  if (tourStepIndex < 0) {
-    markInstructionsSeen();
+  const config = getTourConfig();
+  const steps = config.steps;
+  if (tourStepIndex < 0 && config.introCopy) {
+    markTourSeen(config.kind);
     tourStepIndex = 0;
     renderTourStep();
     return;
   }
-  if (tourStepIndex >= TOUR_STEPS.length - 1) {
+  if (tourStepIndex >= steps.length - 1) {
     closeTutorial({ markSeen: true });
     return;
   }
@@ -2357,7 +2538,8 @@ function nextTourStep() {
 
 function previousTourStep() {
   if (tourStepIndex <= 0) {
-    tourStepIndex = -1;
+    const config = getTourConfig();
+    tourStepIndex = config.introCopy ? -1 : 0;
     renderTourStep();
     return;
   }
@@ -3186,14 +3368,28 @@ async function restoreSelectedVersion() {
   closeHistory();
 }
 
-function openHistory() {
+async function openHistoryTutorial() {
+  if (!isHistoryOpen) {
+    await openHistory({ showTutorial: false });
+  }
+  openTutorial("history");
+}
+
+async function openHistory(options = {}) {
+  const { showTutorial = true } = options;
   if (!appState) return;
   isHistoryOpen = true;
   $("appRoot").classList.add("history-open");
   selectedHistoryVersionId = appState.current_version ? appState.current_version.id : null;
   historyPreviewVersionId = selectedHistoryVersionId;
   $("restoreBtn").disabled = !selectedHistoryVersionId;
-  fetchHistory();
+  try {
+    await fetchHistory();
+  } finally {
+    if (showTutorial && !hasSeenHistoryTutorial() && isHistoryOpen) {
+      requestAnimationFrame(() => openHistoryTutorial());
+    }
+  }
 }
 
 function closeHistory() {
@@ -3374,12 +3570,13 @@ function initializeApp() {
   bindById("codeTabBtn", "click", () => setCodeTab("code"));
   bindById("consoleTabBtn", "click", () => setCodeTab("console"));
   bindById("saveVersionBtn", "click", saveVersion);
-  bindById("historyBtn", "click", openHistory);
+  bindById("historyBtn", "click", () => openHistory());
+  bindById("historyHelpBtn", "click", openHistoryTutorial);
   bindById("closeHistoryBtn", "click", closeHistory);
   bindById("restoreBtn", "click", restoreSelectedVersion);
   bindById("newSessionBtn", "click", startNewSession);
   bindById("resetBtn", "click", resetSession);
-  bindById("helpBtn", "click", openTutorial);
+  bindById("helpBtn", "click", () => openTutorial("app"));
   bindById("tourNextBtn", "click", nextTourStep);
   bindById("tourBackBtn", "click", previousTourStep);
   bindById("tourSkipBtn", "click", () => closeTutorial({ markSeen: true }));
@@ -3390,7 +3587,7 @@ function initializeApp() {
       updateExpandButtons();
       refreshCodeEditorLayout();
       if (!hasSeenInstructions()) {
-        requestAnimationFrame(() => openTutorial());
+        requestAnimationFrame(() => openTutorial("app"));
       }
     })
     .catch((error) => {
@@ -3399,7 +3596,7 @@ function initializeApp() {
       updateExpandButtons();
       refreshCodeEditorLayout();
       if (!hasSeenInstructions()) {
-        requestAnimationFrame(() => openTutorial());
+        requestAnimationFrame(() => openTutorial("app"));
       }
     });
 }
