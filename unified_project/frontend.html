@@ -398,30 +398,120 @@ button.ghost {
 
 .template-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
 }
 
-.template-chip {
-  background: #131823;
-  border: 1px dashed #45506a;
-  color: #aab7d7;
-  font-size: 11px;
-  padding: 4px 9px;
+.template-row.scrollable {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  max-height: 108px;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #50607f #121826;
+}
+
+.template-row.scrollable::-webkit-scrollbar {
+  width: 8px;
+}
+
+.template-row.scrollable::-webkit-scrollbar-track {
+  background: #121826;
   border-radius: 999px;
 }
 
+.template-row.scrollable::-webkit-scrollbar-thumb {
+  background: #50607f;
+  border-radius: 999px;
+}
+
+.template-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #d9e5ff;
+}
+
+.template-label::before {
+  content: "Click to use";
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #88a6e8;
+  background: rgba(95, 141, 247, 0.12);
+  border: 1px solid rgba(95, 141, 247, 0.28);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.template-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  background: linear-gradient(180deg, #1b2334, #141c2c);
+  border: 1px solid #50607f;
+  color: #eef4ff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  padding: 7px 11px;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(8, 12, 20, 0.24);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+  text-align: left;
+}
+
+.template-chip::after {
+  content: ">";
+  font-size: 11px;
+  font-weight: 700;
+  color: #8fb4ff;
+  opacity: 0.9;
+}
+
 .template-chip:hover:not(:disabled) {
-  color: #d6e1ff;
-  border-color: var(--accent);
-  background: #1a2233;
+  color: #ffffff;
+  border-color: #8fb4ff;
+  background: linear-gradient(180deg, #25314a, #182238);
+  box-shadow: 0 10px 22px rgba(31, 59, 115, 0.28);
+  transform: translateY(-1px);
+}
+
+.template-chip:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .template-chip.decision {
   border-style: solid;
-  border-color: #5f8df7;
-  color: #dbe6ff;
-  background: #1a2440;
+  border-color: #6e9cff;
+  color: #ffffff;
+  background: linear-gradient(180deg, #24345d, #1b2748);
+}
+
+.implement-cta {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 11px 14px;
+  background: linear-gradient(135deg, #5f8df7, #7ea5ff);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 10px 24px rgba(95, 141, 247, 0.24);
+}
+
+.implement-cta:hover:not(:disabled) {
+  background: linear-gradient(135deg, #73a0ff, #93b6ff);
+  border-color: transparent;
 }
 
 .preview-strip {
@@ -527,11 +617,20 @@ button.ghost {
   color: #7f8cad;
   display: grid;
   place-items: center;
+  padding: 0;
+  line-height: 0;
 }
 
 .send-btn.active {
   background: var(--accent);
   color: white;
+}
+
+.send-btn svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
 .chat-bottom {
@@ -1168,7 +1267,10 @@ button.ghost {
           <button id="removePreviewBtn" class="remove-preview" title="Remove">✕</button>
         </div>
 
+        <div class="template-label">Suggested Replies</div>
         <div id="templateRow" class="template-row"></div>
+
+        <button id="implementCtaBtn" class="implement-cta" type="button" hidden>Implement in Code</button>
 
         <div class="input-bar">
           <button id="imageBtn" class="icon-btn" title="Attach image" type="button">
@@ -1301,22 +1403,19 @@ const ART_DECISION_ACCEPT = "Art Direction Decision: Accept";
 const ART_DECISION_MODIFY = "Art Direction Decision: Modify";
 const ART_DECISION_MORE = "Art Direction Decision: More options";
 const ART_DECISION_OPTION_PREFIX = "Art Direction Decision: Option ";
+const IMPLEMENT_CTA_MESSAGE = "Let's move into code generation now. Please implement this in p5.js.";
 const TEMPLATE_MESSAGES = {
   emotional_discovery: [
     "I have already a good sense of emotions I want to express, help me implement.",
     "The setting was...",
     "2-3 emojis that fit: ...",
     "A song that matches this feeling is...",
-    "I already have a good sense of the emotion — help me implement",
-    "Here are some emojis that describe how I feel: ",
   ],
   code_generation: [
     "I want to refine/explore my emotions more.",
     "Make the motion slower and more floating.",
     "Use a softer color palette with more negative space.",
     "Can we try a different visual metaphor?",
-    "Change the colors to feel more warm",
-    "back to feelings",
   ],
 };
 const INITIAL_ART_DIRECTION_DECISION_TEMPLATES = [
@@ -1575,6 +1674,23 @@ function buildAlternativeDecisionTemplates(alternatives) {
   return templates;
 }
 
+function dedupeTemplateDescriptors(templates) {
+  const seen = new Set();
+  return templates
+    .map(templateToDescriptor)
+    .filter((template) => {
+      const key = (template.text || template.label || "")
+        .toLowerCase()
+        .replace(/[^\w]+/g, " ")
+        .trim();
+      if (!key || seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+}
+
 function sendTemplateMessage(text) {
   const input = $("chatInput");
   input.value = text;
@@ -1587,6 +1703,7 @@ function renderTemplateRow(phase, pendingArtDecision) {
   const row = $("templateRow");
   if (!row) return;
   row.innerHTML = "";
+  row.classList.remove("scrollable");
   const hasDecisionChoices = !!(pendingArtDecision && !pendingArtDecision.awaiting_modify_details);
   let templates = TEMPLATE_MESSAGES[phase] || TEMPLATE_MESSAGES.emotional_discovery;
   if (hasDecisionChoices) {
@@ -1597,7 +1714,9 @@ function renderTemplateRow(phase, pendingArtDecision) {
       ? buildAlternativeDecisionTemplates(alternatives)
       : INITIAL_ART_DIRECTION_DECISION_TEMPLATES;
   }
-  templates.map(templateToDescriptor).forEach((template) => {
+  const descriptors = dedupeTemplateDescriptors(templates);
+  row.classList.toggle("scrollable", descriptors.length > 2);
+  descriptors.forEach((template) => {
     const btn = document.createElement("button");
     btn.className = "template-chip";
     if (template.decision) {
@@ -1655,6 +1774,25 @@ function renderGaps(gaps) {
     return;
   }
   el.textContent = list.map((gap) => `• ${gap}`).join("\n");
+}
+
+function shouldShowImplementCta(state) {
+  const confidence = (state && state.current_version && state.current_version.emotion_confidence
+    ? state.current_version.emotion_confidence
+    : "").toLowerCase();
+  return !!(
+    state &&
+    state.phase === "emotional_discovery" &&
+    (confidence === "medium" || confidence === "high")
+  );
+}
+
+function updateImplementCta(state = appState) {
+  const btn = $("implementCtaBtn");
+  if (!btn) return;
+  const visible = shouldShowImplementCta(state);
+  btn.hidden = !visible;
+  btn.disabled = !visible || isSending || isRecording;
 }
 
 function initializeCodeEditor() {
@@ -2189,6 +2327,7 @@ function updateSendButtonState() {
   const canSend = (!!text || !!pendingMedia) && !isRecording && !isSending;
   $("sendBtn").classList.toggle("active", canSend);
   $("sendBtn").disabled = !canSend;
+  updateImplementCta();
 }
 
 function showPendingMedia() {
@@ -2411,6 +2550,7 @@ function renderState(state) {
   $("phaseBadge").textContent = formatPhase(state.phase);
   $("versionPill").textContent = formatVersionPill(state.current_version);
   renderTemplateRow(state.phase, state.pending_artistic_decision);
+  updateImplementCta(state);
   renderMessages(state.messages || []);
   if (!isHistoryOpen || !historyPreviewVersionId) {
     loadVersionToPanes(state.current_version);
@@ -2586,27 +2726,33 @@ async function fetchHistory() {
   renderHistoryGraph(data);
 }
 
-async function sendChat() {
+async function sendChat(forcedText = null) {
   if (isSending || isRecording) return;
-  const text = $("chatInput").value.trim();
-  if (!text && !pendingMedia) return;
-  const draftMedia = clonePendingMediaForDraft(pendingMedia);
+  const usingComposerDraft = forcedText == null;
+  const text = (usingComposerDraft ? $("chatInput").value : forcedText || "").trim();
+  const activeMedia = usingComposerDraft ? pendingMedia : null;
+  if (!text && !activeMedia) return;
+  const draftMedia = clonePendingMediaForDraft(activeMedia);
   const optimisticMessage = buildOptimisticMessage(text, draftMedia);
 
   const payload = { session_id: sessionId, message: text };
-  if (pendingMedia) {
-    if (pendingMedia.type === "image") {
-      payload.image = pendingMedia.dataUrl;
-      payload.image_mime = pendingMedia.mime || "image/png";
+  if (activeMedia) {
+    if (activeMedia.type === "image") {
+      payload.image = activeMedia.dataUrl;
+      payload.image_mime = activeMedia.mime || "image/png";
     } else {
-      payload.audio = pendingMedia.dataUrl;
-      payload.audio_mime = pendingMedia.mime || "audio/webm";
+      payload.audio = activeMedia.dataUrl;
+      payload.audio_mime = activeMedia.mime || "audio/webm";
     }
   }
 
   isSending = true;
   pendingOutgoingMessage = optimisticMessage;
-  clearComposerDraft();
+  if (usingComposerDraft) {
+    clearComposerDraft();
+  } else {
+    updateSendButtonState();
+  }
   showChatLoading();
   try {
     const response = await fetch(`${API}/chat`, {
@@ -2618,7 +2764,9 @@ async function sendChat() {
     if (!response.ok) {
       pendingOutgoingMessage = null;
       pendingAssistantTyping = false;
-      restoreComposerDraft(text, draftMedia);
+      if (usingComposerDraft) {
+        restoreComposerDraft(text, draftMedia);
+      }
       renderMessages(appState && Array.isArray(appState.messages) ? appState.messages : []);
       appendConsoleLog("error", data.error || "Chat request failed.");
       alert(data.error || "Chat request failed.");
@@ -2639,7 +2787,9 @@ async function sendChat() {
   } catch (error) {
     pendingOutgoingMessage = null;
     pendingAssistantTyping = false;
-    restoreComposerDraft(text, draftMedia);
+    if (usingComposerDraft) {
+      restoreComposerDraft(text, draftMedia);
+    }
     renderMessages(appState && Array.isArray(appState.messages) ? appState.messages : []);
     appendConsoleLog("error", `Network error: ${error.message}`);
     alert(`Network error: ${error.message}`);
@@ -2813,6 +2963,9 @@ function initializeApp() {
   bindById("sendBtn", "click", (event) => {
     event.preventDefault();
     sendChat();
+  });
+  bindById("implementCtaBtn", "click", () => {
+    sendChat(IMPLEMENT_CTA_MESSAGE);
   });
 
   bindById("removePreviewBtn", "click", clearPendingMedia);
