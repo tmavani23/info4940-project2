@@ -82,6 +82,48 @@ body {
   width: auto;
 }
 
+.download-wrap {
+  position: relative;
+}
+
+.download-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  width: 230px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(22, 24, 30, 0.98);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+}
+
+.download-menu[hidden] {
+  display: none !important;
+}
+
+.download-menu-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #aebad8;
+  padding: 2px 4px 0;
+}
+
+.download-option {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #171c28;
+  border-color: #3f4a63;
+}
+
 .phase-badge {
   font-size: 11px;
   font-weight: 600;
@@ -1227,6 +1269,15 @@ button.ghost {
       <button id="newSessionBtn" class="ghost">New Session</button>
       <button id="resetBtn" class="ghost">Reset</button>
       <button id="historyBtn" class="history-trigger" type="button">View Version History</button>
+      <div class="download-wrap">
+        <button id="downloadBtn" class="ghost" type="button">Download / Save</button>
+        <div id="downloadMenu" class="download-menu" hidden>
+          <div class="download-menu-title">Download</div>
+          <button id="downloadCodeBtn" class="download-option" type="button">Download Code (.js)</button>
+          <button id="downloadImageBtn" class="download-option" type="button">Download Preview Image (.png)</button>
+          <button id="downloadGifBtn" class="download-option" type="button">Download Preview GIF (.gif)</button>
+        </div>
+      </div>
       <button id="helpBtn" class="ghost" title="Replay tutorial">?</button>
     </div>
   </header>
@@ -1559,6 +1610,8 @@ let tourRepositionTimer = null;
 let tourHideTimer = null;
 let pendingOutgoingMessage = null;
 let pendingAssistantTyping = false;
+let isDownloadMenuOpen = false;
+let previewExportRequests = new Map();
 
 const $ = (id) => document.getElementById(id);
 
@@ -1571,6 +1624,38 @@ function escapeHtml(text) {
 
 function renderPlainText(text) {
   return escapeHtml(text).replace(/\n/g, "<br>");
+}
+
+function formatTimestampForFilename(date = new Date()) {
+  return date.toISOString().replace(/[:.]/g, "-");
+}
+
+function getDownloadBaseName() {
+  const versionId = appState && appState.current_version && appState.current_version.id
+    ? `version-${appState.current_version.id}`
+    : "draft";
+  return `emotion-sketch-${versionId}-${formatTimestampForFilename()}`;
+}
+
+function triggerDownload(url, filename, revoke = false) {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  if (revoke) {
+    setTimeout(() => URL.revokeObjectURL(url), 1200);
+  }
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  triggerDownload(url, filename, true);
+}
+
+function downloadDataUrl(dataUrl, filename) {
+  triggerDownload(dataUrl, filename, false);
 }
 
 function renderInlineMarkdown(text) {
@@ -1793,6 +1878,100 @@ function updateImplementCta(state = appState) {
   const visible = shouldShowImplementCta(state);
   btn.hidden = !visible;
   btn.disabled = !visible || isSending || isRecording;
+}
+
+function hasDownloadableCode() {
+  return !!(getCodeValue() || "").trim();
+}
+
+function updateDownloadMenuState() {
+  const hasCode = hasDownloadableCode();
+  const codeBtn = $("downloadCodeBtn");
+  const imageBtn = $("downloadImageBtn");
+  const gifBtn = $("downloadGifBtn");
+  if (codeBtn) codeBtn.disabled = !hasCode;
+  if (imageBtn) imageBtn.disabled = !hasCode;
+  if (gifBtn) gifBtn.disabled = !hasCode;
+}
+
+function openDownloadMenu() {
+  const menu = $("downloadMenu");
+  if (!menu) return;
+  updateDownloadMenuState();
+  menu.hidden = false;
+  isDownloadMenuOpen = true;
+}
+
+function closeDownloadMenu() {
+  const menu = $("downloadMenu");
+  if (!menu) return;
+  menu.hidden = true;
+  isDownloadMenuOpen = false;
+}
+
+function toggleDownloadMenu() {
+  if (isDownloadMenuOpen) {
+    closeDownloadMenu();
+  } else {
+    openDownloadMenu();
+  }
+}
+
+function requestPreviewExport(kind) {
+  return new Promise((resolve, reject) => {
+    const iframe = $("previewFrame");
+    if (!iframe || !iframe.contentWindow) {
+      reject(new Error("Preview is not available."));
+      return;
+    }
+    const requestId = `preview-${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const timeout = setTimeout(() => {
+      previewExportRequests.delete(requestId);
+      reject(new Error(`Preview ${kind.toUpperCase()} export timed out.`));
+    }, kind === "gif" ? 15000 : 5000);
+
+    previewExportRequests.set(requestId, { resolve, reject, timeout });
+    iframe.contentWindow.postMessage({ type: `preview-export-${kind}`, requestId }, "*");
+  });
+}
+
+async function downloadCodeFile() {
+  closeDownloadMenu();
+  const code = getCodeValue();
+  if (!code || !code.trim()) {
+    alert("There is no code to download yet.");
+    return;
+  }
+  downloadBlob(
+    new Blob([code], { type: "text/javascript;charset=utf-8" }),
+    `${getDownloadBaseName()}.js`,
+  );
+}
+
+async function downloadPreviewImage() {
+  closeDownloadMenu();
+  try {
+    const result = await requestPreviewExport("image");
+    if (!result || !result.dataUrl) {
+      throw new Error("Preview image export failed.");
+    }
+    downloadDataUrl(result.dataUrl, `${getDownloadBaseName()}.png`);
+  } catch (error) {
+    alert(error.message || "Could not download the preview image.");
+  }
+}
+
+async function downloadPreviewGif() {
+  closeDownloadMenu();
+  try {
+    const result = await requestPreviewExport("gif");
+    if (!result || !result.dataUrl) {
+      throw new Error("Preview GIF export failed.");
+    }
+    downloadDataUrl(result.dataUrl, `${getDownloadBaseName()}.gif`);
+  } catch (error) {
+    alert(error.message || "Could not download the preview GIF.");
+  }
 }
 
 function initializeCodeEditor() {
@@ -2486,47 +2665,207 @@ function renderMessages(messages) {
   container.scrollTop = container.scrollHeight;
 }
 
-function runPreview(code) {
-  const iframe = $("previewFrame");
-  if (!code || !code.trim()) {
-    iframe.srcdoc = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-  <style>
-    html,body{height:100%;margin:0;}
-    body{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:#0d0f15;
-      color:#9ca7c4;
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-      font-size:14px;
+function buildPreviewBridgeScript() {
+  return `
+    var gifWorkerUrl = null;
+    var gifWorkerPromise = null;
+
+    function sendParentMessage(payload) {
+      parent.postMessage(payload, "*");
     }
-  </style>
-</head>
-<body>No sketch yet.</body>
-</html>`;
-    return;
-  }
+
+    function sendExportResult(payload) {
+      sendParentMessage(Object.assign({ type: "preview-export-result" }, payload));
+    }
+
+    function getSketchCanvas() {
+      return document.querySelector("canvas");
+    }
+
+    function sendExportError(requestId, message) {
+      sendExportResult({ requestId: requestId, ok: false, error: message });
+    }
+
+    function ensureGifWorkerUrl() {
+      if (gifWorkerUrl) {
+        return Promise.resolve(gifWorkerUrl);
+      }
+      if (gifWorkerPromise) {
+        return gifWorkerPromise;
+      }
+
+      gifWorkerPromise = fetch("https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js")
+        .then(function(response) {
+          if (!response.ok) {
+            throw new Error("Could not load the GIF export worker.");
+          }
+          return response.text();
+        })
+        .then(function(source) {
+          gifWorkerUrl = URL.createObjectURL(new Blob([source], { type: "application/javascript" }));
+          return gifWorkerUrl;
+        })
+        .catch(function(error) {
+          gifWorkerPromise = null;
+          throw error;
+        });
+
+      return gifWorkerPromise;
+    }
+
+    function exportPreviewImage(requestId) {
+      try {
+        var canvas = getSketchCanvas();
+        if (!canvas) {
+          sendExportError(requestId, "There is no preview image to download yet.");
+          return;
+        }
+        sendExportResult({
+          requestId: requestId,
+          ok: true,
+          kind: "image",
+          dataUrl: canvas.toDataURL("image/png"),
+        });
+      } catch (error) {
+        sendExportError(requestId, error.message || "Could not export the preview image.");
+      }
+    }
+
+    async function exportPreviewGif(requestId) {
+      var canvas = getSketchCanvas();
+      if (!canvas) {
+        sendExportError(requestId, "There is no preview animation to export yet.");
+        return;
+      }
+      if (typeof GIF !== "function") {
+        sendExportError(requestId, "GIF export is still loading. Please try again in a moment.");
+        return;
+      }
+      try {
+        var width = canvas.width || canvas.clientWidth || 600;
+        var height = canvas.height || canvas.clientHeight || 400;
+        var working = document.createElement("canvas");
+        working.width = width;
+        working.height = height;
+        var ctx = working.getContext("2d");
+        if (!ctx) {
+          sendExportError(requestId, "Could not access the preview canvas for GIF export.");
+          return;
+        }
+
+        var delay = 100;
+        var frameCount = 18;
+        var workerUrl = await ensureGifWorkerUrl();
+        var gif = new GIF({
+          workers: 2,
+          quality: 10,
+          width: width,
+          height: height,
+          background: "#0d0f15",
+          workerScript: workerUrl,
+        });
+
+        gif.on("finished", function(blob) {
+          var reader = new FileReader();
+          reader.onloadend = function() {
+            sendExportResult({
+              requestId: requestId,
+              ok: true,
+              kind: "gif",
+              dataUrl: reader.result,
+            });
+          };
+          reader.onerror = function() {
+            sendExportError(requestId, "Could not prepare the GIF download.");
+          };
+          reader.readAsDataURL(blob);
+        });
+
+        gif.on("abort", function() {
+          sendExportError(requestId, "GIF export was cancelled.");
+        });
+
+        var captured = 0;
+        function captureFrame() {
+          ctx.clearRect(0, 0, width, height);
+          ctx.drawImage(canvas, 0, 0, width, height);
+          gif.addFrame(working, { copy: true, delay: delay });
+        }
+
+        captureFrame();
+        captured += 1;
+
+        var interval = setInterval(function() {
+          try {
+            captureFrame();
+            captured += 1;
+            if (captured >= frameCount) {
+              clearInterval(interval);
+              gif.render();
+            }
+          } catch (error) {
+            clearInterval(interval);
+            sendExportError(requestId, error.message || "Could not capture the preview animation.");
+          }
+        }, delay);
+      } catch (error) {
+        sendExportError(requestId, error.message || "Could not export the preview GIF.");
+      }
+    }
+
+    window.addEventListener("message", function(event) {
+      var data = event.data || {};
+      if (data.type === "preview-export-image") {
+        exportPreviewImage(data.requestId);
+      } else if (data.type === "preview-export-gif") {
+        exportPreviewGif(data.requestId);
+      }
+    });
+
+    window.addEventListener("error", function(e) {
+      sendParentMessage({ type: "p5-error", message: e.message || "Unknown error" });
+    });
+  `;
+}
+
+function buildPreviewDocument(code) {
   const safeCode = (code || "").replace(/<\/script>/gi, "<\\/script>");
-  iframe.srcdoc = `<!DOCTYPE html>
+  const bodyContent = safeCode
+    ? `<script>${safeCode}<\/script>`
+    : `<div class="preview-empty">No sketch yet.</div>`;
+
+  return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"><\/script>
-  <style>html,body{margin:0;padding:0;background:#0d0f15;overflow:hidden;}canvas{display:block;}</style>
-  <script>
-    window.addEventListener("error", function(e) {
-      parent.postMessage({ type: "p5-error", message: e.message || "Unknown error" }, "*");
-    });
-  <\/script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"><\/script>
+  <style>
+    html,body{height:100%;margin:0;padding:0;background:#0d0f15;overflow:hidden;}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+    canvas{display:block;}
+    .preview-empty{
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#9ca7c4;
+      font-size:14px;
+      text-align:center;
+      padding:20px;
+    }
+  </style>
+  <script>${buildPreviewBridgeScript()}<\/script>
 </head>
 <body>
-  <script>${safeCode}<\/script>
+  ${bodyContent}
 </body>
 </html>`;
+}
+
+function runPreview(code) {
+  const iframe = $("previewFrame");
+  iframe.srcdoc = buildPreviewDocument(code || "");
 }
 
 function loadVersionToPanes(version) {
@@ -2897,8 +3236,22 @@ async function resetSession() {
 }
 
 window.addEventListener("message", (event) => {
-  if (!event.data || event.data.type !== "p5-error") return;
-  const msg = `Preview error: ${event.data.message || "Unknown error"}`;
+  const data = event.data || {};
+  if (data.type === "preview-export-result") {
+    const pending = previewExportRequests.get(data.requestId);
+    if (!pending) return;
+    clearTimeout(pending.timeout);
+    previewExportRequests.delete(data.requestId);
+    if (data.ok) {
+      pending.resolve(data);
+    } else {
+      pending.reject(new Error(data.error || "Preview export failed."));
+    }
+    return;
+  }
+
+  if (data.type !== "p5-error") return;
+  const msg = `Preview error: ${data.message || "Unknown error"}`;
   appendConsoleLog("error", msg);
   const row = document.createElement("div");
   row.className = "message system";
@@ -2931,6 +3284,10 @@ function initializeApp() {
 
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      if (isDownloadMenuOpen) {
+        closeDownloadMenu();
+        return;
+      }
       if (isTourOpen()) {
         closeTutorial({ markSeen: true });
       } else {
@@ -2966,6 +3323,22 @@ function initializeApp() {
   });
   bindById("implementCtaBtn", "click", () => {
     sendChat(IMPLEMENT_CTA_MESSAGE);
+  });
+  bindById("downloadBtn", "click", (event) => {
+    event.stopPropagation();
+    toggleDownloadMenu();
+  });
+  bindById("downloadCodeBtn", "click", downloadCodeFile);
+  bindById("downloadImageBtn", "click", downloadPreviewImage);
+  bindById("downloadGifBtn", "click", downloadPreviewGif);
+
+  document.querySelector(".download-wrap")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+  document.addEventListener("click", () => {
+    if (isDownloadMenuOpen) {
+      closeDownloadMenu();
+    }
   });
 
   bindById("removePreviewBtn", "click", clearPendingMedia);
