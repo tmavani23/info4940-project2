@@ -1237,6 +1237,7 @@ button.ghost {
             </div>
             <div class="code-actions">
               <button id="runBtn" type="button">Run</button>
+              <button id="submitFixBtn" class="primary" type="button" style="display:none">Submit Fix</button>
               <button id="saveVersionBtn" class="primary" type="button">Save Version</button>
             </div>
           </div>
@@ -1284,6 +1285,10 @@ const INITIAL_ART_DIRECTION_DECISION_TEMPLATES = [
   { label: "Accept Direction", text: ART_DECISION_ACCEPT, autoSend: true, decision: true },
   { label: "Modify Direction", text: ART_DECISION_MODIFY, autoSend: true, decision: true },
   { label: "More Options", text: ART_DECISION_MORE, autoSend: true, decision: true },
+];
+const DEBUG_DECISION_TEMPLATES = [
+  { label: "Fix it for me", text: "Fix it for me", autoSend: true, decision: true },
+  { label: "I'll fix it myself", text: "I'll fix it myself", autoSend: true, decision: true },
 ];
 
 let sessionId = null;
@@ -1360,10 +1365,24 @@ function sendTemplateMessage(text) {
   sendChat();
 }
 
-function renderTemplateRow(phase, pendingArtDecision) {
+function renderTemplateRow(phase, pendingArtDecision, pendingDebugDecision) {
   const row = $("templateRow");
   if (!row) return;
   row.innerHTML = "";
+
+  // Debug decision chips take priority
+  if (pendingDebugDecision && !pendingDebugDecision.user_fixing) {
+    DEBUG_DECISION_TEMPLATES.forEach((template) => {
+      const btn = document.createElement("button");
+      btn.className = "template-chip decision";
+      btn.type = "button";
+      btn.textContent = template.label;
+      btn.addEventListener("click", () => sendTemplateMessage(template.text));
+      row.appendChild(btn);
+    });
+    return;
+  }
+
   const hasDecisionChoices = !!(pendingArtDecision && !pendingArtDecision.awaiting_modify_details);
   let templates = TEMPLATE_MESSAGES[phase] || TEMPLATE_MESSAGES.emotional_discovery;
   if (hasDecisionChoices) {
@@ -1879,7 +1898,8 @@ function renderState(state) {
   sessionId = state.session_id;
   $("phaseBadge").textContent = formatPhase(state.phase);
   $("versionPill").textContent = formatVersionPill(state.current_version);
-  renderTemplateRow(state.phase, state.pending_artistic_decision);
+  renderTemplateRow(state.phase, state.pending_artistic_decision, state.pending_debug_decision);
+  updateSubmitFixVisibility(state);
   renderMessages(state.messages || []);
   if (!isHistoryOpen || !historyPreviewVersionId) {
     loadVersionToPanes(state.current_version);
@@ -2036,6 +2056,47 @@ function renderHistoryGraph(data) {
 
     svg.appendChild(group);
   });
+}
+
+function updateSubmitFixVisibility(state) {
+  const btn = $("submitFixBtn");
+  if (!btn) return;
+  const show = !!(state.pending_debug_decision && state.pending_debug_decision.user_fixing);
+  btn.style.display = show ? "" : "none";
+}
+
+async function submitUserFix() {
+  if (!sessionId) return;
+  const code = getCodeValue();
+  if (!code.trim()) {
+    alert("Please edit the code in the Code panel before submitting.");
+    return;
+  }
+  isSending = true;
+  updateSendButtonState();
+  showChatLoading();
+  try {
+    const response = await fetch(`${API}/submit-user-fix`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId, code }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      appendConsoleLog("error", data.error || "Could not submit fix.");
+      alert(data.error || "Could not submit fix.");
+      return;
+    }
+    renderState(data.state);
+    if (isHistoryOpen) await fetchHistory();
+  } catch (error) {
+    appendConsoleLog("error", `Network error: ${error.message}`);
+    alert(`Network error: ${error.message}`);
+  } finally {
+    hideChatLoading();
+    isSending = false;
+    updateSendButtonState();
+  }
 }
 
 async function fetchState() {
@@ -2299,6 +2360,7 @@ function initializeApp() {
   bindById("runBtn", "click", () => {
     runPreview(getCodeValue() || "");
   });
+  bindById("submitFixBtn", "click", submitUserFix);
   bindById("codeTabBtn", "click", () => setCodeTab("code"));
   bindById("consoleTabBtn", "click", () => setCodeTab("console"));
   bindById("saveVersionBtn", "click", saveVersion);

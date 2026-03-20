@@ -272,6 +272,43 @@ def _parse_art_direction_decision(text: str) -> Optional[str]:
     return None
 
 
+def _is_debug_request(text: str) -> bool:
+    if not text:
+        return False
+    return bool(
+        re.search(
+            r"\bdebug\b|\bfix\s+(this|the|my|it|a)?\s*(bug|error|code|issue|problem)\b"
+            r"|\b(bug|error)\s+in\b|\bnot working\b|\bbroken\b|\bsomething\s+(is\s+)?wrong\b"
+            r"|\bdoesn'?t work\b|\bwon'?t run\b|\bcrash(es|ing)?\b",
+            text.lower(),
+        )
+    )
+
+
+def _is_debug_fix_for_me(text: str) -> bool:
+    if not text:
+        return False
+    return bool(
+        re.search(
+            r"\bfix it for me\b|\byou fix it\b|\bai fix\b|\bfix for me\b"
+            r"|\bplease fix (it|this)\b|\bgo ahead and fix\b|\bcan you fix\b",
+            text.lower(),
+        )
+    )
+
+
+def _is_debug_fix_myself(text: str) -> bool:
+    if not text:
+        return False
+    return bool(
+        re.search(
+            r"\bi'?ll fix\b|\blet me fix\b|\bi will fix\b|\bfix it myself\b|\bfix myself\b"
+            r"|\bi want to fix\b|\bi'?d like to fix\b",
+            text.lower(),
+        )
+    )
+
+
 def _safe_summary_text(text: str, limit: int = 82) -> str:
     compact = re.sub(r"\s+", " ", text or "").strip()
     if len(compact) <= limit:
@@ -402,6 +439,13 @@ class PendingArtisticDecision:
 
 
 @dataclass
+class PendingDebugDecision:
+    original_code: str
+    user_fixing: bool = False
+    created_at: float = field(default_factory=_now)
+
+
+@dataclass
 class SessionState:
     session_id: str
     phase: str = "emotional_discovery"
@@ -414,6 +458,7 @@ class SessionState:
     current_version_id: Optional[str] = None
     branch_counter: int = 1
     pending_artistic_decision: Optional[PendingArtisticDecision] = None
+    pending_debug_decision: Optional[PendingDebugDecision] = None
 
     def __post_init__(self):
         if self.current_version_id:
@@ -844,6 +889,16 @@ def serialize_version(v: VersionNode) -> dict:
     }
 
 
+def serialize_pending_debug_decision(pending: Optional[PendingDebugDecision]) -> Optional[dict]:
+    if not pending:
+        return None
+    return {
+        "original_code": pending.original_code,
+        "user_fixing": pending.user_fixing,
+        "created_at": pending.created_at,
+    }
+
+
 def serialize_pending_artistic_decision(pending: Optional[PendingArtisticDecision]) -> Optional[dict]:
     if not pending:
         return None
@@ -872,6 +927,7 @@ def serialize_state(session: SessionState) -> dict:
         "branch_heads": dict(session.branch_heads),
         "active_branch": session.active_branch,
         "pending_artistic_decision": serialize_pending_artistic_decision(session.pending_artistic_decision),
+        "pending_debug_decision": serialize_pending_debug_decision(session.pending_debug_decision),
     }
 
 
@@ -1172,6 +1228,100 @@ def api_chat():
             created_version=None,
         )
 
+    # --- Debug decision handling ---
+    debug_pending = session.pending_debug_decision
+    if debug_pending and not debug_pending.user_fixing:
+        cur = session.current_version
+        if _is_debug_fix_for_me(message or ""):
+            session.pending_debug_decision = None
+            session.phase = "code_generation"
+            fix_prompt = (
+                "The user wants you to find and fix the bug or error in the current code. "
+                "Analyze the code carefully, identify the issue, fix it, and return the complete "
+                "corrected p5.js. In your message, briefly explain what was wrong and what you changed."
+            )
+            parsed_raw, raw_response_text, human_msg, assistant_llm_msg = _invoke_llm(
+                session=session, user_text=fix_prompt,
+                image=None, image_mime=None, audio=None, audio_mime=None,
+            )
+            sanitized = _sanitize_llm_payload(parsed_raw, cur)
+            new_emotion = sanitized["emotion_profile"]
+            new_artistic = sanitized["artistic_profile"]
+            new_code = sanitized["code"]
+            new_conf = sanitized["emotion_confidence"]
+            new_gaps = sanitized["emotion_gaps"]
+            changed = cur.emotion_profile != new_emotion or cur.artistic_profile != new_artistic or cur.code != new_code
+            created_version = None
+            if changed:
+                fallback_summary = _build_commit_summary(cur, new_emotion, new_artistic, new_code, source="assistant")
+                summary = _normalize_commit_message(sanitized["commit_message"], fallback=fallback_summary)
+                created_version = create_version(
+                    session, emotion_profile=new_emotion, artistic_profile=new_artistic, code=new_code,
+                    emotion_confidence=new_conf, emotion_gaps=new_gaps, summary=summary, source="assistant",
+                )
+            else:
+                cur.emotion_confidence = new_conf
+                cur.emotion_gaps = new_gaps
+            anchor_id = created_version.id if created_version else cur.id
+            _append_llm_event(session, human_msg, anchor_id)
+            _append_llm_event(session, assistant_llm_msg, anchor_id)
+            _append_chat(session, "assistant", "text", sanitized["message"])
+            return _chat_response(sanitized, raw_response_text, created_version)
+
+        elif _is_debug_fix_myself(message or ""):
+            debug_pending.user_fixing = True
+            assistant_text = (
+                "No problem! Go ahead and edit the code in the Code panel on the right. "
+                "When you're happy with your changes, click Submit Fix to send your revised code back for review."
+            )
+            _append_chat(session, "assistant", "text", assistant_text)
+            return _chat_response(
+                {
+                    "message": assistant_text,
+                    "commit_message": "Waiting for user to fix the code",
+                    "emotion_profile": cur.emotion_profile,
+                    "emotion_confidence": cur.emotion_confidence,
+                    "emotion_gaps": cur.emotion_gaps,
+                    "artistic_profile": cur.artistic_profile,
+                    "code": cur.code,
+                },
+                raw_response_text="",
+                created_version=None,
+            )
+        else:
+            # User sent something unrelated — clear the pending debug decision
+            session.pending_debug_decision = None
+
+    elif (
+        not debug_pending
+        and not session.pending_artistic_decision
+        and _is_debug_request(message or "")
+        and _clean_text(session.current_version.code)
+    ):
+        session.pending_debug_decision = PendingDebugDecision(original_code=session.current_version.code)
+        cur = session.current_version
+        assistant_text = (
+            "I can help with that! Would you like me to find and fix the issue for you, "
+            "or would you prefer to fix it yourself?\n\n"
+            "- Fix it for me\n"
+            "- I'll fix it myself"
+        )
+        _append_chat(session, "assistant", "text", assistant_text)
+        return _chat_response(
+            {
+                "message": assistant_text,
+                "commit_message": "Detected debug request — awaiting user choice",
+                "emotion_profile": cur.emotion_profile,
+                "emotion_confidence": cur.emotion_confidence,
+                "emotion_gaps": cur.emotion_gaps,
+                "artistic_profile": cur.artistic_profile,
+                "code": cur.code,
+            },
+            raw_response_text="",
+            created_version=None,
+        )
+    # --- End debug handling ---
+
     if session.phase == "code_generation" and _is_likely_emotion_refinement_request(message):
         session.phase = "emotional_discovery"
     elif session.phase == "emotional_discovery" and _is_likely_code_request(message) and session.current_version.emotion_profile:
@@ -1346,6 +1496,77 @@ def api_restore_version():
     )
 
 
+@app.route("/api/submit-user-fix", methods=["POST"])
+def api_submit_user_fix():
+    data = request.get_json(silent=True) or {}
+    sid = data.get("session_id")
+    if not sid:
+        return jsonify({"error": "Missing session_id"}), 400
+    session = get_or_create_session(sid)
+
+    user_code = _clean_text(data.get("code")) or session.current_version.code
+    if not user_code:
+        return jsonify({"error": "No code provided."}), 400
+
+    _append_chat(session, "user", "text", "[Submitted edited code for review]")
+
+    review_prompt = (
+        "The user manually edited the code to fix a bug. Here is their revised code:\n\n"
+        f"{user_code}\n\n"
+        "Please review their fix: confirm if it looks correct, explain any remaining issues if present, "
+        "and return this code (or a corrected version) as the new p5.js sketch. "
+        "Be encouraging and supportive of their effort."
+    )
+    parsed_raw, raw_response_text, human_msg, assistant_llm_msg = _invoke_llm(
+        session=session, user_text=review_prompt,
+        image=None, image_mime=None, audio=None, audio_mime=None,
+    )
+    sanitized = _sanitize_llm_payload(parsed_raw, session.current_version)
+    # Prefer the user's submitted code if the LLM left it unchanged
+    if not sanitized.get("code") or sanitized["code"] == session.current_version.code:
+        sanitized["code"] = user_code
+
+    old = session.current_version
+    new_emotion = sanitized["emotion_profile"]
+    new_artistic = sanitized["artistic_profile"]
+    new_code = sanitized["code"]
+    new_conf = sanitized["emotion_confidence"]
+    new_gaps = sanitized["emotion_gaps"]
+    changed = old.emotion_profile != new_emotion or old.artistic_profile != new_artistic or old.code != new_code
+    created_version = None
+    if changed:
+        fallback_summary = _build_commit_summary(old, new_emotion, new_artistic, new_code, source="user")
+        summary = _normalize_commit_message(
+            sanitized.get("commit_message") or "User-submitted debug fix reviewed by assistant",
+            fallback=fallback_summary,
+        )
+        created_version = create_version(
+            session, emotion_profile=new_emotion, artistic_profile=new_artistic, code=new_code,
+            emotion_confidence=new_conf, emotion_gaps=new_gaps, summary=summary, source="user",
+        )
+    else:
+        old.emotion_confidence = new_conf
+        old.emotion_gaps = new_gaps
+
+    anchor_id = created_version.id if created_version else old.id
+    _append_llm_event(session, human_msg, anchor_id)
+    _append_llm_event(session, assistant_llm_msg, anchor_id)
+    _append_chat(session, "assistant", "text", sanitized["message"])
+
+    session.pending_debug_decision = None
+    session.phase = "code_generation"
+
+    return jsonify({
+        "session_id": session.session_id,
+        "phase": session.phase,
+        "reply": sanitized,
+        "version_created": bool(created_version),
+        "created_version_id": created_version.id if created_version else None,
+        "state": serialize_state(session),
+        "raw_response": raw_response_text,
+    })
+
+
 @app.route("/api/new-session", methods=["POST"])
 def api_new_session():
     session = get_or_create_session(str(uuid.uuid4()))
@@ -1395,6 +1616,7 @@ if __name__ == "__main__":
     print("POST /api/chat         -> Chat + LLM JSON parsing")
     print("POST /api/save-version -> Manual version save")
     print("POST /api/restore-version -> Restore selected version")
+    print("POST /api/submit-user-fix -> Submit user-edited code for review")
     print("GET  /api/history      -> Version graph data")
     print("POST /api/new-session  -> New session")
     print("POST /api/reset        -> Reset session")
