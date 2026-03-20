@@ -541,6 +541,12 @@ button.ghost {
   white-space: pre-wrap;
 }
 
+.profile-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .profile-divider {
   margin: 4px 0;
   border: none;
@@ -837,190 +843,156 @@ button.ghost {
   border-radius: 999px;
 }
 
-.instructions-modal {
+.tour-overlay {
   position: fixed;
   inset: 0;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
+  z-index: 60;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.25s ease;
 }
 
-.instructions-modal.visible {
+.tour-overlay.visible {
   opacity: 1;
   pointer-events: auto;
 }
 
-.instructions-modal[hidden] {
+.tour-overlay[hidden] {
   display: none !important;
 }
 
-.instructions-modal:not([hidden]).visible {
-  display: flex;
-}
-
-.instructions-backdrop {
+.tour-scrim {
   position: absolute;
   inset: 0;
-  background: rgba(10, 12, 18, 0.8);
-  backdrop-filter: blur(4px);
+  background: rgba(6, 8, 14, 0.52);
 }
 
-.instructions-content {
-  position: relative;
+.tour-spotlight {
+  position: fixed;
   z-index: 1;
-  max-width: 520px;
-  max-height: 85vh;
-  overflow-y: auto;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+  border-radius: 20px;
+  border: 1px solid rgba(126, 165, 255, 0.7);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow:
+    0 0 0 9999px rgba(7, 9, 14, 0.76),
+    0 0 0 1px rgba(126, 165, 255, 0.2),
+    0 14px 36px rgba(0, 0, 0, 0.26);
+  pointer-events: none;
+  transition:
+    top 0.32s ease,
+    left 0.32s ease,
+    width 0.32s ease,
+    height 0.32s ease,
+    opacity 0.2s ease;
 }
 
-.instructions-header {
+.tour-spotlight[hidden] {
+  opacity: 0;
+}
+
+.tour-card {
+  position: fixed;
+  z-index: 2;
+  width: min(420px, calc(100vw - 32px));
+  background: rgba(22, 24, 30, 0.97);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.42);
+  padding: 20px;
+  transition: top 0.32s ease, left 0.32s ease, transform 0.32s ease;
+}
+
+.tour-topline {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 20px 20px 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.instructions-header h2 {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text);
-  margin: 0;
-}
-
-.instructions-close {
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  display: grid;
-  place-items: center;
-  font-size: 24px;
-  line-height: 1;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.instructions-close:hover {
-  color: var(--text);
-  border-color: var(--accent);
-}
-
-.instructions-body {
-  padding: 16px 20px;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--text);
-}
-
-.instructions-body p {
-  margin: 0 0 12px;
-}
-
-.instructions-body p:last-of-type {
-  margin-bottom: 0;
-}
-
-.instructions-body h3 {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 18px 0 8px;
-  color: #c9d4f0;
-}
-
-.instructions-body h3:first-child {
-  margin-top: 0;
-}
-
-.instructions-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: 12px;
   margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px dashed var(--border);
 }
 
-.instructions-nav a {
-  color: var(--accent);
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 500;
+.tour-step-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #c7d4ff;
+  background: rgba(95, 141, 247, 0.15);
+  border: 1px solid rgba(95, 141, 247, 0.36);
+  border-radius: 999px;
+  padding: 5px 10px;
 }
 
-.instructions-nav a:hover {
-  color: var(--accent-2);
-  text-decoration: underline;
-}
-
-.instructions-quick-start {
-  margin-bottom: 12px;
-}
-
-.instructions-quick-start ul {
-  margin: 0;
-  padding-left: 20px;
-}
-
-.instructions-quick-start li {
-  margin-bottom: 6px;
-}
-
-.instructions-toggle {
-  background: transparent;
+.tour-skip {
   border: none;
-  color: var(--accent);
-  font-size: 13px;
-  cursor: pointer;
+  background: transparent;
+  color: var(--muted);
   padding: 0;
-  margin-bottom: 12px;
+  font-size: 13px;
 }
 
-.instructions-toggle:hover {
-  color: var(--accent-2);
-  text-decoration: underline;
+.tour-skip:hover {
+  color: var(--text);
+  background: transparent;
 }
 
-.instructions-full-guide {
-  display: none;
-}
-
-.instructions-full-guide.visible {
-  display: block;
-}
-
-.instructions-body ul {
+.tour-title {
+  font-size: 24px;
+  line-height: 1.2;
   margin: 0 0 12px;
-  padding-left: 20px;
 }
 
-.instructions-body li {
-  margin-bottom: 6px;
-}
-
-.instructions-footer {
-  padding: 14px 20px 20px;
-  border-top: 1px solid var(--border);
-}
-
-.instructions-footer .primary {
-  width: 100%;
-  padding: 10px 16px;
-  border-radius: 10px;
+.tour-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: #d2dbf2;
   font-size: 14px;
+  line-height: 1.65;
+}
+
+.tour-body p {
+  margin: 0;
+}
+
+.tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.tour-actions button {
+  min-width: 104px;
+}
+
+.tour-actions-spacer {
+  flex: 1;
+}
+
+.tour-overlay.welcome-mode .tour-card {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.tour-overlay.welcome-mode .tour-title {
+  font-size: 28px;
+}
+
+.tour-overlay.welcome-mode .tour-body {
+  font-size: 15px;
+}
+
+.tour-overlay.welcome-mode .tour-spotlight {
+  opacity: 0;
+}
+
+.tour-overlay.welcome-mode .tour-skip,
+.tour-overlay.welcome-mode #tourBackBtn {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 @media (max-width: 1200px) {
@@ -1042,6 +1014,10 @@ button.ghost {
     width: 100%;
     max-width: 100%;
   }
+
+  .tour-card {
+    width: min(420px, calc(100vw - 24px));
+  }
 }
 </style>
 </head>
@@ -1058,62 +1034,24 @@ button.ghost {
       <button id="newSessionBtn" class="ghost">New Session</button>
       <button id="resetBtn" class="ghost">Reset</button>
       <button id="historyBtn" class="history-trigger" type="button">View Version History</button>
-      <button id="helpBtn" class="ghost" title="View instructions">?</button>
+      <button id="helpBtn" class="ghost" title="Replay tutorial">?</button>
     </div>
   </header>
 
-  <div id="instructionsModal" class="instructions-modal" role="dialog" aria-labelledby="instructionsTitle" aria-modal="true" hidden>
-    <div class="instructions-backdrop"></div>
-    <div class="instructions-content">
-      <div class="instructions-header">
-        <h2 id="instructionsTitle">Welcome to Emotion Sketch Studio</h2>
-        <button id="closeInstructionsBtn" class="instructions-close" type="button" aria-label="Close">×</button>
+  <div id="tourOverlay" class="tour-overlay welcome-mode" role="dialog" aria-labelledby="tourTitle" aria-modal="true" hidden>
+    <div class="tour-scrim"></div>
+    <div id="tourSpotlight" class="tour-spotlight" hidden></div>
+    <div id="tourCard" class="tour-card">
+      <div class="tour-topline">
+        <span id="tourStepLabel" class="tour-step-label">Welcome</span>
+        <button id="tourSkipBtn" class="tour-skip" type="button">Skip tour</button>
       </div>
-      <div class="instructions-body">
-        <nav class="instructions-nav" aria-label="Jump to section">
-          <a href="#how-it-works" class="instructions-jump">How it works</a>
-          <a href="#profile" class="instructions-jump">Profile</a>
-          <a href="#version-history" class="instructions-jump">Version history</a>
-          <a href="#tips" class="instructions-jump">Tips</a>
-        </nav>
-
-        <div class="instructions-quick-start">
-          <h3>Quick start</h3>
-          <ul>
-            <li><strong>Share</strong> a memory or feeling in Chat (text, image, or audio).</li>
-            <li><strong>Explore</strong> with follow-up questions: use template chips to reply.</li>
-            <li><strong>Create</strong> by saying "help me implement" or similar when ready.</li>
-            <li><strong>Refine</strong> in the Code panel: Run, Save Version, and use Version History.</li>
-            <li><strong>Edit</strong> the Profile panel to adjust emotion or artistic direction, then Save Version.</li>
-          </ul>
-        </div>
-
-        <button id="toggleFullGuide" class="instructions-toggle" type="button">View full guide</button>
-
-        <div id="instructionsFullGuide" class="instructions-full-guide">
-          <h3 id="how-it-works">How it works</h3>
-          <p><strong>Step 1: Share</strong><br>In the Chat panel, describe a memory or feeling in your own words. You can also attach an image (📷) to show a mood or scene, or record audio (🎤) to describe it verbally.</p>
-          <p><strong>Step 2: Explore</strong><br>The assistant will ask follow-up questions to understand your emotions. Use the template chips above the input to jump-start replies (e.g., "The setting was…", "2–3 emojis that fit…").</p>
-          <p><strong>Step 3: Create</strong><br>When you're ready, say something like "help me implement" or "I have a good sense of the emotion." The assistant will generate p5.js code that appears in the Code panel.</p>
-          <p><strong>Step 4: Refine</strong><br>Edit the code directly in the Code panel. Click <strong>Run</strong> to preview changes. Click <strong>Save Version</strong> to keep a snapshot of your current code and profile. Use <strong>Version History</strong> to browse and restore earlier versions.</p>
-
-          <h3 id="profile">Profile panel</h3>
-          <p>The Profile panel shows the assistant's understanding of your emotions and artistic direction. You can edit it directly: <strong>Emotion Profile</strong> (the assistant's summary of your emotions) and <strong>Artistic Profile</strong> (the visual direction for your sketch). Your edits are saved when you click <strong>Save Version</strong> in the Code panel—that creates a new version that includes your profile changes.</p>
-
-          <h3 id="version-history">Version history</h3>
-          <p>Click <strong>View Version History</strong> to open the edit history graph. You can browse all saved versions and how they connect, click a version to preview its code and profile without restoring, and use <strong>Restore to this version</strong> to bring back that version's code and profile. Use this to try different directions and return to earlier ideas.</p>
-
-          <h3 id="tips">Tips</h3>
-          <ul>
-            <li>You can switch between exploring emotions and generating code at any time.</li>
-            <li>The Profile panel shows the assistant's confidence in understanding your emotions.</li>
-            <li>If something feels off, say so—the assistant is designed to correct and iterate.</li>
-            <li>When the assistant proposes a new visual direction, you can Accept, ask for More options, or use Modify to describe the art direction you want in your own words.</li>
-          </ul>
-        </div>
-      </div>
-      <div class="instructions-footer">
-        <button id="gotItBtn" class="primary" type="button">Got it</button>
+      <h2 id="tourTitle" class="tour-title">Welcome to Emotion Sketch Studio</h2>
+      <div id="tourBody" class="tour-body"></div>
+      <div class="tour-actions">
+        <button id="tourBackBtn" class="ghost" type="button">Back</button>
+        <span class="tour-actions-spacer"></span>
+        <button id="tourNextBtn" class="primary" type="button">Enter</button>
       </div>
     </div>
   </div>
@@ -1189,29 +1127,35 @@ button.ghost {
         <button class="pane-expand-btn" type="button" data-pane-target="profile">Expand</button>
       </div>
       <div class="profile-content">
-        <label for="emotionProfile">Emotion Profile</label>
-        <textarea id="emotionProfile"></textarea>
-
-        <label>Emotion Confidence</label>
-        <div class="confidence-wrap" aria-live="polite">
-          <div id="confidenceBar" class="confidence-bar">
-            <div id="confidenceFill" class="confidence-fill"></div>
-          </div>
-          <span id="confidenceText" class="confidence-text">N/A</span>
+        <div id="emotionProfileGroup" class="profile-group">
+          <label for="emotionProfile">Emotion Profile</label>
+          <textarea id="emotionProfile"></textarea>
         </div>
-        <p id="confidenceHint" class="confidence-hint"></p>
 
-        <label>Emotion Gaps</label>
-        <p id="emotionGapsText" class="gaps-text">No major gaps identified.</p>
+        <div id="confidenceGroup" class="profile-group">
+          <label>Emotion Confidence</label>
+          <div class="confidence-wrap" aria-live="polite">
+            <div id="confidenceBar" class="confidence-bar">
+              <div id="confidenceFill" class="confidence-fill"></div>
+            </div>
+            <span id="confidenceText" class="confidence-text">N/A</span>
+          </div>
+          <p id="confidenceHint" class="confidence-hint"></p>
+
+          <label>Emotion Gaps</label>
+          <p id="emotionGapsText" class="gaps-text">No major gaps identified.</p>
+        </div>
 
         <hr class="profile-divider" />
 
-        <label for="artisticProfile">Artistic Profile</label>
-        <textarea id="artisticProfile"></textarea>
+        <div id="artisticProfileGroup" class="profile-group">
+          <label for="artisticProfile">Artistic Profile</label>
+          <textarea id="artisticProfile"></textarea>
+        </div>
       </div>
     </section>
 
-    <section class="right-pane">
+    <section id="creationPane" class="right-pane">
       <section id="previewPanel" class="panel pane-expandable" data-pane-id="preview">
         <div class="panel-header">
           <h2 class="panel-title">Preview</h2>
@@ -1286,6 +1230,118 @@ const INITIAL_ART_DIRECTION_DECISION_TEMPLATES = [
   { label: "Modify / Describe Idea", text: ART_DECISION_MODIFY, autoSend: true, decision: true },
   { label: "More Options", text: ART_DECISION_MORE, autoSend: true, decision: true },
 ];
+const TOUR_WELCOME_COPY = [
+  "This studio helps you turn emotions, memories, and lived experiences into expressive p5.js sketches with an AI collaborator.",
+  "Take a quick tour to see how the chat, profile, preview, and versioning tools work together.",
+];
+const TOUR_STEPS = [
+  {
+    target: "#chatPanel",
+    placement: "right",
+    padding: 18,
+    title: "Chat With The AI Collaborator",
+    body: [
+      "This is where you can chat with the AI collaborator about the emotion, memory, or lived experience you want to express.",
+    ],
+  },
+  {
+    target: "#chatPanel",
+    placement: "right",
+    padding: 18,
+    title: "Refine The Feeling Before You Code",
+    body: [
+      "The AI collaborator first helps you discover and refine the emotion you want to express.",
+      "The more you chat, the better it can understand your emotions and create sketches that match what you have in mind.",
+      "You can tell it to move on and create code for you at any time.",
+    ],
+  },
+  {
+    target: "#templateRow",
+    placement: "top",
+    padding: 14,
+    title: "Suggested Replies",
+    body: [
+      "We also suggest reply options above the input box to help speed up the process and keep the conversation moving.",
+    ],
+  },
+  {
+    target: "#profilePanel",
+    placement: "right",
+    padding: 18,
+    title: "Profile Pane",
+    body: [
+      "This pane is a running summary of what the AI understands about your emotion and visual direction.",
+      "It updates automatically as you chat, so you can double-check that you and the AI are staying on the same page.",
+    ],
+  },
+  {
+    target: "#emotionProfileGroup",
+    placement: "left",
+    padding: 14,
+    title: "Emotion Profile",
+    body: [
+      "Here, the AI summarizes the emotion it believes you are trying to express.",
+    ],
+  },
+  {
+    target: "#confidenceGroup",
+    placement: "left",
+    padding: 14,
+    title: "Confidence And Gaps",
+    body: [
+      "This shows how confident the AI is about understanding your emotion. If confidence is low, it usually helps to describe the feeling more.",
+      "You can still ask it to generate code even with low confidence, but the result is more likely to miss what you mean.",
+      "The gaps list the parts the AI does not fully understand yet, so you know what to clarify next.",
+    ],
+  },
+  {
+    target: "#artisticProfileGroup",
+    placement: "left",
+    padding: 14,
+    title: "Artistic Profile",
+    body: [
+      "This is where the AI summarizes your artistic preferences, imagery, and visual metaphors.",
+    ],
+  },
+  {
+    target: "#profilePanel",
+    placement: "right",
+    padding: 18,
+    title: "Use The Profile To Stay Aligned",
+    body: [
+      "You can review and edit this panel directly at any time. It gives you a quick way to make sure the shared context still matches what you want.",
+    ],
+  },
+  {
+    target: "#creationPane",
+    placement: "left",
+    padding: 18,
+    title: "Preview And Code",
+    body: [
+      "After you enter the coding stage, the generated code and a live preview of the sketch appear here.",
+      "You can edit and run the code yourself, or keep asking the AI to code for you.",
+    ],
+  },
+  {
+    target: "#newSessionBtn",
+    placement: "bottom",
+    padding: 12,
+    title: "New Session",
+    body: [
+      "Click here whenever you want to start a brand-new session from scratch.",
+    ],
+  },
+  {
+    target: "#historyBtn",
+    placement: "bottom",
+    padding: 12,
+    title: "Version History",
+    body: [
+      "Click here to open Version History, where you can browse and restore earlier code, artistic-profile, or emotion-profile versions.",
+      "That makes it easy to explore different directions and still return to a previous version later.",
+    ],
+  },
+];
 
 let sessionId = null;
 let appState = null;
@@ -1305,6 +1361,9 @@ let isSending = false;
 let codeEditorView = null;
 let activeCodeTab = "code";
 let consoleEntries = [];
+let tourStepIndex = -1;
+let tourRepositionTimer = null;
+let tourHideTimer = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -1559,22 +1618,271 @@ function markInstructionsSeen() {
   localStorage.setItem(STORAGE_KEY_INSTRUCTIONS, "true");
 }
 
-function showInstructionsModal() {
-  const modal = $("instructionsModal");
-  if (!modal) return;
-  modal.hidden = false;
-  modal.classList.add("visible");
-  modal.setAttribute("aria-hidden", "false");
-  $("gotItBtn")?.focus();
+function isTourOpen() {
+  const overlay = $("tourOverlay");
+  return !!(overlay && !overlay.hidden && overlay.getAttribute("aria-hidden") !== "true");
 }
 
-function hideInstructionsModal() {
-  const modal = $("instructionsModal");
-  if (!modal) return;
-  modal.hidden = true;
-  modal.classList.remove("visible");
-  modal.setAttribute("aria-hidden", "true");
-  $("helpBtn")?.focus();
+function clearTourTimers() {
+  if (tourRepositionTimer) {
+    clearTimeout(tourRepositionTimer);
+    tourRepositionTimer = null;
+  }
+  if (tourHideTimer) {
+    clearTimeout(tourHideTimer);
+    tourHideTimer = null;
+  }
+}
+
+function setTourBody(paragraphs) {
+  const body = $("tourBody");
+  if (!body) return;
+  body.innerHTML = "";
+  const lines = Array.isArray(paragraphs) ? paragraphs : [paragraphs];
+  lines.filter(Boolean).forEach((line) => {
+    const p = document.createElement("p");
+    p.textContent = line;
+    body.appendChild(p);
+  });
+}
+
+function getTourTarget(step) {
+  if (!step || !step.target) return null;
+  return document.querySelector(step.target);
+}
+
+function hideTourSpotlight() {
+  const spotlight = $("tourSpotlight");
+  if (!spotlight) return;
+  spotlight.hidden = true;
+}
+
+function showTourSpotlight(rect) {
+  const spotlight = $("tourSpotlight");
+  if (!spotlight || !rect) return;
+  spotlight.hidden = false;
+  spotlight.style.top = `${rect.top}px`;
+  spotlight.style.left = `${rect.left}px`;
+  spotlight.style.width = `${rect.width}px`;
+  spotlight.style.height = `${rect.height}px`;
+}
+
+function getExpandedRect(rect, padding) {
+  const pad = Number.isFinite(padding) ? padding : 14;
+  const margin = 10;
+  const left = Math.max(margin, rect.left - pad);
+  const top = Math.max(margin, rect.top - pad);
+  const right = Math.min(window.innerWidth - margin, rect.right + pad);
+  const bottom = Math.min(window.innerHeight - margin, rect.bottom + pad);
+  return {
+    left,
+    top,
+    right,
+    bottom,
+    width: Math.max(40, right - left),
+    height: Math.max(40, bottom - top),
+  };
+}
+
+function clampTourCardPosition(position, cardRect) {
+  const margin = 16;
+  return {
+    left: Math.min(Math.max(position.left, margin), Math.max(margin, window.innerWidth - cardRect.width - margin)),
+    top: Math.min(Math.max(position.top, margin), Math.max(margin, window.innerHeight - cardRect.height - margin)),
+  };
+}
+
+function positionTourCard(targetRect, preferredPlacement) {
+  const overlay = $("tourOverlay");
+  const card = $("tourCard");
+  if (!overlay || !card) return;
+  if (tourStepIndex < 0 || !targetRect) {
+    overlay.classList.add("welcome-mode");
+    card.style.left = "";
+    card.style.top = "";
+    card.style.transform = "";
+    return;
+  }
+
+  overlay.classList.remove("welcome-mode");
+  const cardRect = card.getBoundingClientRect();
+  const gap = 18;
+  const isCompact = window.innerWidth <= 980;
+  const order = isCompact
+    ? ["bottom", "top", "center"]
+    : Array.from(new Set([preferredPlacement || "right", "right", "left", "bottom", "top", "center"]));
+
+  const candidates = {
+    right: {
+      left: targetRect.right + gap,
+      top: targetRect.top + (targetRect.height - cardRect.height) / 2,
+    },
+    left: {
+      left: targetRect.left - cardRect.width - gap,
+      top: targetRect.top + (targetRect.height - cardRect.height) / 2,
+    },
+    bottom: {
+      left: targetRect.left + (targetRect.width - cardRect.width) / 2,
+      top: targetRect.bottom + gap,
+    },
+    top: {
+      left: targetRect.left + (targetRect.width - cardRect.width) / 2,
+      top: targetRect.top - cardRect.height - gap,
+    },
+    center: {
+      left: (window.innerWidth - cardRect.width) / 2,
+      top: (window.innerHeight - cardRect.height) / 2,
+    },
+  };
+
+  const fits = (position) => (
+    position.left >= 16 &&
+    position.top >= 16 &&
+    position.left + cardRect.width <= window.innerWidth - 16 &&
+    position.top + cardRect.height <= window.innerHeight - 16
+  );
+
+  let next = null;
+  for (const placement of order) {
+    const candidate = candidates[placement];
+    if (candidate && fits(candidate)) {
+      next = candidate;
+      break;
+    }
+  }
+
+  if (!next) {
+    next = clampTourCardPosition(candidates[order[0]] || candidates.center, cardRect);
+  }
+
+  card.style.left = `${next.left}px`;
+  card.style.top = `${next.top}px`;
+  card.style.transform = "translate(0, 0)";
+}
+
+function positionActiveTourStep() {
+  if (!isTourOpen() || tourStepIndex < 0) return;
+  const step = TOUR_STEPS[tourStepIndex];
+  const target = getTourTarget(step);
+  if (!target) {
+    hideTourSpotlight();
+    positionTourCard(null, "center");
+    return;
+  }
+
+  target.scrollIntoView({
+    behavior: "smooth",
+    block: window.innerWidth <= 1200 ? "center" : "nearest",
+    inline: "nearest",
+  });
+
+  const place = () => {
+    const rect = target.getBoundingClientRect();
+    const expanded = getExpandedRect(rect, step.padding);
+    showTourSpotlight(expanded);
+    positionTourCard(expanded, step.placement);
+  };
+
+  requestAnimationFrame(place);
+  clearTimeout(tourRepositionTimer);
+  tourRepositionTimer = setTimeout(place, 260);
+}
+
+function renderTourStep() {
+  const overlay = $("tourOverlay");
+  const stepLabel = $("tourStepLabel");
+  const title = $("tourTitle");
+  const nextBtn = $("tourNextBtn");
+  const backBtn = $("tourBackBtn");
+  if (!overlay || !stepLabel || !title || !nextBtn || !backBtn) return;
+
+  if (tourStepIndex < 0) {
+    overlay.classList.add("welcome-mode");
+    stepLabel.textContent = "Welcome";
+    title.textContent = "Welcome to Emotion Sketch Studio";
+    setTourBody(TOUR_WELCOME_COPY);
+    nextBtn.textContent = "Enter";
+    backBtn.textContent = "Back";
+    hideTourSpotlight();
+    positionTourCard(null, "center");
+    requestAnimationFrame(() => nextBtn.focus());
+    return;
+  }
+
+  const step = TOUR_STEPS[tourStepIndex];
+  overlay.classList.remove("welcome-mode");
+  stepLabel.textContent = `Step ${tourStepIndex + 1} of ${TOUR_STEPS.length}`;
+  title.textContent = step.title;
+  setTourBody(step.body);
+  nextBtn.textContent = tourStepIndex === TOUR_STEPS.length - 1 ? "Finish" : "Next";
+  backBtn.textContent = "Back";
+  requestAnimationFrame(() => {
+    positionActiveTourStep();
+    nextBtn.focus();
+  });
+}
+
+function openTutorial() {
+  closeHistory();
+  closeFullscreenPane();
+  clearTourTimers();
+  tourStepIndex = -1;
+  const overlay = $("tourOverlay");
+  if (!overlay) return;
+  overlay.hidden = false;
+  overlay.setAttribute("aria-hidden", "false");
+  requestAnimationFrame(() => {
+    overlay.classList.add("visible");
+    renderTourStep();
+  });
+}
+
+function closeTutorial(options = {}) {
+  const { markSeen = false, focusHelp = true } = options;
+  clearTourTimers();
+  const overlay = $("tourOverlay");
+  if (!overlay) return;
+  if (markSeen) {
+    markInstructionsSeen();
+  }
+  overlay.classList.remove("visible");
+  overlay.setAttribute("aria-hidden", "true");
+  hideTourSpotlight();
+  tourHideTimer = setTimeout(() => {
+    if (!overlay.classList.contains("visible")) {
+      overlay.hidden = true;
+    }
+  }, 220);
+  if (focusHelp) {
+    requestAnimationFrame(() => {
+      $("helpBtn")?.focus();
+    });
+  }
+}
+
+function nextTourStep() {
+  if (tourStepIndex < 0) {
+    markInstructionsSeen();
+    tourStepIndex = 0;
+    renderTourStep();
+    return;
+  }
+  if (tourStepIndex >= TOUR_STEPS.length - 1) {
+    closeTutorial({ markSeen: true });
+    return;
+  }
+  tourStepIndex += 1;
+  renderTourStep();
+}
+
+function previousTourStep() {
+  if (tourStepIndex <= 0) {
+    tourStepIndex = -1;
+    renderTourStep();
+    return;
+  }
+  tourStepIndex -= 1;
+  renderTourStep();
 }
 
 function updateExpandButtons() {
@@ -1884,6 +2192,9 @@ function renderState(state) {
   renderMessages(state.messages || []);
   if (!isHistoryOpen || !historyPreviewVersionId) {
     loadVersionToPanes(state.current_version);
+  }
+  if (isTourOpen() && tourStepIndex >= 0) {
+    requestAnimationFrame(() => positionActiveTourStep());
   }
 }
 
@@ -2238,9 +2549,8 @@ function initializeApp() {
 
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
-      const modal = $("instructionsModal");
-      if (modal && !modal.hidden) {
-        hideInstructionsModal();
+      if (isTourOpen()) {
+        closeTutorial({ markSeen: true });
       } else {
         closeFullscreenPane();
       }
@@ -2249,6 +2559,9 @@ function initializeApp() {
 
   window.addEventListener("resize", () => {
     refreshCodeEditorLayout();
+    if (isTourOpen() && tourStepIndex >= 0) {
+      positionActiveTourStep();
+    }
   });
 
   bindById("chatInput", "input", () => {
@@ -2308,52 +2621,28 @@ function initializeApp() {
   bindById("restoreBtn", "click", restoreSelectedVersion);
   bindById("newSessionBtn", "click", startNewSession);
   bindById("resetBtn", "click", resetSession);
-  bindById("helpBtn", "click", showInstructionsModal);
-  bindById("gotItBtn", "click", () => {
-    markInstructionsSeen();
-    hideInstructionsModal();
-  });
-  bindById("closeInstructionsBtn", "click", hideInstructionsModal);
-  document.querySelector(".instructions-backdrop")?.addEventListener("click", hideInstructionsModal);
-
-  bindById("toggleFullGuide", "click", () => {
-    const guide = $("instructionsFullGuide");
-    const btn = $("toggleFullGuide");
-    if (guide?.classList.toggle("visible")) {
-      btn.textContent = "Show less";
-    } else {
-      btn.textContent = "View full guide";
-    }
-  });
-
-  document.querySelectorAll(".instructions-jump").forEach((link) => {
-    link.addEventListener("click", (e) => {
-      e.preventDefault();
-      const guide = $("instructionsFullGuide");
-      const btn = $("toggleFullGuide");
-      if (guide && !guide.classList.contains("visible")) {
-        guide.classList.add("visible");
-        if (btn) btn.textContent = "Show less";
-      }
-      const id = link.getAttribute("href")?.slice(1);
-      const target = id ? document.getElementById(id) : null;
-      target?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  });
-
-  requestAnimationFrame(() => showInstructionsModal());
+  bindById("helpBtn", "click", openTutorial);
+  bindById("tourNextBtn", "click", nextTourStep);
+  bindById("tourBackBtn", "click", previousTourStep);
+  bindById("tourSkipBtn", "click", () => closeTutorial({ markSeen: true }));
 
   fetchState()
     .then(() => {
       updateSendButtonState();
       updateExpandButtons();
       refreshCodeEditorLayout();
+      if (!hasSeenInstructions()) {
+        requestAnimationFrame(() => openTutorial());
+      }
     })
     .catch((error) => {
       console.error("Initial state fetch failed:", error);
       updateSendButtonState();
       updateExpandButtons();
       refreshCodeEditorLayout();
+      if (!hasSeenInstructions()) {
+        requestAnimationFrame(() => openTutorial());
+      }
     });
 }
 
