@@ -44,6 +44,11 @@ ART_DECISION_MODIFY = "Art Direction Decision: Modify"
 ART_DECISION_MORE = "Art Direction Decision: More options"
 ART_DECISION_OPTION_PREFIX = "Art Direction Decision: Option "
 
+PHASE_EMOTION = "emotional_discovery"
+PHASE_ARTISTIC = "artistic_discovery"
+PHASE_CODE = "code_generation"
+PHASE_ORDER = [PHASE_EMOTION, PHASE_ARTISTIC, PHASE_CODE]
+
 
 BASE_PROMPT = """
 You are a collaborative creative coding assistant helping novice programmers create p5.js sketches that express lived experiences and emotions.
@@ -80,6 +85,7 @@ Return STRICT JSON only with this exact schema:
   "emotion_confidence": "<low|medium|high>",
   "emotion_gaps": ["<gap 1>", "<gap 2>"],
   "artistic_profile": "",
+  "artistic_confidence": "",
   "code": ""
 }
 
@@ -122,6 +128,7 @@ Return STRICT JSON only with this exact schema:
   "emotion_confidence": "<low|medium|high>",
   "emotion_gaps": ["<gap 1>", "<gap 2>"],
   "artistic_profile": "<1-3 sentences of visual direction>",
+  "artistic_confidence": "<low|medium|high>",
   "code": "<full runnable p5.js>",
   "should_create_version": true,
   "offers_artistic_alternatives": false,
@@ -212,7 +219,7 @@ Rules:
 
 
 def build_system_prompt(phase: str, state_summary: str) -> str:
-    phase_prompt = DISCOVERY_PROMPT if phase == "emotional_discovery" else IMPLEMENTATION_PROMPT
+    phase_prompt = DISCOVERY_PROMPT if phase == PHASE_EMOTION else IMPLEMENTATION_PROMPT
     return f"{BASE_PROMPT}\n\nCurrent state:\n{state_summary}\n\n{phase_prompt}"
 
 
@@ -241,6 +248,10 @@ def _normalize_confidence(value: Any) -> str:
     if c in {"1", "1.0"}:
         return "high"
     return "low"
+
+
+def _confidence_allows_advance(value: Any) -> bool:
+    return _normalize_confidence(value) in {"medium", "high"}
 
 
 def _normalize_gaps(value: Any) -> list[str]:
@@ -475,6 +486,16 @@ def _update_current_emotion_state(
     version.emotion_gaps = emotion_gaps
 
 
+def _update_current_artistic_state(
+    version: "VersionNode",
+    *,
+    artistic_profile: str,
+    artistic_confidence: str,
+) -> None:
+    version.artistic_profile = artistic_profile
+    version.artistic_confidence = artistic_confidence
+
+
 def _parse_canonical_art_direction_command(text: str) -> Optional[str]:
     cleaned = _collapse_spaces(text)
     if not cleaned:
@@ -665,7 +686,11 @@ def _restore_transition_message(version_summary: str) -> str:
 
 
 def _infer_phase_from_version(version: "VersionNode") -> str:
-    return "code_generation" if _clean_text(version.code) else "emotional_discovery"
+    if _clean_text(version.code):
+        return PHASE_CODE
+    if _clean_text(version.artistic_profile):
+        return PHASE_ARTISTIC
+    return PHASE_EMOTION
 
 
 def _summarize_state_for_prompt(version: "VersionNode") -> str:
@@ -678,13 +703,14 @@ def _summarize_state_for_prompt(version: "VersionNode") -> str:
         f"Emotion confidence: {version.emotion_confidence or '(empty)'}\n"
         f"Emotion gaps: {', '.join(version.emotion_gaps) if version.emotion_gaps else '(none)'}\n"
         f"Artistic profile: {version.artistic_profile or '(empty)'}\n"
+        f"Artistic confidence: {version.artistic_confidence or '(empty)'}\n"
         f"Code first line: {code_first or '(empty)'}"
     )
 
 
 def _default_mock_reply(phase: str, version: "VersionNode") -> dict:
     emotion = version.emotion_profile or "The emotion is still unfolding and may need more context."
-    if phase == "emotional_discovery":
+    if phase == PHASE_EMOTION:
         return {
             "message": (
                 "Thank you for sharing this. I can hear there is real emotional weight here, and I can help you express it visually. "
@@ -699,6 +725,7 @@ def _default_mock_reply(phase: str, version: "VersionNode") -> dict:
                 "The desired motion or pacing is not fully defined.",
             ],
             "artistic_profile": version.artistic_profile or "",
+            "artistic_confidence": version.artistic_confidence or "",
             "code": "",
             "should_create_version": False,
             "offers_artistic_alternatives": False,
@@ -716,6 +743,7 @@ def _default_mock_reply(phase: str, version: "VersionNode") -> dict:
         "emotion_gaps": version.emotion_gaps or ["Color and pacing preference may need refinement."],
         "artistic_profile": version.artistic_profile
         or "Soft particle motion with a restrained palette to keep emotional focus.",
+        "artistic_confidence": version.artistic_confidence or "medium",
         "code": version.code or "",
         "should_create_version": False,
         "offers_artistic_alternatives": False,
@@ -741,7 +769,7 @@ def _salvage_non_json_llm_reply(
     text_without_code = re.sub(r"```[\s\S]*?```", "", raw).strip()
     if text_without_code and len(text_without_code) >= 20:
         fallback["message"] = text_without_code
-    elif phase == "code_generation" and intent_hint == "sketch_rejection":
+    elif phase == PHASE_CODE and intent_hint == "sketch_rejection":
         fallback["message"] = (
             "I hear the current sketch is off. Tell me what feels most wrong about it right now: "
             "the motion, density, shape, color, or overall mood. I may still miss your intent, "
@@ -787,6 +815,7 @@ class VersionNode:
     summary: str
     emotion_profile: str
     artistic_profile: str
+    artistic_confidence: str
     code: str
     emotion_confidence: str
     emotion_gaps: list[str] = field(default_factory=list)
@@ -796,6 +825,7 @@ class VersionNode:
 @dataclass
 class PendingArtisticDecision:
     proposed_artistic_profile: str
+    proposed_artistic_confidence: str
     proposed_code: str
     proposed_emotion_profile: str
     proposed_emotion_confidence: str
@@ -809,7 +839,7 @@ class PendingArtisticDecision:
 @dataclass
 class SessionState:
     session_id: str
-    phase: str = "emotional_discovery"
+    phase: str = PHASE_EMOTION
     messages: list[ChatEntry] = field(default_factory=list)
     llm_events: list[dict[str, Any]] = field(default_factory=list)
     versions: dict[str, VersionNode] = field(default_factory=dict)
@@ -819,6 +849,8 @@ class SessionState:
     current_version_id: Optional[str] = None
     branch_counter: int = 1
     pending_artistic_decision: Optional[PendingArtisticDecision] = None
+    unlocked_phases: list[str] = field(default_factory=lambda: [PHASE_EMOTION])
+    visited_phases: list[str] = field(default_factory=lambda: [PHASE_EMOTION])
 
     def __post_init__(self):
         if self.current_version_id:
@@ -831,6 +863,7 @@ class SessionState:
             summary="Initial version",
             emotion_profile="",
             artistic_profile="",
+            artistic_confidence="",
             code="",
             emotion_confidence="",
             emotion_gaps=["Share a personal moment so we can ground the emotion."],
@@ -844,6 +877,82 @@ class SessionState:
     @property
     def current_version(self) -> VersionNode:
         return self.versions[self.current_version_id]
+
+
+def _phase_index(phase: str) -> int:
+    try:
+        return PHASE_ORDER.index(phase)
+    except ValueError:
+        return 0
+
+
+def _unlock_phase(session: SessionState, phase: str) -> None:
+    phase_idx = _phase_index(phase)
+    for unlocked in PHASE_ORDER[: phase_idx + 1]:
+        if unlocked not in session.unlocked_phases:
+            session.unlocked_phases.append(unlocked)
+
+
+def _mark_phase_visited(session: SessionState, phase: str) -> bool:
+    _unlock_phase(session, phase)
+    first_visit = phase not in session.visited_phases
+    if first_visit:
+        session.visited_phases.append(phase)
+    return first_visit
+
+
+def _can_unlock_phase(session: SessionState, phase: str) -> bool:
+    current = session.current_version
+    if phase == PHASE_EMOTION:
+        return True
+    if phase == PHASE_ARTISTIC:
+        return bool(_clean_text(current.emotion_profile)) and _confidence_allows_advance(current.emotion_confidence)
+    if phase == PHASE_CODE:
+        if _clean_text(current.code):
+            return True
+        return bool(_clean_text(current.artistic_profile)) and _confidence_allows_advance(current.artistic_confidence)
+    return False
+
+
+def _phase_locked_message(target_phase: str) -> str:
+    if target_phase == PHASE_ARTISTIC:
+        return (
+            "Keep refining the emotion a bit more first. Artistic Discovery unlocks once the emotion confidence reaches medium or high."
+        )
+    if target_phase == PHASE_CODE:
+        return (
+            "Choose and save an artistic direction first. Coding unlocks once the artistic confidence reaches medium or high."
+        )
+    return "That phase is not ready yet."
+
+
+def _phase_transition_message(phase: str, *, first_visit: bool, current_version: VersionNode) -> str:
+    if phase == PHASE_EMOTION:
+        return (
+            "Back in **Emotion Discovery**. We can revisit the memory, setting, or feeling itself before changing the visuals."
+        )
+    if phase == PHASE_ARTISTIC:
+        intro = "Welcome to **Artistic Discovery**." if first_visit else "Back in **Artistic Discovery**."
+        return (
+            f"{intro}\n\n"
+            "Tell me about the visual direction you want and I will turn it into three artwork options with previews.\n"
+            "- Abstract vs detailed\n"
+            "- Still vs gentle motion vs dynamic motion\n"
+            "- Warm, cool, monochrome, or high-contrast color\n"
+            "- Organic vs geometric shapes\n"
+            "- Minimal vs dense composition\n"
+            "- Smooth, grainy, or glowing texture\n\n"
+            "You can use the preference chips, type your own note, or go back whenever you want."
+        )
+    if phase == PHASE_CODE:
+        if _clean_text(current_version.artistic_profile):
+            return (
+                "You are in **Coding** now. I can implement the chosen artistic direction in p5.js, and you can still jump back to Artistic for a bigger visual rethink."
+            )
+        return (
+            "You are in **Coding** now. This version does not have a saved artistic direction yet, so if you want a more guided implementation, hop back to Artistic first."
+        )
+    return ""
 
 
 sessions: dict[str, SessionState] = {}
@@ -970,6 +1079,7 @@ def _sanitize_artistic_options_payload(
         deduped.append(opt)
     emotion_profile = _ensure_emotion_prefix(_clean_text(raw.get("emotion_profile"))) or current.emotion_profile
     emotion_confidence = _normalize_confidence(raw.get("emotion_confidence") or current.emotion_confidence)
+    artistic_confidence = _normalize_confidence(raw.get("artistic_confidence") or current.artistic_confidence)
     emotion_gaps = _normalize_gaps(raw.get("emotion_gaps"))
     if not emotion_gaps:
         emotion_gaps = current.emotion_gaps
@@ -983,6 +1093,7 @@ def _sanitize_artistic_options_payload(
         "artistic_options": deduped[:3],
         "emotion_profile": emotion_profile,
         "emotion_confidence": emotion_confidence,
+        "artistic_confidence": artistic_confidence,
         "emotion_gaps": emotion_gaps,
         "commit_message": commit_message,
     }
@@ -993,6 +1104,7 @@ def create_version(
     *,
     emotion_profile: str,
     artistic_profile: str,
+    artistic_confidence: str,
     code: str,
     emotion_confidence: str,
     emotion_gaps: list[str],
@@ -1017,6 +1129,7 @@ def create_version(
         summary=summary,
         emotion_profile=emotion_profile,
         artistic_profile=artistic_profile,
+        artistic_confidence=artistic_confidence,
         code=code,
         emotion_confidence=emotion_confidence,
         emotion_gaps=emotion_gaps,
@@ -1062,7 +1175,7 @@ def _invoke_llm(
         fallback_json = json.dumps(parsed)
         return parsed, fallback_json, human_msg, AIMessage(content=fallback_json)
 
-    llm = phase_1_llm if session.phase == "emotional_discovery" else phase_2_llm
+    llm = phase_1_llm if session.phase == PHASE_EMOTION else phase_2_llm
     state_summary = _summarize_state_for_prompt(session.current_version)
     system_msg = SystemMessage(content=build_system_prompt(session.phase, state_summary))
 
@@ -1103,17 +1216,20 @@ def _invoke_artistic_options_llm(
     proposed_artistic_profile: str,
 ) -> tuple[dict, str, Any, Any]:
     prompt_text = f"""
-You are in an artistic-direction proposal step. Do not finalize a version yet.
+You are in the artistic discovery step of a three-phase workflow: emotion -> artistic -> coding.
+Do not generate code and do not finalize a version yet.
 The user feedback is: "{user_feedback or 'No extra feedback provided.'}"
+Current emotion profile: "{session.current_version.emotion_profile or '(empty)'}"
 Current proposed artistic profile: "{proposed_artistic_profile or '(empty)'}"
 
 Return STRICT JSON only with this schema:
 {{
   "message": "<empathetic short reply + brief interpretation + natural presentation of the options + invitation to choose or describe their own vision>",
-  "recommended_artistic_profile": "<updated artistic profile proposal>",
+  "recommended_artistic_profile": "<2-4 sentences that summarize the visual direction, explicitly naming the user's chosen preferences, their custom note or chat direction, and how it connects back to the emotion>",
   "artistic_options": ["<option 1>", "<option 2>", "<option 3>"],
   "emotion_profile": "The emotion is ...",
   "emotion_confidence": "<low|medium|high>",
+  "artistic_confidence": "<low|medium|high>",
   "emotion_gaps": ["<gap 1>", "<gap 2>"],
   "commit_message": "<one-line summary of this proposed direction>"
 }}
@@ -1121,6 +1237,9 @@ Return STRICT JSON only with this schema:
 Rules:
 - Be empathetic and supportive.
 - Set expectation that you may be wrong and invite correction.
+- Generate exactly 3 clearly distinct artwork directions the user could compare before coding.
+- Use a spread of visual axes when helpful: abstraction vs detail, stillness vs motion, palette temperature and contrast, shape language, composition density, atmosphere, and texture.
+- In `recommended_artistic_profile`, explicitly mention the user's stated visual preferences and any direct visual note they typed in this request.
 - Present the options naturally in the `message`, so the user can understand what each option means.
 - Invite the user to choose one option, ask for more options, or describe their own art direction in their own words.
 - Do not include markdown or any keys outside this schema.
@@ -1229,6 +1348,7 @@ def _sanitize_llm_payload(raw: dict, current: VersionNode) -> dict:
     commit_message = _clean_text(raw.get("commit_message"))
     emotion_profile = _ensure_emotion_prefix(_clean_text(raw.get("emotion_profile"))) or current.emotion_profile
     artistic_profile = _clean_text(raw.get("artistic_profile")) or current.artistic_profile
+    artistic_confidence = _normalize_confidence(raw.get("artistic_confidence") or current.artistic_confidence)
     code = _clean_text(raw.get("code")) or current.code
     emotion_confidence = _normalize_confidence(raw.get("emotion_confidence") or current.emotion_confidence)
     emotion_gaps = _normalize_gaps(raw.get("emotion_gaps"))
@@ -1249,6 +1369,7 @@ def _sanitize_llm_payload(raw: dict, current: VersionNode) -> dict:
         "emotion_confidence": emotion_confidence,
         "emotion_gaps": emotion_gaps,
         "artistic_profile": artistic_profile,
+        "artistic_confidence": artistic_confidence,
         "code": code,
         "should_create_version": should_create_version,
         "offers_artistic_alternatives": offers_artistic_alternatives,
@@ -1275,6 +1396,7 @@ def serialize_version(v: VersionNode) -> dict:
         "summary": v.summary,
         "emotion_profile": v.emotion_profile,
         "artistic_profile": v.artistic_profile,
+        "artistic_confidence": v.artistic_confidence,
         "code": v.code,
         "emotion_confidence": v.emotion_confidence,
         "emotion_gaps": v.emotion_gaps,
@@ -1287,6 +1409,7 @@ def serialize_pending_artistic_decision(pending: Optional[PendingArtisticDecisio
         return None
     return {
         "proposed_artistic_profile": pending.proposed_artistic_profile,
+        "proposed_artistic_confidence": pending.proposed_artistic_confidence,
         "proposed_code": pending.proposed_code,
         "proposed_emotion_profile": pending.proposed_emotion_profile,
         "proposed_emotion_confidence": pending.proposed_emotion_confidence,
@@ -1304,6 +1427,9 @@ def serialize_state(session: SessionState) -> dict:
     return {
         "session_id": session.session_id,
         "phase": session.phase,
+        "phase_order": list(PHASE_ORDER),
+        "unlocked_phases": list(session.unlocked_phases),
+        "visited_phases": list(session.visited_phases),
         "current_version": current,
         "versions": versions,
         "messages": [serialize_message(m) for m in session.messages],
@@ -1349,6 +1475,53 @@ def api_history():
             "edges": edges,
             "branch_heads": dict(session.branch_heads),
             "active_branch": session.active_branch,
+        }
+    )
+
+
+@app.route("/api/set-phase", methods=["POST"])
+def api_set_phase():
+    data = request.get_json(silent=True) or {}
+    sid = data.get("session_id")
+    target_phase = _clean_text(data.get("phase"))
+    if not sid or not target_phase:
+        return jsonify({"error": "Missing session_id or phase"}), 400
+
+    session = get_or_create_session(sid)
+    if target_phase not in PHASE_ORDER:
+        return jsonify({"error": "Invalid phase"}), 400
+
+    if target_phase not in session.unlocked_phases and not _can_unlock_phase(session, target_phase):
+        return jsonify({"error": _phase_locked_message(target_phase)}), 400
+
+    previous_phase = session.phase
+    _unlock_phase(session, target_phase)
+    first_visit = _mark_phase_visited(session, target_phase)
+    session.phase = target_phase
+    if target_phase != PHASE_ARTISTIC:
+        session.pending_artistic_decision = None
+
+    transition_message = _phase_transition_message(
+        target_phase,
+        first_visit=first_visit,
+        current_version=session.current_version,
+    )
+    if transition_message:
+        _append_chat(session, "assistant", "system", transition_message)
+        _append_llm_event(session, AIMessage(content=transition_message), session.current_version_id)
+
+    should_auto_implement = (
+        target_phase == PHASE_CODE
+        and previous_phase == PHASE_ARTISTIC
+        and bool(_clean_text(session.current_version.artistic_profile))
+    )
+
+    return jsonify(
+        {
+            "ok": True,
+            "phase": session.phase,
+            "should_auto_implement": should_auto_implement,
+            "state": serialize_state(session),
         }
     )
 
@@ -1402,15 +1575,116 @@ def api_chat():
         }
     )
     decision = actions["art_direction_decision"]
+    user_text_for_model = message
 
-    # Handle explicit artistic-decision actions first when a proposal is pending.
-    if pending and decision:
+    if session.phase == PHASE_CODE and actions["emotion_refinement"] and not actions["sketch_rejection"]:
+        session.phase = PHASE_EMOTION
+        _mark_phase_visited(session, PHASE_EMOTION)
+        session.pending_artistic_decision = None
+    elif session.phase == PHASE_ARTISTIC and actions["emotion_refinement"]:
+        session.phase = PHASE_EMOTION
+        _mark_phase_visited(session, PHASE_EMOTION)
+        session.pending_artistic_decision = None
+    elif session.phase == PHASE_EMOTION and session.current_version.emotion_profile:
+        if actions["confirm_start_coding"] or actions["code_request"]:
+            if PHASE_CODE not in session.unlocked_phases:
+                if PHASE_ARTISTIC not in session.unlocked_phases and not _can_unlock_phase(session, PHASE_ARTISTIC):
+                    assistant_text = _phase_locked_message(PHASE_ARTISTIC)
+                    _append_chat(session, "assistant", "text", assistant_text)
+                    current = session.current_version
+                    return _chat_response(
+                        {
+                            "message": assistant_text,
+                            "commit_message": "Stayed in emotion discovery until the feeling is clearer",
+                            "emotion_profile": current.emotion_profile,
+                            "emotion_confidence": current.emotion_confidence,
+                            "emotion_gaps": current.emotion_gaps,
+                            "artistic_profile": current.artistic_profile,
+                            "artistic_confidence": current.artistic_confidence,
+                            "code": current.code,
+                            "should_create_version": False,
+                            "offers_artistic_alternatives": False,
+                            "artistic_options": [],
+                        },
+                        raw_response_text="",
+                        created_version=None,
+                    )
+                _unlock_phase(session, PHASE_ARTISTIC)
+                first_visit = _mark_phase_visited(session, PHASE_ARTISTIC)
+                session.phase = PHASE_ARTISTIC
+                transition_message = _phase_transition_message(
+                    PHASE_ARTISTIC,
+                    first_visit=first_visit,
+                    current_version=session.current_version,
+                )
+                _append_chat(session, "assistant", "system", transition_message)
+                _append_llm_event(session, AIMessage(content=transition_message), session.current_version_id)
+                current = session.current_version
+                return _chat_response(
+                    {
+                        "message": transition_message,
+                        "commit_message": "Moved from emotion discovery to artistic discovery",
+                        "emotion_profile": current.emotion_profile,
+                        "emotion_confidence": current.emotion_confidence,
+                        "emotion_gaps": current.emotion_gaps,
+                        "artistic_profile": current.artistic_profile,
+                        "artistic_confidence": current.artistic_confidence,
+                        "code": current.code,
+                        "should_create_version": False,
+                        "offers_artistic_alternatives": False,
+                        "artistic_options": [],
+                    },
+                    raw_response_text="",
+                    created_version=None,
+                )
+            session.phase = PHASE_CODE
+            _mark_phase_visited(session, PHASE_CODE)
+            user_text_for_model = _build_code_start_confirmation_prompt(session, message)
+    elif session.phase == PHASE_ARTISTIC and (actions["confirm_start_coding"] or actions["code_request"]):
+        if PHASE_CODE not in session.unlocked_phases and not _can_unlock_phase(session, PHASE_CODE):
+            assistant_text = (
+                "Choose one of the artwork options, accept the draft direction, or describe the visuals you want first. "
+                "Once an artistic direction is saved, Coding will unlock."
+            )
+            _append_chat(session, "assistant", "text", assistant_text)
+            current = session.current_version
+            pending = session.pending_artistic_decision
+            return _chat_response(
+                {
+                    "message": assistant_text,
+                    "commit_message": "Stayed in artistic discovery until a direction is chosen",
+                    "emotion_profile": current.emotion_profile,
+                    "emotion_confidence": current.emotion_confidence,
+                    "emotion_gaps": current.emotion_gaps,
+                    "artistic_profile": (
+                        pending.proposed_artistic_profile if pending and pending.proposed_artistic_profile else current.artistic_profile
+                    ),
+                    "artistic_confidence": (
+                        pending.proposed_artistic_confidence if pending and pending.proposed_artistic_confidence else current.artistic_confidence
+                    ),
+                    "code": current.code,
+                    "should_create_version": False,
+                    "offers_artistic_alternatives": bool(pending and pending.alternatives),
+                    "artistic_options": list(pending.alternatives) if pending else [],
+                },
+                raw_response_text="",
+                created_version=None,
+            )
+        session.phase = PHASE_CODE
+        _mark_phase_visited(session, PHASE_CODE)
+        session.pending_artistic_decision = None
+        user_text_for_model = _build_code_start_confirmation_prompt(session, message)
+
+    pending = session.pending_artistic_decision
+
+    if session.phase == PHASE_ARTISTIC:
         current = session.current_version
-        if decision == "modify":
+
+        if pending and decision == "modify":
             pending.awaiting_modify_details = True
             assistant_text = (
-                "Thanks for steering this. Tell me what you want to change, or just describe the art direction "
-                "you already have in mind, and I will revise the proposal before creating any version."
+                "Tell me what to change in the artwork options, or describe the visual direction you want in your own words, "
+                "and I will generate a fresh set before we code."
             )
             _append_chat(session, "assistant", "text", assistant_text)
             return _chat_response(
@@ -1421,6 +1695,7 @@ def api_chat():
                     "emotion_confidence": pending.proposed_emotion_confidence or current.emotion_confidence,
                     "emotion_gaps": pending.proposed_emotion_gaps or current.emotion_gaps,
                     "artistic_profile": pending.proposed_artistic_profile or current.artistic_profile,
+                    "artistic_confidence": pending.proposed_artistic_confidence or current.artistic_confidence,
                     "code": current.code,
                     "should_create_version": False,
                     "offers_artistic_alternatives": False,
@@ -1430,53 +1705,84 @@ def api_chat():
                 created_version=None,
             )
 
-        if decision == "more_options":
-            options_payload, raw_options_text, human_msg, assistant_msg = _invoke_artistic_options_llm(
-                session,
-                user_feedback="Please provide more artistic direction alternatives before implementation.",
-                proposed_artistic_profile=pending.proposed_artistic_profile,
-            )
-            pending.proposed_artistic_profile = options_payload["recommended_artistic_profile"]
-            pending.proposed_emotion_profile = options_payload["emotion_profile"]
-            pending.proposed_emotion_confidence = options_payload["emotion_confidence"]
-            pending.proposed_emotion_gaps = options_payload["emotion_gaps"]
-            pending.proposed_commit_message = options_payload["commit_message"]
-            pending.alternatives = options_payload["artistic_options"]
-            pending.awaiting_modify_details = False
-            assistant_text = options_payload["message"]
-            _append_chat(session, "assistant", "text", assistant_text)
-            _append_llm_event(session, human_msg, session.current_version_id)
-            _append_llm_event(session, assistant_msg, session.current_version_id)
-            return _chat_response(
-                {
-                    "message": assistant_text,
-                    "commit_message": pending.proposed_commit_message,
-                    "emotion_profile": pending.proposed_emotion_profile,
-                    "emotion_confidence": pending.proposed_emotion_confidence,
-                    "emotion_gaps": pending.proposed_emotion_gaps,
-                    "artistic_profile": pending.proposed_artistic_profile,
-                    "code": current.code,
-                    "should_create_version": False,
-                    "offers_artistic_alternatives": True,
-                    "artistic_options": list(pending.alternatives),
-                },
-                raw_response_text=raw_options_text,
-                created_version=None,
-            )
+        if pending and decision in {"accept", "more_options"} | {
+            f"option_{i}" for i in range(1, 4)
+        }:
+            if decision == "more_options":
+                feedback = "Please generate three fresh artistic directions I can compare before coding."
+            else:
+                feedback = ""
 
-        selected_artistic_profile = None
-        selected_label = "accepted-proposal"
-        if decision == "accept":
-            selected_artistic_profile = pending.proposed_artistic_profile
-        elif decision.startswith("option_"):
-            try:
-                option_index = int(decision.split("_", 1)[1])
-            except Exception:
-                option_index = 0
-            if not pending.alternatives:
-                assistant_text = (
-                    "I do not have numbered alternatives yet. Use More options first, or choose Accept/Modify."
+            if decision == "more_options":
+                options_payload, raw_options_text, human_msg, assistant_msg = _invoke_artistic_options_llm(
+                    session,
+                    user_feedback=feedback,
+                    proposed_artistic_profile=pending.proposed_artistic_profile,
                 )
+                pending.proposed_artistic_profile = options_payload["recommended_artistic_profile"]
+                pending.proposed_emotion_profile = options_payload["emotion_profile"]
+                pending.proposed_emotion_confidence = options_payload["emotion_confidence"]
+                pending.proposed_emotion_gaps = options_payload["emotion_gaps"]
+                pending.proposed_commit_message = options_payload["commit_message"]
+                pending.proposed_artistic_confidence = options_payload["artistic_confidence"]
+                pending.alternatives = options_payload["artistic_options"]
+                pending.awaiting_modify_details = False
+                assistant_text = options_payload["message"]
+                _append_chat(session, "assistant", "text", assistant_text)
+                _append_llm_event(session, human_msg, session.current_version_id)
+                _append_llm_event(session, assistant_msg, session.current_version_id)
+                return _chat_response(
+                    {
+                        "message": assistant_text,
+                        "commit_message": pending.proposed_commit_message,
+                        "emotion_profile": pending.proposed_emotion_profile,
+                        "emotion_confidence": pending.proposed_emotion_confidence,
+                        "emotion_gaps": pending.proposed_emotion_gaps,
+                        "artistic_profile": pending.proposed_artistic_profile,
+                        "artistic_confidence": pending.proposed_artistic_confidence,
+                        "code": current.code,
+                        "should_create_version": False,
+                        "offers_artistic_alternatives": True,
+                        "artistic_options": list(pending.alternatives),
+                    },
+                    raw_response_text=raw_options_text,
+                    created_version=None,
+                )
+
+            selected_artistic_profile = None
+            if decision == "accept":
+                selected_artistic_profile = pending.proposed_artistic_profile
+            elif decision.startswith("option_"):
+                try:
+                    option_index = int(decision.split("_", 1)[1])
+                except Exception:
+                    option_index = 0
+                if option_index < 1 or option_index > len(pending.alternatives):
+                    assistant_text = (
+                        f"I could not find Option {option_index}. Please choose one of the listed options, ask for more options, or refine the art direction."
+                    )
+                    _append_chat(session, "assistant", "text", assistant_text)
+                    return _chat_response(
+                        {
+                            "message": assistant_text,
+                            "commit_message": pending.proposed_commit_message,
+                            "emotion_profile": pending.proposed_emotion_profile or current.emotion_profile,
+                            "emotion_confidence": pending.proposed_emotion_confidence or current.emotion_confidence,
+                            "emotion_gaps": pending.proposed_emotion_gaps or current.emotion_gaps,
+                            "artistic_profile": pending.proposed_artistic_profile or current.artistic_profile,
+                            "artistic_confidence": pending.proposed_artistic_confidence or current.artistic_confidence,
+                            "code": current.code,
+                            "should_create_version": False,
+                            "offers_artistic_alternatives": True,
+                            "artistic_options": list(pending.alternatives),
+                        },
+                        raw_response_text="",
+                        created_version=None,
+                    )
+                selected_artistic_profile = pending.alternatives[option_index - 1]
+
+            if not selected_artistic_profile:
+                assistant_text = "I could not figure out which artistic option you wanted. Please choose one of the visible options."
                 _append_chat(session, "assistant", "text", assistant_text)
                 return _chat_response(
                     {
@@ -1486,151 +1792,140 @@ def api_chat():
                         "emotion_confidence": pending.proposed_emotion_confidence or current.emotion_confidence,
                         "emotion_gaps": pending.proposed_emotion_gaps or current.emotion_gaps,
                         "artistic_profile": pending.proposed_artistic_profile or current.artistic_profile,
+                        "artistic_confidence": pending.proposed_artistic_confidence or current.artistic_confidence,
                         "code": current.code,
+                        "should_create_version": False,
+                        "offers_artistic_alternatives": True,
+                        "artistic_options": list(pending.alternatives),
                     },
                     raw_response_text="",
                     created_version=None,
                 )
-            if option_index < 1 or option_index > len(pending.alternatives):
-                assistant_text = (
-                    f"I could not find Option {option_index}. Please choose one of the listed options, Modify, or More options."
-                )
-                _append_chat(session, "assistant", "text", assistant_text)
-                return _chat_response(
-                    {
-                        "message": assistant_text,
-                        "commit_message": pending.proposed_commit_message,
-                        "emotion_profile": pending.proposed_emotion_profile or current.emotion_profile,
-                        "emotion_confidence": pending.proposed_emotion_confidence or current.emotion_confidence,
-                        "emotion_gaps": pending.proposed_emotion_gaps or current.emotion_gaps,
-                        "artistic_profile": pending.proposed_artistic_profile or current.artistic_profile,
-                        "code": current.code,
-                    },
-                    raw_response_text="",
-                    created_version=None,
-                )
-            selected_artistic_profile = pending.alternatives[option_index - 1]
-            selected_label = f"option-{option_index}"
-            pending.proposed_artistic_profile = selected_artistic_profile
 
-        if not selected_artistic_profile:
-            assistant_text = "I could not parse that artistic-direction action. Please choose one of the available options."
+            new_emotion = pending.proposed_emotion_profile or current.emotion_profile
+            new_conf = pending.proposed_emotion_confidence or current.emotion_confidence
+            new_gaps = pending.proposed_emotion_gaps or current.emotion_gaps
+            new_artistic = selected_artistic_profile
+            new_artistic_conf = pending.proposed_artistic_confidence or current.artistic_confidence
+            created_version = None
+
+            if _has_artistic_change(current.artistic_profile, new_artistic) or _has_emotional_state_change(
+                current,
+                new_emotion,
+                new_conf,
+                new_gaps,
+            ):
+                summary = _normalize_commit_message(
+                    pending.proposed_commit_message,
+                    fallback="Saved the selected artistic direction before coding",
+                )
+                created_version = create_version(
+                    session,
+                    emotion_profile=new_emotion,
+                    artistic_profile=new_artistic,
+                    artistic_confidence=new_artistic_conf,
+                    code=current.code,
+                    emotion_confidence=new_conf,
+                    emotion_gaps=new_gaps,
+                    summary=summary,
+                    source="assistant",
+                )
+            else:
+                _update_current_emotion_state(
+                    current,
+                    emotion_profile=new_emotion,
+                    emotion_confidence=new_conf,
+                    emotion_gaps=new_gaps,
+                )
+                _update_current_artistic_state(
+                    current,
+                    artistic_profile=new_artistic,
+                    artistic_confidence=new_artistic_conf,
+                )
+
+            if _confidence_allows_advance(new_artistic_conf):
+                _unlock_phase(session, PHASE_CODE)
+                assistant_text = (
+                    "I saved that artistic direction. Move to **Coding** when you are ready, and I will implement it in p5.js. "
+                    "You can still come back here for a bigger visual change anytime."
+                )
+            else:
+                assistant_text = (
+                    "I saved that artistic direction, but the artistic confidence is still low. Let’s refine the visuals a bit more here before moving into **Coding**."
+                )
             _append_chat(session, "assistant", "text", assistant_text)
+            session.pending_artistic_decision = None
             return _chat_response(
                 {
                     "message": assistant_text,
                     "commit_message": pending.proposed_commit_message,
-                    "emotion_profile": pending.proposed_emotion_profile or current.emotion_profile,
-                    "emotion_confidence": pending.proposed_emotion_confidence or current.emotion_confidence,
-                    "emotion_gaps": pending.proposed_emotion_gaps or current.emotion_gaps,
-                    "artistic_profile": pending.proposed_artistic_profile or current.artistic_profile,
+                    "emotion_profile": new_emotion,
+                    "emotion_confidence": new_conf,
+                    "emotion_gaps": new_gaps,
+                    "artistic_profile": new_artistic,
+                    "artistic_confidence": new_artistic_conf,
                     "code": current.code,
+                    "should_create_version": bool(created_version),
+                    "offers_artistic_alternatives": False,
+                    "artistic_options": [],
                 },
                 raw_response_text="",
-                created_version=None,
+                created_version=created_version,
             )
 
-        # Accept path: now implement and create a version.
-        accept_prompt = (
-            "The user accepted this artistic direction. Implement it now and provide runnable p5.js.\n"
-            f"Accepted artistic profile ({selected_label}): {selected_artistic_profile}\n"
-            "Be explicit that your implementation may still need corrections."
-        )
-        parsed_raw, raw_response_text, human_msg, assistant_llm_msg = _invoke_llm(
-            session=session,
-            user_text=accept_prompt,
-            image=None,
-            image_mime=None,
-            audio=None,
-            audio_mime=None,
-            intent_hint="",
-        )
-        sanitized = _sanitize_llm_payload(parsed_raw, current)
-        new_emotion = sanitized["emotion_profile"] or pending.proposed_emotion_profile or current.emotion_profile
-        new_artistic = sanitized["artistic_profile"] or selected_artistic_profile or current.artistic_profile
-        new_code = sanitized["code"] or pending.proposed_code or current.code
-        new_conf = sanitized["emotion_confidence"] or pending.proposed_emotion_confidence or current.emotion_confidence
-        new_gaps = sanitized["emotion_gaps"] or pending.proposed_emotion_gaps or current.emotion_gaps
-        changed = _has_material_implementation_change(current, new_artistic, new_code)
-        created_version = None
-        if changed:
-            fallback_summary = _build_commit_summary(current, new_emotion, new_artistic, new_code, source="assistant")
-            summary = _normalize_commit_message(
-                sanitized.get("commit_message") or pending.proposed_commit_message,
-                fallback=fallback_summary,
-            )
-            created_version = create_version(
-                session,
-                emotion_profile=new_emotion,
-                artistic_profile=new_artistic,
-                code=new_code,
-                emotion_confidence=new_conf,
-                emotion_gaps=new_gaps,
-                summary=summary,
-                source="assistant",
-            )
-        else:
-            _update_current_emotion_state(
-                current,
-                emotion_profile=new_emotion,
-                emotion_confidence=new_conf,
-                emotion_gaps=new_gaps,
-            )
-        turn_anchor_id = created_version.id if created_version else current.id
-        _append_llm_event(session, human_msg, turn_anchor_id)
-        _append_llm_event(session, assistant_llm_msg, turn_anchor_id)
-        _append_chat(session, "assistant", "text", sanitized["message"])
-        session.pending_artistic_decision = None
-        session.phase = "code_generation"
-        return _chat_response(sanitized, raw_response_text, created_version)
+        if not user_text_for_model:
+            if image and audio:
+                user_text_for_model = "I shared an image and audio clip as artistic inspiration. Turn them into three visual directions before coding."
+            elif image:
+                user_text_for_model = "I shared an image as artistic inspiration. Turn it into three visual directions before coding."
+            elif audio:
+                user_text_for_model = "I shared an audio clip as artistic inspiration. Turn it into three visual directions before coding."
+            else:
+                user_text_for_model = "Generate three artistic directions I can compare before coding."
 
-    # If a proposal is pending and the user sends feedback, treat it as modify input.
-    if pending and not decision:
-        current = session.current_version
-        feedback = message or "Please revise this artistic direction based on my latest feedback."
+        proposed_profile = pending.proposed_artistic_profile if pending else current.artistic_profile
         options_payload, raw_options_text, human_msg, assistant_msg = _invoke_artistic_options_llm(
             session,
-            user_feedback=feedback,
-            proposed_artistic_profile=pending.proposed_artistic_profile,
+            user_feedback=user_text_for_model,
+            proposed_artistic_profile=proposed_profile,
         )
-        pending.proposed_artistic_profile = options_payload["recommended_artistic_profile"]
-        pending.proposed_emotion_profile = options_payload["emotion_profile"]
-        pending.proposed_emotion_confidence = options_payload["emotion_confidence"]
-        pending.proposed_emotion_gaps = options_payload["emotion_gaps"]
-        pending.proposed_commit_message = options_payload["commit_message"]
-        pending.alternatives = options_payload["artistic_options"]
-        pending.awaiting_modify_details = False
-        assistant_text = options_payload["message"]
-        _append_chat(session, "assistant", "text", assistant_text)
+        _update_current_emotion_state(
+            current,
+            emotion_profile=options_payload["emotion_profile"] or current.emotion_profile,
+            emotion_confidence=options_payload["emotion_confidence"] or current.emotion_confidence,
+            emotion_gaps=options_payload["emotion_gaps"] or current.emotion_gaps,
+        )
+        session.pending_artistic_decision = PendingArtisticDecision(
+            proposed_artistic_profile=options_payload["recommended_artistic_profile"],
+            proposed_artistic_confidence=options_payload["artistic_confidence"] or current.artistic_confidence,
+            proposed_code=current.code,
+            proposed_emotion_profile=options_payload["emotion_profile"] or current.emotion_profile,
+            proposed_emotion_confidence=options_payload["emotion_confidence"] or current.emotion_confidence,
+            proposed_emotion_gaps=options_payload["emotion_gaps"] or current.emotion_gaps,
+            proposed_commit_message=options_payload["commit_message"],
+            alternatives=options_payload["artistic_options"],
+            awaiting_modify_details=False,
+        )
+        _append_chat(session, "assistant", "text", options_payload["message"])
         _append_llm_event(session, human_msg, session.current_version_id)
         _append_llm_event(session, assistant_msg, session.current_version_id)
         return _chat_response(
             {
-                "message": assistant_text,
-                "commit_message": pending.proposed_commit_message,
-                "emotion_profile": pending.proposed_emotion_profile or current.emotion_profile,
-                "emotion_confidence": pending.proposed_emotion_confidence or current.emotion_confidence,
-                "emotion_gaps": pending.proposed_emotion_gaps or current.emotion_gaps,
-                "artistic_profile": pending.proposed_artistic_profile or current.artistic_profile,
+                "message": options_payload["message"],
+                "commit_message": options_payload["commit_message"],
+                "emotion_profile": options_payload["emotion_profile"] or current.emotion_profile,
+                "emotion_confidence": options_payload["emotion_confidence"] or current.emotion_confidence,
+                "emotion_gaps": options_payload["emotion_gaps"] or current.emotion_gaps,
+                "artistic_profile": options_payload["recommended_artistic_profile"],
+                "artistic_confidence": options_payload["artistic_confidence"] or current.artistic_confidence,
                 "code": current.code,
                 "should_create_version": False,
                 "offers_artistic_alternatives": True,
-                "artistic_options": list(pending.alternatives),
+                "artistic_options": list(options_payload["artistic_options"]),
             },
             raw_response_text=raw_options_text,
             created_version=None,
         )
-
-    user_text_for_model = message
-
-    if session.phase == "code_generation" and actions["emotion_refinement"] and not actions["sketch_rejection"]:
-        session.phase = "emotional_discovery"
-    elif session.phase == "emotional_discovery" and session.current_version.emotion_profile:
-        if actions["confirm_start_coding"]:
-            session.phase = "code_generation"
-            user_text_for_model = _build_code_start_confirmation_prompt(session, message)
-        elif actions["code_request"]:
-            session.phase = "code_generation"
 
     if not user_text_for_model:
         if image and audio:
@@ -1639,7 +1934,7 @@ def api_chat():
             user_text_for_model = "I shared an image. Please infer emotional cues and update the profiles."
         else:
             user_text_for_model = "I shared an audio clip. Please infer emotional cues and update the profiles."
-    elif session.phase == "code_generation" and actions["sketch_rejection"]:
+    elif session.phase == PHASE_CODE and actions["sketch_rejection"]:
         user_text_for_model = _build_sketch_rejection_prompt(session, message)
 
     parsed_raw, raw_response_text, human_msg, assistant_llm_msg = _invoke_llm(
@@ -1656,6 +1951,7 @@ def api_chat():
     old = session.current_version
     new_emotion = sanitized["emotion_profile"]
     new_artistic = sanitized["artistic_profile"]
+    new_artistic_conf = sanitized["artistic_confidence"]
     new_code = sanitized["code"]
     new_conf = sanitized["emotion_confidence"]
     new_gaps = sanitized["emotion_gaps"]
@@ -1663,7 +1959,7 @@ def api_chat():
     offers_artistic_alternatives = sanitized["offers_artistic_alternatives"]
     artistic_options = sanitized["artistic_options"]
 
-    if session.phase == "code_generation" and new_code and new_code != old.code:
+    if session.phase == PHASE_CODE and new_code and new_code != old.code:
         code_ok, code_issue = _is_probably_complete_p5_code(new_code)
         if not code_ok:
             repaired_code = _repair_incomplete_p5_code(
@@ -1687,20 +1983,18 @@ def api_chat():
                     f"Reason: {code_issue} Ask me to try generating the sketch again and I will retry."
                 )
 
-    should_stage_artistic_decision = (
-        session.phase == "code_generation"
-        and (
-            offers_artistic_alternatives
-            or (_clean_text(new_artistic) and _has_artistic_change(old.artistic_profile, new_artistic))
-        )
-    )
+    should_stage_artistic_decision = session.phase == PHASE_CODE and offers_artistic_alternatives
 
     if should_stage_artistic_decision:
-        old.emotion_profile = new_emotion
-        old.emotion_confidence = new_conf
-        old.emotion_gaps = new_gaps
+        _update_current_emotion_state(
+            old,
+            emotion_profile=new_emotion,
+            emotion_confidence=new_conf,
+            emotion_gaps=new_gaps,
+        )
         session.pending_artistic_decision = PendingArtisticDecision(
             proposed_artistic_profile=new_artistic,
+            proposed_artistic_confidence=new_artistic_conf,
             proposed_code=new_code,
             proposed_emotion_profile=new_emotion,
             proposed_emotion_confidence=new_conf,
@@ -1712,6 +2006,9 @@ def api_chat():
             alternatives=artistic_options,
             awaiting_modify_details=False,
         )
+        session.phase = PHASE_ARTISTIC
+        _unlock_phase(session, PHASE_ARTISTIC)
+        _mark_phase_visited(session, PHASE_ARTISTIC)
         staged_message = sanitized["message"]
         _append_chat(session, "assistant", "text", staged_message)
         _append_llm_event(session, human_msg, old.id)
@@ -1727,7 +2024,7 @@ def api_chat():
     emotional_state_change = _has_emotional_state_change(old, new_emotion, new_conf, new_gaps)
     implementation_version_change = _has_material_implementation_change(old, new_artistic, new_code)
 
-    if session.phase == "emotional_discovery":
+    if session.phase == PHASE_EMOTION:
         should_create_version = emotional_state_change
     else:
         should_create_version = bool(llm_should_create_version) and implementation_version_change
@@ -1754,7 +2051,7 @@ def api_chat():
 
     created_version = None
     if should_create_version:
-        if session.phase == "emotional_discovery" and not emotion_profile_change:
+        if session.phase == PHASE_EMOTION and not emotion_profile_change:
             fallback_summary = "Refined emotional understanding details"
         else:
             fallback_summary = _build_commit_summary(old, new_emotion, new_artistic, new_code, source="assistant")
@@ -1763,6 +2060,7 @@ def api_chat():
             session,
             emotion_profile=new_emotion,
             artistic_profile=new_artistic,
+            artistic_confidence=new_artistic_conf,
             code=new_code,
             emotion_confidence=new_conf,
             emotion_gaps=new_gaps,
@@ -1782,9 +2080,10 @@ def api_chat():
     turn_anchor_id = created_version.id if created_version else old.id
     _append_llm_event(session, human_msg, turn_anchor_id)
     _append_llm_event(session, assistant_llm_msg, turn_anchor_id)
-
-    if session.phase == "emotional_discovery" and actions["code_request"] and sanitized["emotion_profile"]:
-        session.phase = "code_generation"
+    if sanitized["emotion_profile"] and _confidence_allows_advance(new_conf):
+        _unlock_phase(session, PHASE_ARTISTIC)
+    if session.phase == PHASE_CODE and (_clean_text(new_code) or (_clean_text(new_artistic) and _confidence_allows_advance(new_artistic_conf))):
+        _unlock_phase(session, PHASE_CODE)
 
     _append_chat(session, "assistant", "text", sanitized["message"])
     return _chat_response(sanitized, raw_response_text, created_version)
@@ -1811,12 +2110,17 @@ def api_save_version():
         session,
         emotion_profile=emotion_profile,
         artistic_profile=artistic_profile,
+        artistic_confidence=old.artistic_confidence or "",
         code=code,
         emotion_confidence=old.emotion_confidence or "",
         emotion_gaps=old.emotion_gaps,
         summary=summary,
         source="user",
     )
+    if emotion_profile and _confidence_allows_advance(old.emotion_confidence):
+        _unlock_phase(session, PHASE_ARTISTIC)
+    if code or (artistic_profile and _confidence_allows_advance(old.artistic_confidence)):
+        _unlock_phase(session, PHASE_CODE)
     _append_chat(session, "assistant", "system", "Saved a new version from your manual edits.")
 
     return jsonify({"ok": True, "state": serialize_state(session)})
@@ -1839,6 +2143,7 @@ def api_restore_version():
     session.active_branch = target.branch
     session.phase = _infer_phase_from_version(target)
     session.pending_artistic_decision = None
+    _mark_phase_visited(session, session.phase)
 
     restore_message = _restore_transition_message(target.summary)
     _append_chat(session, "assistant", "system", restore_message)
@@ -1861,7 +2166,7 @@ def api_new_session():
         session,
         "assistant",
         "system",
-        "New session started. Share an emotion, a memory, an image, or an audio clip to begin.",
+        "New session started. We will move through Emotion Discovery, Artistic Discovery, and Coding together. Share an emotion, a memory, an image, or an audio clip to begin.",
     )
     return jsonify({"ok": True, "state": serialize_state(session)})
 

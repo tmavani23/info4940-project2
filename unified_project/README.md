@@ -1,5 +1,13 @@
 # p5 Emotion Chatbot
 
+The app now uses a three-step flow:
+
+1. `Emotion Discovery`
+2. `Artistic Discovery`
+3. `Coding`
+
+Users go through the stages in order the first time, then can jump back to earlier stages to rethink the emotion or art direction before continuing.
+
 ## Run
 
 Uses Gemini via API key from `.env` (`GOOGLE_API_KEY`).

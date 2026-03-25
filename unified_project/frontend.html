@@ -174,7 +174,7 @@ button.ghost {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 1.05fr 1.05fr 1.2fr;
+  grid-template-columns: minmax(0, 1.42fr) minmax(280px, 0.78fr) minmax(0, 1.14fr);
   gap: 14px;
   padding: 14px;
 }
@@ -221,7 +221,7 @@ button.ghost {
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -265,7 +265,7 @@ button.ghost {
 }
 
 .bubble {
-  max-width: min(78%, 520px);
+  max-width: min(86%, 720px);
   padding: 10px 13px;
   border-radius: 13px;
   line-height: 1.5;
@@ -431,10 +431,10 @@ button.ghost {
 .input-wrap {
   border-top: 1px solid var(--border);
   background: #171b24;
-  padding: 10px 12px;
+  padding: 9px 12px 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
   z-index: 1;
 }
 
@@ -449,7 +449,7 @@ button.ghost {
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior-y: contain;
-  max-height: 108px;
+  max-height: 84px;
   padding-right: 4px;
   scrollbar-width: thin;
   scrollbar-color: #50607f #121826;
@@ -603,6 +603,440 @@ button.ghost {
   border-radius: 14px;
   background: #1e2431;
   padding: 6px 7px 6px 9px;
+}
+
+.stage-flow {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.stage-node {
+  flex: 1 1 0;
+  min-width: 136px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  border: 1px solid #46506b;
+  background: linear-gradient(180deg, #182134, #131927);
+  color: #eaf1ff;
+  text-align: left;
+  box-shadow: 0 10px 22px rgba(4, 7, 12, 0.22);
+}
+
+.stage-node:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #8fb4ff;
+  background: linear-gradient(180deg, #203050, #172234);
+}
+
+.stage-node:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.stage-node.current:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.stage-node.current {
+  border-color: #8fb4ff;
+  background: linear-gradient(135deg, rgba(95, 141, 247, 0.26), rgba(25, 36, 57, 0.95));
+  box-shadow: 0 12px 30px rgba(66, 108, 204, 0.28);
+}
+
+.stage-node.complete {
+  border-color: rgba(77, 212, 166, 0.42);
+  background: linear-gradient(180deg, #172631, #131d25);
+}
+
+.stage-node.locked {
+  background: linear-gradient(180deg, #141922, #11151d);
+}
+
+.stage-index {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(143, 180, 255, 0.35);
+  background: rgba(143, 180, 255, 0.12);
+  color: #d7e6ff;
+  flex-shrink: 0;
+}
+
+.stage-node.complete .stage-index {
+  border-color: rgba(77, 212, 166, 0.4);
+  background: rgba(77, 212, 166, 0.14);
+  color: #d8fff2;
+}
+
+.stage-copy {
+  min-width: 0;
+}
+
+.stage-name {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stage-desc {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  color: #a7b5d6;
+}
+
+.stage-connector {
+  display: grid;
+  place-items: center;
+  color: #5f6f91;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 0 2px;
+}
+
+.stage-flow-hint {
+  font-size: 10px;
+  line-height: 1.4;
+  color: #9eacc8;
+}
+
+.artistic-studio {
+  border: 1px solid rgba(95, 141, 247, 0.24);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(126, 165, 255, 0.15), transparent 34%),
+    linear-gradient(180deg, rgba(19, 26, 39, 0.98), rgba(13, 17, 26, 0.98));
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 292px;
+  overflow-y: auto;
+}
+
+.artistic-studio[hidden] {
+  display: none !important;
+}
+
+.artistic-studio-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.artistic-studio-head h3 {
+  font-size: 15px;
+  margin-top: 4px;
+}
+
+.artistic-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8eb2ff;
+}
+
+.artistic-copy {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #b9c8e7;
+}
+
+.art-pref-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.art-pref-group {
+  border: 1px solid rgba(83, 97, 129, 0.75);
+  border-radius: 14px;
+  padding: 8px 9px;
+  background: rgba(17, 23, 35, 0.88);
+}
+
+.art-pref-group h4 {
+  font-size: 11px;
+  margin-bottom: 7px;
+  color: #e7efff;
+}
+
+.art-pref-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.art-pref-chip {
+  padding: 6px 9px;
+  border-radius: 999px;
+  border: 1px solid #485571;
+  background: #182133;
+  color: #d9e6ff;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.art-pref-chip:hover:not(:disabled) {
+  border-color: #8fb4ff;
+  background: #1f2b43;
+}
+
+.art-pref-chip.selected {
+  border-color: #8fb4ff;
+  background: linear-gradient(135deg, rgba(95, 141, 247, 0.28), rgba(26, 40, 66, 0.96));
+  color: #ffffff;
+}
+
+.art-note-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.art-note-wrap label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #dbe7ff;
+}
+
+.art-note {
+  width: 100%;
+  min-height: 70px;
+  resize: vertical;
+  border-radius: 14px;
+  border: 1px solid #46506b;
+  background: #131b29;
+  color: #e8eefc;
+  padding: 11px 12px;
+  font: inherit;
+}
+
+.art-note:focus {
+  outline: 1px solid rgba(143, 180, 255, 0.55);
+  border-color: #8fb4ff;
+}
+
+.artistic-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.art-option-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid rgba(77, 90, 119, 0.8);
+  padding-top: 10px;
+}
+
+.art-option-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.art-draft-profile {
+  font-size: 11px;
+  line-height: 1.45;
+  color: #dce7ff;
+  max-width: 520px;
+}
+
+.art-option-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.art-option-card {
+  border: 1px solid rgba(83, 98, 129, 0.78);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #161d2a, #101722);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 214px;
+}
+
+.art-option-preview {
+  position: relative;
+  height: 92px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 22% 24%, var(--preview-a) 0%, transparent 42%),
+    radial-gradient(circle at 82% 28%, rgba(255, 255, 255, 0.16) 0%, transparent 20%),
+    linear-gradient(145deg, var(--preview-b), var(--preview-c));
+}
+
+.art-option-preview::before,
+.art-option-preview::after {
+  content: "";
+  position: absolute;
+  opacity: 0.74;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04));
+}
+
+.art-option-preview::before {
+  width: 124px;
+  height: 124px;
+  left: -18px;
+  top: 14px;
+  border-radius: 54% 46% 42% 58%;
+}
+
+.art-option-preview::after {
+  width: 74px;
+  height: 74px;
+  right: 14px;
+  bottom: 12px;
+  border-radius: 48% 52% 60% 40%;
+}
+
+.art-option-preview.geometric::before,
+.art-option-preview.geometric::after {
+  border-radius: 20px;
+  transform: rotate(18deg);
+}
+
+.art-option-preview.dense::before {
+  width: 152px;
+  height: 152px;
+  top: -8px;
+}
+
+.art-option-preview.dense::after {
+  width: 96px;
+  height: 96px;
+}
+
+.art-option-preview.minimal::before {
+  width: 92px;
+  height: 92px;
+  left: 8px;
+}
+
+.art-option-preview.minimal::after {
+  width: 54px;
+  height: 54px;
+  right: 18px;
+  bottom: 18px;
+}
+
+.art-option-preview.glow {
+  box-shadow: inset 0 0 36px rgba(255, 255, 255, 0.08);
+}
+
+.art-option-preview.grain .art-option-grain {
+  opacity: 0.2;
+}
+
+.art-option-grain {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.24) 0.8px, transparent 0.8px);
+  background-size: 4px 4px;
+  mix-blend-mode: soft-light;
+  opacity: 0.08;
+}
+
+.art-option-preview.dynamic::before,
+.art-option-preview.dynamic::after {
+  animation: artPreviewDrift 8s ease-in-out infinite;
+}
+
+.art-option-preview.gentle::before,
+.art-option-preview.gentle::after {
+  animation: artPreviewDrift 12s ease-in-out infinite;
+}
+
+.art-option-preview.still::before,
+.art-option-preview.still::after {
+  animation: none;
+}
+
+.art-option-body {
+  padding: 10px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.art-option-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.art-option-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #eef4ff;
+}
+
+.art-option-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.art-option-tag {
+  border-radius: 999px;
+  background: rgba(143, 180, 255, 0.12);
+  border: 1px solid rgba(143, 180, 255, 0.22);
+  color: #cfe0ff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 7px;
+}
+
+.art-option-summary {
+  font-size: 11px;
+  line-height: 1.45;
+  color: #c6d3ef;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.art-option-choose {
+  width: 100%;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #273c66, #1d2a49);
+  border-color: #5f79b1;
+  color: #ffffff;
+}
+
+.art-option-choose:hover:not(:disabled) {
+  background: linear-gradient(135deg, #355089, #23345b);
+}
+
+@keyframes artPreviewDrift {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) rotate(6deg) scale(1.04);
+  }
 }
 
 .icon-btn {
@@ -1294,6 +1728,11 @@ button.ghost {
     max-width: 100%;
   }
 
+  .art-pref-grid,
+  .art-option-cards {
+    grid-template-columns: 1fr;
+  }
+
   .tour-card {
     width: min(420px, calc(100vw - 24px));
   }
@@ -1355,6 +1794,43 @@ button.ghost {
       <div id="messages" class="messages"></div>
 
       <div class="input-wrap">
+        <section id="artisticStudio" class="artistic-studio" hidden>
+          <div class="artistic-studio-head">
+            <div>
+              <div class="artistic-kicker">Artistic Discovery</div>
+              <h3>Shape the artwork before we code it</h3>
+            </div>
+            <button id="clearArtPrefsBtn" class="ghost" type="button">Clear</button>
+          </div>
+
+          <p id="artisticStudioCopy" class="artistic-copy">
+            Pick a few visual preferences, add your own note, and I’ll turn them into three artwork directions with previews.
+          </p>
+
+          <div id="artPreferenceGroups" class="art-pref-grid"></div>
+
+          <div class="art-note-wrap">
+            <label for="artPreferenceNote">Artistic note</label>
+            <textarea id="artPreferenceNote" class="art-note" rows="3" placeholder="Ex: muted blue haze, sparse composition, trembling light, slow drifting motion..."></textarea>
+          </div>
+
+          <div class="artistic-actions">
+            <button id="generateArtOptionsBtn" class="primary" type="button">Generate 3 Artwork Options</button>
+            <button id="refreshArtOptionsBtn" class="ghost" type="button">More Options</button>
+          </div>
+
+          <div id="artOptionPanel" class="art-option-panel" hidden>
+            <div class="art-option-head">
+              <div>
+                <div class="artistic-kicker">Draft Direction</div>
+                <p id="artDraftProfile" class="art-draft-profile"></p>
+              </div>
+              <button id="acceptArtDirectionBtn" class="primary" type="button">Use Draft Direction</button>
+            </div>
+            <div id="artOptionCards" class="art-option-cards"></div>
+          </div>
+        </section>
+
         <div id="previewStrip" class="preview-strip">
           <img id="previewImage" alt="attachment preview" style="display:none" />
           <audio id="previewAudio" controls style="display:none"></audio>
@@ -1362,7 +1838,7 @@ button.ghost {
           <button id="removePreviewBtn" class="remove-preview" title="Remove">✕</button>
         </div>
 
-        <div class="template-label">Suggested Replies</div>
+        <div id="templateLabel" class="template-label">Suggested Prompts</div>
         <div id="templateRow" class="template-row"></div>
 
         <button id="implementCtaBtn" class="implement-cta" type="button" hidden>Implement in Code</button>
@@ -1396,6 +1872,9 @@ button.ghost {
             </svg>
           </button>
         </div>
+
+        <div id="stageFlow" class="stage-flow" aria-label="Workflow stages"></div>
+        <div id="stageFlowHint" class="stage-flow-hint"></div>
       </div>
 
       <aside id="historyPane" class="history-pane">
@@ -1445,6 +1924,17 @@ button.ghost {
         <div id="artisticProfileGroup" class="profile-group">
           <label for="artisticProfile">Artistic Profile</label>
           <textarea id="artisticProfile"></textarea>
+        </div>
+
+        <div id="artisticConfidenceGroup" class="profile-group">
+          <label>Artistic Confidence</label>
+          <div class="confidence-wrap" aria-live="polite">
+            <div id="artisticConfidenceBar" class="confidence-bar">
+              <div id="artisticConfidenceFill" class="confidence-fill"></div>
+            </div>
+            <span id="artisticConfidenceText" class="confidence-text">N/A</span>
+          </div>
+          <p id="artisticConfidenceHint" class="confidence-hint"></p>
         </div>
       </div>
     </section>
@@ -1502,13 +1992,51 @@ const ART_DECISION_ACCEPT = "Art Direction Decision: Accept";
 const ART_DECISION_MODIFY = "Art Direction Decision: Modify";
 const ART_DECISION_MORE = "Art Direction Decision: More options";
 const ART_DECISION_OPTION_PREFIX = "Art Direction Decision: Option ";
-const IMPLEMENT_CTA_MESSAGE = "Let's move into code generation now. Please implement this in p5.js.";
+const IMPLEMENT_CTA_MESSAGE = "Let's move into coding now and implement the selected artistic direction in p5.js.";
+const PHASE_FLOW = [
+  {
+    id: "emotional_discovery",
+    label: "Emotion",
+    description: "understand the feeling",
+    cta: "Continue to Artistic",
+    placeholder: "Share a memory, feeling, image, or audio cue...",
+  },
+  {
+    id: "artistic_discovery",
+    label: "Artistic",
+    description: "shape the visual direction",
+    cta: "Continue to Coding",
+    placeholder: "Describe the look, motion, color, texture, or atmosphere you want...",
+  },
+  {
+    id: "code_generation",
+    label: "Coding",
+    description: "implement and tweak the sketch",
+    cta: "",
+    placeholder: "Ask for code tweaks, motion changes, or visual refinements...",
+  },
+];
+const ARTISTIC_PREFERENCE_GROUPS = [
+  { key: "detail", label: "Detail", options: ["Abstract", "Balanced", "Detailed"] },
+  { key: "motion", label: "Motion", options: ["Still", "Gentle motion", "Dynamic motion"] },
+  { key: "palette", label: "Palette", options: ["Warm", "Cool", "Monochrome", "High contrast"] },
+  { key: "shapes", label: "Shape language", options: ["Organic", "Geometric", "Mixed forms"] },
+  { key: "composition", label: "Composition", options: ["Minimal", "Layered", "Dense"] },
+  { key: "texture", label: "Texture", options: ["Smooth", "Grainy", "Glowing"] },
+  { key: "atmosphere", label: "Atmosphere", options: ["Calm", "Tense", "Dreamlike", "Dramatic"] },
+];
 const TEMPLATE_MESSAGES = {
   emotional_discovery: [
-    "I have already a good sense of emotions I want to express, help me implement.",
+    "I have a good sense of the feeling now. Let's move into the artistic stage.",
     "The setting was...",
     "2-3 emojis that fit: ...",
     "A song that matches this feeling is...",
+  ],
+  artistic_discovery: [
+    "Give me three very different art directions.",
+    "I want softer motion and more negative space.",
+    "Use a cooler palette with grain and haze.",
+    "Less geometric, more organic and atmospheric.",
   ],
   code_generation: [
     "I want to refine/explore my emotions more.",
@@ -1518,7 +2046,7 @@ const TEMPLATE_MESSAGES = {
   ],
 };
 const INITIAL_ART_DIRECTION_DECISION_TEMPLATES = [
-  { label: "Accept Direction", text: ART_DECISION_ACCEPT, autoSend: true, decision: true },
+  { label: "Use Draft Direction", text: ART_DECISION_ACCEPT, autoSend: true, decision: true },
   { label: "Modify / Describe Idea", text: ART_DECISION_MODIFY, autoSend: true, decision: true },
   { label: "More Options", text: ART_DECISION_MORE, autoSend: true, decision: true },
 ];
@@ -1557,11 +2085,20 @@ const TOUR_STEPS = [
     target: "#chatPanel",
     placement: "right",
     padding: 18,
-    title: "Refine The Feeling Before You Code",
+    title: "Move Through Three Stages",
     body: [
-      "The AI collaborator first helps you discover and refine the emotion you want to express.",
-      "The more you chat, the better it can understand your emotions and create sketches that match what you have in mind.",
-      "You can tell it to move on and create code for you at any time.",
+      "The flow is now Emotion Discovery, Artistic Discovery, and then Coding.",
+      "On your first pass, the app expects you to move through those stages in order. After a stage is unlocked, you can jump back to it anytime.",
+    ],
+  },
+  {
+    target: "#stageFlow",
+    placement: "top",
+    padding: 14,
+    title: "Stage Flow",
+    body: [
+      "This flow chart under the input box shows where you are in the process.",
+      "You can use it to go back to emotion or artistic decisions when you need a bigger change before continuing to code.",
     ],
   },
   {
@@ -1610,6 +2147,7 @@ const TOUR_STEPS = [
     title: "Artistic Profile",
     body: [
       "This is where the AI summarizes your artistic preferences, imagery, and visual metaphors.",
+      "In the Artistic stage, the draft direction shown here updates alongside the option cards in the chat pane.",
     ],
   },
   {
@@ -1729,6 +2267,7 @@ let pendingAssistantTyping = false;
 let activeTourKind = "app";
 let isDownloadMenuOpen = false;
 let previewExportRequests = new Map();
+let artPreferenceSelections = {};
 
 const $ = (id) => document.getElementById(id);
 
@@ -1839,6 +2378,7 @@ function renderAssistantMarkdown(text) {
 }
 
 function formatPhase(phase) {
+  if (phase === "artistic_discovery") return "Phase: Artistic Discovery";
   if (phase === "code_generation") return "Phase: Code Generation";
   return "Phase: Emotional Discovery";
 }
@@ -1846,6 +2386,144 @@ function formatPhase(phase) {
 function formatVersionPill(version) {
   if (!version) return "Version: -";
   return `Version: ${version.id} (${version.branch})`;
+}
+
+function getPhaseMeta(phase) {
+  return PHASE_FLOW.find((item) => item.id === phase) || PHASE_FLOW[0];
+}
+
+function getPhaseIndex(phase) {
+  return PHASE_FLOW.findIndex((item) => item.id === phase);
+}
+
+function getPreviousPhase(phase) {
+  const index = getPhaseIndex(phase);
+  return index > 0 ? PHASE_FLOW[index - 1].id : null;
+}
+
+function initializeArtPreferenceSelections() {
+  artPreferenceSelections = {};
+  ARTISTIC_PREFERENCE_GROUPS.forEach((group) => {
+    artPreferenceSelections[group.key] = "";
+  });
+}
+
+function getArtPreferenceSelectionsSummary() {
+  const selections = ARTISTIC_PREFERENCE_GROUPS
+    .map((group) => {
+      const value = artPreferenceSelections[group.key];
+      return value ? `${group.label}: ${value}` : "";
+    })
+    .filter(Boolean);
+  const note = ($("artPreferenceNote")?.value || "").trim();
+  return { selections, note };
+}
+
+function buildArtPreferenceMessage() {
+  const { selections, note } = getArtPreferenceSelectionsSummary();
+  if (!selections.length && !note) {
+    return "Generate three distinct artistic directions I can compare before coding.";
+  }
+  const lines = [
+    "We are in the artistic discovery stage.",
+    "Please turn these preferences into three distinct artwork directions I can compare before coding.",
+  ];
+  if (selections.length) {
+    lines.push("Selected preferences:");
+    lines.push(...selections);
+  }
+  if (note) {
+    lines.push(`Additional artistic note: ${note}`);
+  }
+  return lines.join("\n");
+}
+
+function renderArtPreferenceGroups() {
+  const container = $("artPreferenceGroups");
+  if (!container) return;
+  container.innerHTML = "";
+  ARTISTIC_PREFERENCE_GROUPS.forEach((group) => {
+    const card = document.createElement("section");
+    card.className = "art-pref-group";
+
+    const title = document.createElement("h4");
+    title.textContent = group.label;
+    card.appendChild(title);
+
+    const options = document.createElement("div");
+    options.className = "art-pref-options";
+    group.options.forEach((option) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "art-pref-chip";
+      if (artPreferenceSelections[group.key] === option) {
+        chip.classList.add("selected");
+      }
+      chip.textContent = option;
+      chip.setAttribute("aria-pressed", artPreferenceSelections[group.key] === option ? "true" : "false");
+      chip.addEventListener("click", () => {
+        artPreferenceSelections[group.key] = artPreferenceSelections[group.key] === option ? "" : option;
+        renderArtPreferenceGroups();
+      });
+      options.appendChild(chip);
+    });
+
+    card.appendChild(options);
+    container.appendChild(card);
+  });
+}
+
+function getStageHint(state) {
+  if (!state) return "";
+  const unlocked = new Set(state.unlocked_phases || []);
+  if (!unlocked.has("code_generation")) {
+    return "First pass follows Emotion -> Artistic -> Coding. Once a phase is unlocked, you can jump back or forward anytime.";
+  }
+  return "All three phases are unlocked for this chat. Jump between them whenever you need to rethink the feeling, art direction, or code.";
+}
+
+function renderStageFlow(state) {
+  const container = $("stageFlow");
+  const hint = $("stageFlowHint");
+  if (!container || !state) return;
+  const unlocked = new Set(state.unlocked_phases || []);
+  const visited = new Set(state.visited_phases || []);
+  const currentPhase = state.phase || "emotional_discovery";
+  const currentIndex = getPhaseIndex(currentPhase);
+  container.innerHTML = "";
+
+  PHASE_FLOW.forEach((phase, index) => {
+    const btn = document.createElement("button");
+    const isCurrent = phase.id === currentPhase;
+    const isNextPhase = index === currentIndex + 1;
+    const isUnlocked = unlocked.has(phase.id) || isCurrent || (isNextPhase && canAdvanceFromCurrentPhase(state));
+    const isComplete = visited.has(phase.id) && index < currentIndex;
+    btn.type = "button";
+    btn.className = "stage-node";
+    if (isCurrent) btn.classList.add("current");
+    if (isComplete) btn.classList.add("complete");
+    if (!isUnlocked) btn.classList.add("locked");
+    btn.disabled = isCurrent || isSending || isRecording || !isUnlocked;
+    btn.innerHTML = `
+      <span class="stage-index">${index + 1}</span>
+      <span class="stage-copy">
+        <span class="stage-name">${phase.label}</span>
+        <span class="stage-desc">${phase.description}</span>
+      </span>
+    `;
+    btn.addEventListener("click", () => {
+      setPhase(phase.id);
+    });
+    container.appendChild(btn);
+    if (index < PHASE_FLOW.length - 1) {
+      const connector = document.createElement("div");
+      connector.className = "stage-connector";
+      connector.textContent = "→";
+      container.appendChild(connector);
+    }
+  });
+
+  hint.textContent = getStageHint(state);
 }
 
 function templateToDescriptor(item) {
@@ -1906,6 +2584,9 @@ function renderTemplateRow(phase, pendingArtDecision) {
   if (!row) return;
   row.innerHTML = "";
   row.classList.remove("scrollable");
+  if (phase === "artistic_discovery") {
+    return;
+  }
   const hasDecisionChoices = !!(pendingArtDecision && !pendingArtDecision.awaiting_modify_details);
   let templates = TEMPLATE_MESSAGES[phase] || TEMPLATE_MESSAGES.emotional_discovery;
   if (hasDecisionChoices) {
@@ -1942,11 +2623,190 @@ function renderTemplateRow(phase, pendingArtDecision) {
   });
 }
 
-function renderConfidence(confidence) {
-  const fill = $("confidenceFill");
-  const text = $("confidenceText");
-  const hint = $("confidenceHint");
-  if (!fill || !text) return;
+function shouldShowSuggestedPrompts(state) {
+  if (!state) return true;
+  return state.phase !== "artistic_discovery";
+}
+
+function hashString(value) {
+  let hash = 0;
+  const input = String(value || "");
+  for (let i = 0; i < input.length; i += 1) {
+    hash = ((hash << 5) - hash + input.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+function containsAny(text, needles) {
+  return needles.some((needle) => text.includes(needle));
+}
+
+function inferArtOptionMeta(optionText, index = 0) {
+  const text = (optionText || "").toLowerCase();
+  const hash = hashString(`${optionText}-${index}`);
+  let palette = ["#6d85ff", "#1a2745", "#0a1120"];
+  let paletteLabel = "cool palette";
+
+  if (containsAny(text, ["warm", "ember", "sunset", "gold", "orange", "red"])) {
+    palette = ["#ffb56b", "#7b2f33", "#26131c"];
+    paletteLabel = "warm palette";
+  } else if (containsAny(text, ["monochrome", "black", "white", "stark", "charcoal", "grayscale"])) {
+    palette = ["#f1f5fb", "#525c6b", "#0f1218"];
+    paletteLabel = "monochrome";
+  } else if (containsAny(text, ["dream", "glow", "luminous", "neon", "ethereal"])) {
+    palette = ["#9fe8ff", "#6c5cff", "#13162f"];
+    paletteLabel = "glowing palette";
+  } else if (containsAny(text, ["green", "teal", "sea", "ocean"])) {
+    palette = ["#7ef0ca", "#1f5b63", "#071d24"];
+    paletteLabel = "teal palette";
+  }
+
+  let motionClass = "gentle";
+  let motionLabel = "gentle motion";
+  if (containsAny(text, ["still", "static", "pause", "quiet", "frozen"])) {
+    motionClass = "still";
+    motionLabel = "still";
+  } else if (containsAny(text, ["dynamic", "frantic", "swirl", "burst", "fast", "pulse", "chaotic"])) {
+    motionClass = "dynamic";
+    motionLabel = "dynamic motion";
+  }
+
+  let shapeClass = "organic";
+  let shapeLabel = "organic forms";
+  if (containsAny(text, ["geometric", "grid", "sharp", "angular", "rect", "line"])) {
+    shapeClass = "geometric";
+    shapeLabel = "geometric forms";
+  }
+
+  let densityClass = "layered";
+  let densityLabel = "layered";
+  if (containsAny(text, ["minimal", "sparse", "negative space", "open"])) {
+    densityClass = "minimal";
+    densityLabel = "minimal";
+  } else if (containsAny(text, ["dense", "crowded", "cluster", "packed", "storm"])) {
+    densityClass = "dense";
+    densityLabel = "dense";
+  }
+
+  let textureClass = "";
+  let textureLabel = "";
+  if (containsAny(text, ["grain", "textured", "dust", "rough"])) {
+    textureClass = "grain";
+    textureLabel = "grainy";
+  } else if (containsAny(text, ["glow", "mist", "haze", "soft light", "luminous"])) {
+    textureClass = "glow";
+    textureLabel = "glowing";
+  }
+
+  const extraTags = [];
+  if (containsAny(text, ["abstract"])) extraTags.push("abstract");
+  if (containsAny(text, ["detailed", "intricate"])) extraTags.push("detailed");
+  if (containsAny(text, ["dream", "ethereal"])) extraTags.push("dreamlike");
+  if (containsAny(text, ["dramatic", "theatrical"])) extraTags.push("dramatic");
+  if (containsAny(text, ["tense", "uneasy", "anxious"])) extraTags.push("tense");
+
+  return {
+    summary: optionText || "Artwork option",
+    previewClass: [motionClass, shapeClass, densityClass, textureClass].filter(Boolean).join(" "),
+    style: `--preview-a:${palette[0]}; --preview-b:${palette[1]}; --preview-c:${palette[2]};`,
+    grainOpacity: 0.08 + (hash % 6) * 0.02,
+    tags: [paletteLabel, motionLabel, shapeLabel, densityLabel, textureLabel, ...extraTags]
+      .filter(Boolean)
+      .slice(0, 4),
+  };
+}
+
+function renderArtOptionCards(pending) {
+  const container = $("artOptionCards");
+  if (!container) return;
+  container.innerHTML = "";
+  const options = Array.isArray(pending && pending.alternatives) ? pending.alternatives : [];
+  if (!options.length) {
+    const empty = document.createElement("p");
+    empty.className = "artistic-copy";
+    empty.textContent = "No artwork options yet. Generate a set from your selected preferences above.";
+    container.appendChild(empty);
+    return;
+  }
+
+  options.forEach((option, index) => {
+    const meta = inferArtOptionMeta(option, index);
+    const card = document.createElement("article");
+    card.className = "art-option-card";
+
+    const preview = document.createElement("div");
+    preview.className = `art-option-preview ${meta.previewClass}`.trim();
+    preview.setAttribute("style", meta.style);
+    preview.innerHTML = `<span class="art-option-grain" style="opacity:${meta.grainOpacity.toFixed(2)}"></span>`;
+    card.appendChild(preview);
+
+    const body = document.createElement("div");
+    body.className = "art-option-body";
+    body.innerHTML = `
+      <div class="art-option-meta">
+        <span class="art-option-label">Option ${index + 1}</span>
+      </div>
+      <div class="art-option-tags">${meta.tags.map((tag) => `<span class="art-option-tag">${escapeHtml(tag)}</span>`).join("")}</div>
+      <p class="art-option-summary">${escapeHtml(meta.summary)}</p>
+    `;
+
+    const chooseBtn = document.createElement("button");
+    chooseBtn.type = "button";
+    chooseBtn.className = "art-option-choose";
+    chooseBtn.textContent = `Choose Option ${index + 1}`;
+    chooseBtn.disabled = isSending || isRecording;
+    chooseBtn.addEventListener("click", () => {
+      sendTemplateMessage(`${ART_DECISION_OPTION_PREFIX}${index + 1}`);
+    });
+
+    body.appendChild(chooseBtn);
+    card.appendChild(body);
+    container.appendChild(card);
+  });
+}
+
+function renderArtisticStudio(state) {
+  const studio = $("artisticStudio");
+  const copy = $("artisticStudioCopy");
+  const optionPanel = $("artOptionPanel");
+  const draft = $("artDraftProfile");
+  const acceptBtn = $("acceptArtDirectionBtn");
+  const refreshBtn = $("refreshArtOptionsBtn");
+  if (!studio || !copy || !optionPanel || !draft || !acceptBtn || !refreshBtn) return;
+
+  const isArtisticPhase = !!(state && state.phase === "artistic_discovery");
+  const pending = state && state.pending_artistic_decision ? state.pending_artistic_decision : null;
+  studio.hidden = !isArtisticPhase;
+  studio.style.display = isArtisticPhase ? "flex" : "none";
+  studio.setAttribute("aria-hidden", isArtisticPhase ? "false" : "true");
+  if (!isArtisticPhase) {
+    optionPanel.hidden = true;
+    draft.textContent = "";
+    return;
+  }
+
+  copy.textContent = pending
+    ? "Compare the draft direction and preview cards below. You can choose one, ask for more options, or update the note and regenerate."
+    : "Pick a few visual preferences, add your own note, and I’ll turn them into three artwork directions with previews before we start coding.";
+
+  optionPanel.hidden = !(pending && (pending.proposed_artistic_profile || (pending.alternatives || []).length));
+  draft.textContent = pending && pending.proposed_artistic_profile
+    ? pending.proposed_artistic_profile
+    : "Your current artistic direction draft will appear here after you generate options.";
+  acceptBtn.disabled = !pending || !pending.proposed_artistic_profile || isSending || isRecording;
+  refreshBtn.disabled = isSending || isRecording;
+  renderArtOptionCards(pending);
+}
+
+function updateComposerPanels(state) {
+  const showSuggestedPrompts = shouldShowSuggestedPrompts(state);
+  const templateLabel = $("templateLabel");
+  const templateRow = $("templateRow");
+  if (templateLabel) templateLabel.hidden = !showSuggestedPrompts;
+  if (templateRow) templateRow.hidden = !showSuggestedPrompts;
+}
+
+function getConfidenceVisual(confidence) {
   const key = (confidence || "").toLowerCase();
   const settings = {
     na: { pct: 0, color: "#4a5166", label: "N/A" },
@@ -1955,16 +2815,45 @@ function renderConfidence(confidence) {
     medium: { pct: 62, color: "#f0b454", label: "MEDIUM" },
     high: { pct: 92, color: "#ef6f88", label: "HIGH" },
   };
-  const s = settings[key] || settings.na;
+  return settings[key] || settings.na;
+}
+
+function renderConfidenceBar({ fillId, textId, hintId, confidence, lowHint }) {
+  const fill = $(fillId);
+  const text = $(textId);
+  const hint = $(hintId);
+  if (!fill || !text) return;
+  const key = (confidence || "").toLowerCase();
+  const s = getConfidenceVisual(key);
   fill.style.width = `${s.pct}%`;
   fill.style.background = s.color;
   text.textContent = s.label;
   if (!hint) return;
   if (key === "low") {
-    hint.textContent = "The AI assistant's confidence in understanding your emotions is low. You can still ask it to implement, but it is more likely to produce an inaccurate emotional expression. It is recommended to explore emotions a bit more first.";
+    hint.textContent = lowHint;
     return;
   }
   hint.textContent = "";
+}
+
+function renderConfidence(confidence) {
+  renderConfidenceBar({
+    fillId: "confidenceFill",
+    textId: "confidenceText",
+    hintId: "confidenceHint",
+    confidence,
+    lowHint: "The AI assistant's confidence in understanding your emotions is low. It is recommended to explore emotions a bit more before moving into Artistic Discovery.",
+  });
+}
+
+function renderArtisticConfidence(confidence) {
+  renderConfidenceBar({
+    fillId: "artisticConfidenceFill",
+    textId: "artisticConfidenceText",
+    hintId: "artisticConfidenceHint",
+    confidence,
+    lowHint: "The AI assistant's confidence in the visual direction is still low. Refine the palette, motion, texture, or composition a bit more before moving into Coding.",
+  });
 }
 
 function renderGaps(gaps) {
@@ -1978,15 +2867,61 @@ function renderGaps(gaps) {
   el.textContent = list.map((gap) => `• ${gap}`).join("\n");
 }
 
-function shouldShowImplementCta(state) {
-  const confidence = (state && state.current_version && state.current_version.emotion_confidence
-    ? state.current_version.emotion_confidence
-    : "").toLowerCase();
-  return !!(
+function confidenceAllowsAdvance(confidence) {
+  const key = (confidence || "").toLowerCase();
+  return key === "medium" || key === "high";
+}
+
+function getDisplayedArtisticConfidence(state, fallbackVersion) {
+  const version = fallbackVersion || (state && state.current_version) || null;
+  if (
     state &&
-    state.phase === "emotional_discovery" &&
-    (confidence === "medium" || confidence === "high")
-  );
+    state.phase === "artistic_discovery" &&
+    state.pending_artistic_decision &&
+    state.pending_artistic_decision.proposed_artistic_profile
+  ) {
+    return state.pending_artistic_decision.proposed_artistic_confidence || (version && version.artistic_confidence) || "";
+  }
+  return (version && version.artistic_confidence) || "";
+}
+
+function buildDetailedArtisticProfileText(state, fallbackVersion) {
+  const baseProfile = getDisplayedArtisticProfile(state, fallbackVersion);
+  if (!state || state.phase !== "artistic_discovery") {
+    return baseProfile;
+  }
+  const { selections, note } = getArtPreferenceSelectionsSummary();
+  const details = [];
+  if (selections.length) {
+    details.push(`Current studio selections: ${selections.join("; ")}`);
+  }
+  if (note) {
+    details.push(`Current studio note: ${note}`);
+  }
+  return [baseProfile, ...details].filter(Boolean).join("\n\n");
+}
+
+function shouldShowImplementCta(state) {
+  if (!state) return false;
+  if (state.phase !== "emotional_discovery" && state.phase !== "artistic_discovery") {
+    return false;
+  }
+  return canAdvanceFromCurrentPhase(state);
+}
+
+function canAdvanceFromCurrentPhase(state) {
+  if (!state) return false;
+  const unlocked = new Set(state.unlocked_phases || []);
+  const currentVersion = state.current_version || {};
+  if (state.phase === "emotional_discovery") {
+    return unlocked.has("artistic_discovery")
+      || (confidenceAllowsAdvance(currentVersion.emotion_confidence) && !!(currentVersion.emotion_profile || "").trim());
+  }
+  if (state.phase === "artistic_discovery") {
+    return unlocked.has("code_generation")
+      || (confidenceAllowsAdvance(currentVersion.artistic_confidence) && !!(currentVersion.artistic_profile || "").trim());
+  }
+  return false;
 }
 
 function updateImplementCta(state = appState) {
@@ -1994,7 +2929,10 @@ function updateImplementCta(state = appState) {
   if (!btn) return;
   const visible = shouldShowImplementCta(state);
   btn.hidden = !visible;
-  btn.disabled = !visible || isSending || isRecording;
+  btn.disabled = !visible || isSending || isRecording || !canAdvanceFromCurrentPhase(state);
+  if (!visible || !state) return;
+  const meta = getPhaseMeta(state.phase);
+  btn.textContent = meta.cta || "Continue";
 }
 
 function hasDownloadableCode() {
@@ -2625,6 +3563,18 @@ function buildOptimisticMessage(text, media) {
   return null;
 }
 
+function formatUserFacingMessage(text) {
+  const value = (text || "").trim();
+  if (!value) return "";
+  if (value === ART_DECISION_ACCEPT) return "Use the draft artistic direction.";
+  if (value === ART_DECISION_MODIFY) return "I want to modify the artistic direction.";
+  if (value === ART_DECISION_MORE) return "Show me more artwork options.";
+  if (value.startsWith(ART_DECISION_OPTION_PREFIX)) {
+    return `Choose ${value.replace("Art Direction Decision: ", "")}.`;
+  }
+  return value;
+}
+
 function restoreComposerDraft(text, media) {
   $("chatInput").value = text || "";
   $("chatInput").style.height = "auto";
@@ -2661,7 +3611,7 @@ function createMessageRow(msg, options = {}) {
   } else if (msg.role === "assistant") {
     bubble.innerHTML = renderAssistantMarkdown(msg.content || "");
   } else {
-    bubble.textContent = msg.content || "";
+    bubble.textContent = formatUserFacingMessage(msg.content || "");
   }
 
   row.appendChild(avatar);
@@ -2689,6 +3639,11 @@ function updateSendButtonState() {
   $("sendBtn").classList.toggle("active", canSend);
   $("sendBtn").disabled = !canSend;
   updateImplementCta();
+  if (appState) {
+    updateComposerPanels(appState);
+    renderStageFlow(appState);
+    renderArtisticStudio(appState);
+  }
 }
 
 function showPendingMedia() {
@@ -3050,11 +4005,34 @@ function runPreview(code) {
   iframe.srcdoc = buildPreviewDocument(code || "");
 }
 
-function loadVersionToPanes(version) {
+function getDisplayedArtisticProfile(state, fallbackVersion) {
+  const version = fallbackVersion || (state && state.current_version) || null;
+  if (
+    state &&
+    state.phase === "artistic_discovery" &&
+    state.pending_artistic_decision &&
+    state.pending_artistic_decision.proposed_artistic_profile
+  ) {
+    return state.pending_artistic_decision.proposed_artistic_profile;
+  }
+  return version && version.artistic_profile ? version.artistic_profile : "";
+}
+
+function updateChatPlaceholder(state) {
+  const input = $("chatInput");
+  if (!input || !state) return;
+  input.placeholder = getPhaseMeta(state.phase).placeholder;
+}
+
+function loadVersionToPanes(version, options = {}) {
   if (!version) return;
+  const { usePendingArtistic = false, state = appState } = options;
   $("emotionProfile").value = version.emotion_profile || "";
-  $("artisticProfile").value = version.artistic_profile || "";
+  $("artisticProfile").value = usePendingArtistic
+    ? buildDetailedArtisticProfileText(state, version)
+    : (version.artistic_profile || "");
   renderConfidence(version.emotion_confidence || "");
+  renderArtisticConfidence(usePendingArtistic ? getDisplayedArtisticConfidence(state, version) : (version.artistic_confidence || ""));
   renderGaps(version.emotion_gaps || []);
   setCodeValue(version.code || "");
   runPreview(version.code || "");
@@ -3070,11 +4048,15 @@ function renderState(state) {
   sessionId = state.session_id;
   $("phaseBadge").textContent = formatPhase(state.phase);
   $("versionPill").textContent = formatVersionPill(state.current_version);
+  updateComposerPanels(state);
+  renderStageFlow(state);
   renderTemplateRow(state.phase, state.pending_artistic_decision);
+  renderArtisticStudio(state);
+  updateChatPlaceholder(state);
   updateImplementCta(state);
   renderMessages(state.messages || []);
   if (!isHistoryOpen || !historyPreviewVersionId) {
-    loadVersionToPanes(state.current_version);
+    loadVersionToPanes(state.current_version, { usePendingArtistic: true, state });
   }
   if (isTourOpen() && tourStepIndex >= 0) {
     requestAnimationFrame(() => positionActiveTourStep());
@@ -3223,7 +4205,7 @@ function renderHistoryGraph(data) {
       historyPreviewVersionId = version.id;
       const selectedVersion = getVersionById(version.id);
       if (selectedVersion) {
-        loadVersionToPanes(selectedVersion);
+        loadVersionToPanes(selectedVersion, { usePendingArtistic: false, state: appState });
       }
       $("restoreBtn").disabled = false;
       renderHistoryGraph(data);
@@ -3245,6 +4227,59 @@ async function fetchHistory() {
   const response = await fetch(`${API}/history?session_id=${encodeURIComponent(sessionId)}`);
   const data = await response.json();
   renderHistoryGraph(data);
+}
+
+async function setPhase(targetPhase) {
+  if (!sessionId || isSending || isRecording) return;
+  const response = await fetch(`${API}/set-phase`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session_id: sessionId,
+      phase: targetPhase,
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    appendConsoleLog("warn", data.error || "Could not change phase.");
+    alert(data.error || "Could not change phase.");
+    return;
+  }
+  renderState(data.state);
+  if (isHistoryOpen) {
+    await fetchHistory();
+  }
+  if (data.should_auto_implement) {
+    await sendChat(IMPLEMENT_CTA_MESSAGE);
+  }
+}
+
+function clearArtisticStudioInputs() {
+  initializeArtPreferenceSelections();
+  const note = $("artPreferenceNote");
+  if (note) {
+    note.value = "";
+  }
+  renderArtPreferenceGroups();
+  if (appState) {
+    renderArtisticStudio(appState);
+  }
+}
+
+async function generateArtOptionsFromStudio() {
+  if (!appState || appState.phase !== "artistic_discovery") {
+    await setPhase("artistic_discovery");
+    if (!appState || appState.phase !== "artistic_discovery") return;
+  }
+  await sendChat(buildArtPreferenceMessage());
+}
+
+async function refreshArtOptionsFromStudio() {
+  if (appState && appState.pending_artistic_decision && (appState.pending_artistic_decision.alternatives || []).length) {
+    await sendChat(ART_DECISION_MORE);
+    return;
+  }
+  await generateArtOptionsFromStudio();
 }
 
 async function sendChat(forcedText = null) {
@@ -3399,7 +4434,7 @@ function closeHistory() {
   selectedHistoryVersionId = null;
   $("restoreBtn").disabled = true;
   if (appState && appState.current_version) {
-    loadVersionToPanes(appState.current_version);
+    loadVersionToPanes(appState.current_version, { usePendingArtistic: true, state: appState });
   }
 }
 
@@ -3412,6 +4447,7 @@ async function startNewSession() {
     return;
   }
   historyPreviewVersionId = null;
+  clearArtisticStudioInputs();
   renderState(data.state);
 }
 
@@ -3428,6 +4464,7 @@ async function resetSession() {
     return;
   }
   historyPreviewVersionId = null;
+  clearArtisticStudioInputs();
   renderState(data.state);
 }
 
@@ -3467,6 +4504,8 @@ function bindById(id, eventName, handler) {
 
 function initializeApp() {
   initializeCodeEditor();
+  initializeArtPreferenceSelections();
+  renderArtPreferenceGroups();
   renderConsoleLog();
   setCodeTab("code");
 
@@ -3517,9 +4556,20 @@ function initializeApp() {
     event.preventDefault();
     sendChat();
   });
-  bindById("implementCtaBtn", "click", () => {
-    sendChat(IMPLEMENT_CTA_MESSAGE);
+  bindById("implementCtaBtn", "click", async () => {
+    if (!appState) return;
+    if (appState.phase === "emotional_discovery") {
+      await setPhase("artistic_discovery");
+      return;
+    }
+    if (appState.phase === "artistic_discovery") {
+      await setPhase("code_generation");
+    }
   });
+  bindById("clearArtPrefsBtn", "click", clearArtisticStudioInputs);
+  bindById("generateArtOptionsBtn", "click", generateArtOptionsFromStudio);
+  bindById("refreshArtOptionsBtn", "click", refreshArtOptionsFromStudio);
+  bindById("acceptArtDirectionBtn", "click", () => sendTemplateMessage(ART_DECISION_ACCEPT));
   bindById("downloadBtn", "click", (event) => {
     event.stopPropagation();
     toggleDownloadMenu();
