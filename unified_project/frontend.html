@@ -878,6 +878,9 @@ button.ghost {
   position: relative;
   height: 92px;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background:
     radial-gradient(circle at 22% 24%, var(--preview-a) 0%, transparent 42%),
     radial-gradient(circle at 82% 28%, rgba(255, 255, 255, 0.16) 0%, transparent 20%),
@@ -970,6 +973,24 @@ button.ghost {
   animation: none;
 }
 
+.art-option-preview.live-preview {
+  background: #0d0f15;
+}
+
+.art-option-preview.live-preview::before,
+.art-option-preview.live-preview::after {
+  display: none;
+}
+
+.art-option-preview-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #0d0f15;
+  overflow: hidden;
+}
+
 .art-option-body {
   padding: 10px;
   display: flex;
@@ -1012,6 +1033,7 @@ button.ghost {
   line-height: 1.45;
   color: #c6d3ef;
   flex: 1;
+  line-clamp: 4;
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
@@ -1825,7 +1847,6 @@ button.ghost {
                 <div class="artistic-kicker">Draft Direction</div>
                 <p id="artDraftProfile" class="art-draft-profile"></p>
               </div>
-              <button id="acceptArtDirectionBtn" class="primary" type="button">Use Draft Direction</button>
             </div>
             <div id="artOptionCards" class="art-option-cards"></div>
           </div>
@@ -2479,7 +2500,7 @@ function getStageHint(state) {
   if (!unlocked.has("code_generation")) {
     return "First pass follows Emotion -> Artistic -> Coding. Once a phase is unlocked, you can jump back or forward anytime.";
   }
-  return "All three phases are unlocked for this chat. Jump between them whenever you need to rethink the feeling, art direction, or code.";
+  return "";
 }
 
 function renderStageFlow(state) {
@@ -2512,7 +2533,7 @@ function renderStageFlow(state) {
       </span>
     `;
     btn.addEventListener("click", () => {
-      setPhase(phase.id);
+      setPhase(phase.id, getDirectArtisticTransitionPayload(phase.id));
     });
     container.appendChild(btn);
     if (index < PHASE_FLOW.length - 1) {
@@ -2721,6 +2742,9 @@ function renderArtOptionCards(pending) {
   if (!container) return;
   container.innerHTML = "";
   const options = Array.isArray(pending && pending.alternatives) ? pending.alternatives : [];
+  const previewCodes = Array.isArray(pending && pending.alternative_preview_codes)
+    ? pending.alternative_preview_codes
+    : [];
   if (!options.length) {
     const empty = document.createElement("p");
     empty.className = "artistic-copy";
@@ -2735,9 +2759,21 @@ function renderArtOptionCards(pending) {
     card.className = "art-option-card";
 
     const preview = document.createElement("div");
-    preview.className = `art-option-preview ${meta.previewClass}`.trim();
-    preview.setAttribute("style", meta.style);
-    preview.innerHTML = `<span class="art-option-grain" style="opacity:${meta.grainOpacity.toFixed(2)}"></span>`;
+    const previewCode = previewCodes[index] || "";
+    if (previewCode) {
+      preview.className = "art-option-preview live-preview";
+      const iframe = document.createElement("iframe");
+      iframe.className = "art-option-preview-frame";
+      iframe.title = `Artistic option ${index + 1} preview`;
+      iframe.loading = "lazy";
+      iframe.setAttribute("sandbox", "allow-scripts");
+      iframe.srcdoc = buildPreviewDocument(previewCode);
+      preview.appendChild(iframe);
+    } else {
+      preview.className = `art-option-preview ${meta.previewClass}`.trim();
+      preview.setAttribute("style", meta.style);
+      preview.innerHTML = `<span class="art-option-grain" style="opacity:${meta.grainOpacity.toFixed(2)}"></span>`;
+    }
     card.appendChild(preview);
 
     const body = document.createElement("div");
@@ -2770,9 +2806,8 @@ function renderArtisticStudio(state) {
   const copy = $("artisticStudioCopy");
   const optionPanel = $("artOptionPanel");
   const draft = $("artDraftProfile");
-  const acceptBtn = $("acceptArtDirectionBtn");
   const refreshBtn = $("refreshArtOptionsBtn");
-  if (!studio || !copy || !optionPanel || !draft || !acceptBtn || !refreshBtn) return;
+  if (!studio || !copy || !optionPanel || !draft || !refreshBtn) return;
 
   const isArtisticPhase = !!(state && state.phase === "artistic_discovery");
   const pending = state && state.pending_artistic_decision ? state.pending_artistic_decision : null;
@@ -2793,7 +2828,6 @@ function renderArtisticStudio(state) {
   draft.textContent = pending && pending.proposed_artistic_profile
     ? pending.proposed_artistic_profile
     : "Your current artistic direction draft will appear here after you generate options.";
-  acceptBtn.disabled = !pending || !pending.proposed_artistic_profile || isSending || isRecording;
   refreshBtn.disabled = isSending || isRecording;
   renderArtOptionCards(pending);
 }
@@ -2872,6 +2906,48 @@ function confidenceAllowsAdvance(confidence) {
   return key === "medium" || key === "high";
 }
 
+function buildDirectArtisticProfileFromSelections() {
+  const { selections, note } = getArtPreferenceSelectionsSummary();
+  if (!selections.length && !note) {
+    return "";
+  }
+  const parts = [];
+  if (selections.length) {
+    parts.push(`Use this visual direction: ${selections.join("; ")}.`);
+  }
+  if (note) {
+    parts.push(`User note: ${note}.`);
+  }
+  parts.push("Implement this direction directly instead of generating comparison options.");
+  return parts.join(" ");
+}
+
+function inferArtisticConfidenceFromSelections() {
+  const { selections, note } = getArtPreferenceSelectionsSummary();
+  if (selections.length >= 3 || (selections.length >= 2 && note)) {
+    return "high";
+  }
+  if (selections.length || note) {
+    return "medium";
+  }
+  return "";
+}
+
+function getDirectArtisticTransitionPayload(targetPhase) {
+  if (!appState || appState.phase !== "artistic_discovery" || targetPhase !== "code_generation") {
+    return null;
+  }
+  const artisticProfile = buildDirectArtisticProfileFromSelections();
+  const artisticConfidence = inferArtisticConfidenceFromSelections();
+  if (!artisticProfile || !confidenceAllowsAdvance(artisticConfidence)) {
+    return null;
+  }
+  return {
+    artistic_profile: artisticProfile,
+    artistic_confidence: artisticConfidence,
+  };
+}
+
 function getDisplayedArtisticConfidence(state, fallbackVersion) {
   const version = fallbackVersion || (state && state.current_version) || null;
   if (
@@ -2918,7 +2994,9 @@ function canAdvanceFromCurrentPhase(state) {
       || (confidenceAllowsAdvance(currentVersion.emotion_confidence) && !!(currentVersion.emotion_profile || "").trim());
   }
   if (state.phase === "artistic_discovery") {
+    const directPayload = getDirectArtisticTransitionPayload("code_generation");
     return unlocked.has("code_generation")
+      || !!directPayload
       || (confidenceAllowsAdvance(currentVersion.artistic_confidence) && !!(currentVersion.artistic_profile || "").trim());
   }
   return false;
@@ -3968,7 +4046,57 @@ function buildPreviewBridgeScript() {
 function buildPreviewDocument(code) {
   const safeCode = (code || "").replace(/<\/script>/gi, "<\\/script>");
   const bodyContent = safeCode
-    ? `<script>${safeCode}<\/script>`
+    ? `
+      <script>
+        (function() {
+          let rafId = 0;
+
+          function fitPreviewCanvas() {
+            const canvas = document.querySelector("canvas");
+            if (!canvas) return;
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || canvas.width || 1;
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight || canvas.height || 1;
+            const intrinsicWidth = canvas.width || viewportWidth;
+            const intrinsicHeight = canvas.height || viewportHeight;
+            if (!intrinsicWidth || !intrinsicHeight) return;
+            const scale = Math.min(viewportWidth / intrinsicWidth, viewportHeight / intrinsicHeight, 1);
+            const nextWidth = \`\${Math.max(1, Math.floor(intrinsicWidth * scale))}px\`;
+            const nextHeight = \`\${Math.max(1, Math.floor(intrinsicHeight * scale))}px\`;
+            if (canvas.style.width !== nextWidth) {
+              canvas.style.width = nextWidth;
+            }
+            if (canvas.style.height !== nextHeight) {
+              canvas.style.height = nextHeight;
+            }
+          }
+
+          function queueFitPreviewCanvas() {
+            cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(fitPreviewCanvas);
+          }
+
+          window.addEventListener("resize", queueFitPreviewCanvas);
+          window.addEventListener("load", queueFitPreviewCanvas);
+          window.__fitPreviewCanvas = queueFitPreviewCanvas;
+
+          const observer = new MutationObserver(queueFitPreviewCanvas);
+          observer.observe(document.documentElement, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["width", "height"]
+          });
+        })();
+      <\/script>
+      <script>${safeCode}<\/script>
+      <script>
+        if (window.__fitPreviewCanvas) {
+          window.__fitPreviewCanvas();
+          setTimeout(window.__fitPreviewCanvas, 50);
+          setTimeout(window.__fitPreviewCanvas, 200);
+        }
+      <\/script>
+    `
     : `<div class="preview-empty">No sketch yet.</div>`;
 
   return `<!DOCTYPE html>
@@ -3978,9 +4106,21 @@ function buildPreviewDocument(code) {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"><\/script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"><\/script>
   <style>
-    html,body{height:100%;margin:0;padding:0;background:#0d0f15;overflow:hidden;}
-    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
-    canvas{display:block;}
+    html,body{height:100%;width:100%;margin:0;padding:0;background:#0d0f15;overflow:hidden;}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      display:grid;
+      place-items:center;
+    }
+    canvas{
+      display:block;
+      max-width:100% !important;
+      max-height:100% !important;
+      width:auto !important;
+      height:auto !important;
+      margin:0 auto;
+      box-sizing:border-box;
+    }
     .preview-empty{
       height:100%;
       display:flex;
@@ -4229,7 +4369,7 @@ async function fetchHistory() {
   renderHistoryGraph(data);
 }
 
-async function setPhase(targetPhase) {
+async function setPhase(targetPhase, extraPayload = null) {
   if (!sessionId || isSending || isRecording) return;
   const response = await fetch(`${API}/set-phase`, {
     method: "POST",
@@ -4237,6 +4377,7 @@ async function setPhase(targetPhase) {
     body: JSON.stringify({
       session_id: sessionId,
       phase: targetPhase,
+      ...(extraPayload || {}),
     }),
   });
   const data = await response.json();
@@ -4563,13 +4704,12 @@ function initializeApp() {
       return;
     }
     if (appState.phase === "artistic_discovery") {
-      await setPhase("code_generation");
+      await setPhase("code_generation", getDirectArtisticTransitionPayload("code_generation"));
     }
   });
   bindById("clearArtPrefsBtn", "click", clearArtisticStudioInputs);
   bindById("generateArtOptionsBtn", "click", generateArtOptionsFromStudio);
   bindById("refreshArtOptionsBtn", "click", refreshArtOptionsFromStudio);
-  bindById("acceptArtDirectionBtn", "click", () => sendTemplateMessage(ART_DECISION_ACCEPT));
   bindById("downloadBtn", "click", (event) => {
     event.stopPropagation();
     toggleDownloadMenu();

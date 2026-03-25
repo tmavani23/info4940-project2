@@ -829,6 +829,7 @@ class PendingArtisticDecision:
     proposed_code: str
     proposed_emotion_profile: str
     proposed_emotion_confidence: str
+    alternative_preview_codes: list[str] = field(default_factory=list)
     proposed_emotion_gaps: list[str] = field(default_factory=list)
     proposed_commit_message: str = ""
     alternatives: list[str] = field(default_factory=list)
@@ -1049,6 +1050,143 @@ def _default_artistic_alternatives(base_profile: str) -> list[str]:
         f"{seed} Emphasis: stark contrast with sparse geometry and pauses.",
         f"{seed} Emphasis: dreamlike motion trails with breathing rhythm.",
     ]
+
+
+def _contains_any(text: str, needles: list[str]) -> bool:
+    return any(needle in text for needle in needles)
+
+
+def _build_artistic_option_preview_code(option_text: str, emotion_profile: str = "") -> str:
+    text = _clean_text(option_text).lower()
+    emotion_hint = _clean_text(emotion_profile)
+    seed = sum((idx + 1) * ord(ch) for idx, ch in enumerate(text or emotion_hint or "art")) % 997
+
+    palette = [(109, 133, 255), (26, 39, 69), (10, 17, 32)]
+    background = (12, 16, 26)
+    if _contains_any(text, ["warm", "ember", "sunset", "gold", "orange", "red"]):
+        palette = [(255, 181, 107), (176, 75, 88), (53, 23, 31)]
+        background = (28, 13, 18)
+    elif _contains_any(text, ["monochrome", "black", "white", "stark", "charcoal", "grayscale"]):
+        palette = [(238, 242, 248), (108, 117, 128), (21, 26, 32)]
+        background = (11, 13, 18)
+    elif _contains_any(text, ["dream", "glow", "luminous", "neon", "ethereal"]):
+        palette = [(159, 232, 255), (108, 92, 255), (19, 22, 47)]
+        background = (10, 11, 28)
+    elif _contains_any(text, ["green", "teal", "sea", "ocean"]):
+        palette = [(126, 240, 202), (31, 91, 99), (7, 29, 36)]
+        background = (7, 16, 22)
+
+    if _contains_any(text, ["still", "static", "quiet", "frozen", "pause"]):
+        motion_speed = 0.0018
+        drift_x = 6
+        drift_y = 4
+    elif _contains_any(text, ["dynamic", "frantic", "swirl", "burst", "fast", "pulse", "chaotic"]):
+        motion_speed = 0.024
+        drift_x = 34
+        drift_y = 26
+    else:
+        motion_speed = 0.009
+        drift_x = 16
+        drift_y = 12
+
+    if _contains_any(text, ["minimal", "sparse", "negative space", "open"]):
+        particle_count = 9
+        min_size = 18
+        max_size = 38
+    elif _contains_any(text, ["dense", "crowded", "cluster", "packed", "storm"]):
+        particle_count = 30
+        min_size = 10
+        max_size = 28
+    else:
+        particle_count = 18
+        min_size = 14
+        max_size = 32
+
+    geometric = _contains_any(text, ["geometric", "grid", "sharp", "angular", "rect", "line"])
+    grainy = _contains_any(text, ["grain", "textured", "dust", "rough"])
+    glowing = _contains_any(text, ["glow", "mist", "haze", "soft light", "luminous", "dream"])
+
+    return f"""// Artistic option preview
+const PREVIEW_COLORS = {json.dumps(palette)};
+const PREVIEW_BG = {json.dumps(background)};
+const PARTICLE_COUNT = {particle_count};
+const MOTION_SPEED = {motion_speed};
+const DRIFT_X = {drift_x};
+const DRIFT_Y = {drift_y};
+const MIN_SIZE = {min_size};
+const MAX_SIZE = {max_size};
+const USE_GEOMETRY = {str(geometric).lower()};
+const USE_GRAIN = {str(grainy).lower()};
+const USE_GLOW = {str(glowing).lower()};
+const SEED = {seed};
+
+let nodes = [];
+
+function setup() {{
+  createCanvas(windowWidth || 320, windowHeight || 180);
+  noStroke();
+  rectMode(CENTER);
+  for (let i = 0; i < PARTICLE_COUNT; i += 1) {{
+    nodes.push({{
+      baseX: map(((i * 29) + SEED) % 100, 0, 99, width * 0.18, width * 0.82),
+      baseY: map(((i * 47) + (SEED * 3)) % 100, 0, 99, height * 0.18, height * 0.82),
+      size: map(((i * 17) + SEED) % 100, 0, 99, MIN_SIZE, MAX_SIZE),
+      phase: i * 0.63,
+      drift: map(((i * 13) + SEED) % 100, 0, 99, 0.65, 1.4),
+      colorIndex: i % PREVIEW_COLORS.length
+    }});
+  }}
+}}
+
+function drawGlow(x, y, size, col) {{
+  fill(col[0], col[1], col[2], 26);
+  ellipse(x, y, size * 1.9, size * 1.9);
+}}
+
+function drawShape(x, y, size, col) {{
+  fill(col[0], col[1], col[2], 180);
+  if (USE_GEOMETRY) {{
+    push();
+    translate(x, y);
+    rotate(sin(frameCount * MOTION_SPEED + size) * 0.4);
+    rect(0, 0, size, size * 0.76, size * 0.2);
+    pop();
+    return;
+  }}
+  ellipse(x, y, size, size * 0.82);
+}}
+
+function draw() {{
+  background(PREVIEW_BG[0], PREVIEW_BG[1], PREVIEW_BG[2]);
+  for (let i = 0; i < nodes.length; i += 1) {{
+    const node = nodes[i];
+    const t = frameCount * MOTION_SPEED * node.drift + node.phase;
+    const x = node.baseX + sin(t * 1.4) * DRIFT_X + cos(t * 0.55) * (DRIFT_X * 0.35);
+    const y = node.baseY + cos(t * 1.1) * DRIFT_Y;
+    const col = PREVIEW_COLORS[node.colorIndex];
+    if (USE_GLOW) {{
+      drawGlow(x, y, node.size, col);
+    }}
+    drawShape(x, y, node.size, col);
+  }}
+
+  if (USE_GRAIN) {{
+    stroke(255, 255, 255, 18);
+    for (let i = 0; i < 48; i += 1) {{
+      point((i * 37 + SEED) % width, (i * 23 + frameCount + SEED) % height);
+    }}
+    noStroke();
+  }}
+}}
+
+function windowResized() {{
+  resizeCanvas(windowWidth || 320, windowHeight || 180);
+}}
+""".strip()
+
+
+def _build_artistic_option_preview_codes(options: list[str], emotion_profile: str = "") -> list[str]:
+    return [_build_artistic_option_preview_code(option, emotion_profile) for option in options[:3]]
 
 
 def _sanitize_artistic_options_payload(
@@ -1411,6 +1549,7 @@ def serialize_pending_artistic_decision(pending: Optional[PendingArtisticDecisio
         "proposed_artistic_profile": pending.proposed_artistic_profile,
         "proposed_artistic_confidence": pending.proposed_artistic_confidence,
         "proposed_code": pending.proposed_code,
+        "alternative_preview_codes": list(pending.alternative_preview_codes),
         "proposed_emotion_profile": pending.proposed_emotion_profile,
         "proposed_emotion_confidence": pending.proposed_emotion_confidence,
         "proposed_emotion_gaps": pending.proposed_emotion_gaps,
@@ -1490,6 +1629,36 @@ def api_set_phase():
     session = get_or_create_session(sid)
     if target_phase not in PHASE_ORDER:
         return jsonify({"error": "Invalid phase"}), 400
+
+    if session.phase == PHASE_ARTISTIC and target_phase == PHASE_CODE:
+        direct_artistic_profile = _clean_text(data.get("artistic_profile"))
+        direct_artistic_confidence = _normalize_confidence(data.get("artistic_confidence") or "")
+        if direct_artistic_profile:
+            current = session.current_version
+            if (
+                _has_artistic_change(current.artistic_profile, direct_artistic_profile)
+                or current.artistic_confidence != direct_artistic_confidence
+            ):
+                summary = "Saved artistic panel selections for direct implementation"
+                create_version(
+                    session,
+                    emotion_profile=current.emotion_profile,
+                    artistic_profile=direct_artistic_profile,
+                    artistic_confidence=direct_artistic_confidence,
+                    code=current.code,
+                    emotion_confidence=current.emotion_confidence,
+                    emotion_gaps=current.emotion_gaps,
+                    summary=summary,
+                    source="user",
+                )
+            else:
+                _update_current_artistic_state(
+                    current,
+                    artistic_profile=direct_artistic_profile,
+                    artistic_confidence=direct_artistic_confidence,
+                )
+            if _confidence_allows_advance(direct_artistic_confidence):
+                _unlock_phase(session, PHASE_CODE)
 
     if target_phase not in session.unlocked_phases and not _can_unlock_phase(session, target_phase):
         return jsonify({"error": _phase_locked_message(target_phase)}), 400
@@ -1726,6 +1895,10 @@ def api_chat():
                 pending.proposed_commit_message = options_payload["commit_message"]
                 pending.proposed_artistic_confidence = options_payload["artistic_confidence"]
                 pending.alternatives = options_payload["artistic_options"]
+                pending.alternative_preview_codes = _build_artistic_option_preview_codes(
+                    pending.alternatives,
+                    pending.proposed_emotion_profile or current.emotion_profile,
+                )
                 pending.awaiting_modify_details = False
                 assistant_text = options_payload["message"]
                 _append_chat(session, "assistant", "text", assistant_text)
@@ -1899,6 +2072,10 @@ def api_chat():
             proposed_artistic_profile=options_payload["recommended_artistic_profile"],
             proposed_artistic_confidence=options_payload["artistic_confidence"] or current.artistic_confidence,
             proposed_code=current.code,
+            alternative_preview_codes=_build_artistic_option_preview_codes(
+                options_payload["artistic_options"],
+                options_payload["emotion_profile"] or current.emotion_profile,
+            ),
             proposed_emotion_profile=options_payload["emotion_profile"] or current.emotion_profile,
             proposed_emotion_confidence=options_payload["emotion_confidence"] or current.emotion_confidence,
             proposed_emotion_gaps=options_payload["emotion_gaps"] or current.emotion_gaps,
@@ -1996,6 +2173,10 @@ def api_chat():
             proposed_artistic_profile=new_artistic,
             proposed_artistic_confidence=new_artistic_conf,
             proposed_code=new_code,
+            alternative_preview_codes=_build_artistic_option_preview_codes(
+                artistic_options,
+                new_emotion,
+            ),
             proposed_emotion_profile=new_emotion,
             proposed_emotion_confidence=new_conf,
             proposed_emotion_gaps=new_gaps,
