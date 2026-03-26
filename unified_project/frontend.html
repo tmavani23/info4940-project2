@@ -2259,7 +2259,6 @@ const ART_DECISION_ACCEPT = "Art Direction Decision: Accept";
 const ART_DECISION_MODIFY = "Art Direction Decision: Modify";
 const ART_DECISION_MORE = "Art Direction Decision: More options";
 const ART_DECISION_OPTION_PREFIX = "Art Direction Decision: Option ";
-const IMPLEMENT_CTA_MESSAGE = "Let's move into coding now and implement the selected artistic direction in p5.js.";
 const PHASE_FLOW = [
   {
     id: "emotional_discovery",
@@ -2735,6 +2734,35 @@ function getArtPreferenceSelectionsSummary() {
   return { selections, note };
 }
 
+function buildImplementCurrentArtisticDirectionMessage(state = appState) {
+  const activeState = state || appState;
+  const currentVersion = (activeState && activeState.current_version) || {};
+  const panelState = normalizeArtisticPanelState(activeState && activeState.artistic_panel_state);
+  const selections = ARTISTIC_PREFERENCE_GROUPS
+    .map((group) => {
+      const value = panelState.selections[group.key];
+      return value ? `${group.label}: ${value}` : "";
+    })
+    .filter(Boolean);
+  const lines = [];
+  if ((currentVersion.code || "").trim()) {
+    lines.push("Update the current p5.js sketch so it matches the latest artistic direction.");
+    lines.push("Replace any earlier motion, color, texture, composition, or shape choices that conflict with the updated direction.");
+  } else {
+    lines.push("Create the p5.js sketch now using the latest artistic direction.");
+  }
+  if ((currentVersion.artistic_profile || "").trim()) {
+    lines.push(`Current artistic profile: ${currentVersion.artistic_profile.trim()}`);
+  }
+  if (selections.length) {
+    lines.push(`Current artistic preference tags: ${selections.join("; ")}`);
+  }
+  if (panelState.note) {
+    lines.push(`Current artistic note: ${panelState.note}`);
+  }
+  return lines.join("\n");
+}
+
 function buildArtPreferenceMessage() {
   const { selections, note } = getArtPreferenceSelectionsSummary();
   if (!selections.length && !note) {
@@ -2780,6 +2808,7 @@ function renderArtPreferenceGroups() {
       chip.addEventListener("click", () => {
         artPreferenceSelections[group.key] = artPreferenceSelections[group.key] === option ? "" : option;
         renderArtPreferenceGroups();
+        refreshArtisticDraftUi();
       });
       options.appendChild(chip);
     });
@@ -2787,6 +2816,16 @@ function renderArtPreferenceGroups() {
     card.appendChild(options);
     container.appendChild(card);
   });
+}
+
+function refreshArtisticDraftUi(state = appState) {
+  if (!state) return;
+  updateImplementCta(state);
+  renderStageFlow(state);
+  renderArtisticStudio(state);
+  if (!isHistoryOpen || !historyPreviewVersionId) {
+    $("artisticProfile").value = buildDetailedArtisticProfileText(state, state.current_version);
+  }
 }
 
 function getStageHint(state) {
@@ -3291,24 +3330,49 @@ function inferArtisticConfidenceFromSelections() {
   return "";
 }
 
+function getPendingArtisticTransitionPayload(state = appState) {
+  if (!state || state.phase !== "artistic_discovery") {
+    return null;
+  }
+  const pending = state.pending_artistic_decision;
+  if (!pending || !(pending.proposed_artistic_profile || "").trim()) {
+    return null;
+  }
+  const artisticConfidence = pending.proposed_artistic_confidence || "";
+  if (!confidenceAllowsAdvance(artisticConfidence)) {
+    return null;
+  }
+  return {
+    artistic_profile: pending.proposed_artistic_profile,
+    artistic_confidence: artisticConfidence,
+  };
+}
+
 function getDirectArtisticTransitionPayload(targetPhase) {
   if (!appState || appState.phase !== "artistic_discovery" || targetPhase !== "code_generation") {
     return null;
   }
-  const version = appState.current_version || {};
-  const hasSavedDirection = confidenceAllowsAdvance(version.artistic_confidence) && !!(version.artistic_profile || "").trim();
-  if (hasSavedDirection && !artisticPanelStateHasUnsavedChanges(appState)) {
-    return null;
-  }
   const artisticProfile = buildDirectArtisticProfileFromSelections();
   const artisticConfidence = inferArtisticConfidenceFromSelections();
-  if (!artisticProfile || !confidenceAllowsAdvance(artisticConfidence)) {
+  const selectionPayload = artisticProfile && confidenceAllowsAdvance(artisticConfidence)
+    ? {
+        artistic_profile: artisticProfile,
+        artistic_confidence: artisticConfidence,
+      }
+    : null;
+  if (artisticPanelStateHasUnsavedChanges(appState) && selectionPayload) {
+    return selectionPayload;
+  }
+  const pendingPayload = getPendingArtisticTransitionPayload(appState);
+  if (pendingPayload) {
+    return pendingPayload;
+  }
+  const version = appState.current_version || {};
+  const hasSavedDirection = confidenceAllowsAdvance(version.artistic_confidence) && !!(version.artistic_profile || "").trim();
+  if (hasSavedDirection) {
     return null;
   }
-  return {
-    artistic_profile: artisticProfile,
-    artistic_confidence: artisticConfidence,
-  };
+  return selectionPayload;
 }
 
 function getDisplayedArtisticConfidence(state, fallbackVersion) {
@@ -4079,11 +4143,11 @@ function updateSendButtonState() {
   const canSend = (!!text || !!pendingMedia) && !isRecording && !isSending;
   $("sendBtn").classList.toggle("active", canSend);
   $("sendBtn").disabled = !canSend;
-  updateImplementCta();
   if (appState) {
     updateComposerPanels(appState);
-    renderStageFlow(appState);
-    renderArtisticStudio(appState);
+    refreshArtisticDraftUi(appState);
+  } else {
+    updateImplementCta();
   }
 }
 
@@ -4760,7 +4824,9 @@ async function setPhase(targetPhase, extraPayload = null) {
     await fetchHistory();
   }
   if (data.should_auto_implement) {
-    await sendChat(IMPLEMENT_CTA_MESSAGE);
+    await sendChat(buildImplementCurrentArtisticDirectionMessage(data.state), {
+      intentHint: "implement_current_art_direction",
+    });
   }
 }
 
@@ -4772,7 +4838,7 @@ function clearArtisticStudioInputs() {
   }
   renderArtPreferenceGroups();
   if (appState) {
-    renderArtisticStudio(appState);
+    refreshArtisticDraftUi(appState);
   }
 }
 
@@ -4792,7 +4858,7 @@ async function refreshArtOptionsFromStudio() {
   await generateArtOptionsFromStudio();
 }
 
-async function sendChat(forcedText = null) {
+async function sendChat(forcedText = null, options = {}) {
   if (isSending || isRecording) return;
   const usingComposerDraft = forcedText == null;
   const text = (usingComposerDraft ? $("chatInput").value : forcedText || "").trim();
@@ -4803,6 +4869,9 @@ async function sendChat(forcedText = null) {
 
   const payload = { session_id: sessionId, message: text };
   payload.artistic_panel_state = getArtisticPanelStatePayload();
+  if (options && options.intentHint) {
+    payload.intent_hint = options.intentHint;
+  }
   const directArtisticPayload = getDirectArtisticTransitionPayload("code_generation");
   if (directArtisticPayload) {
     payload.artistic_profile = directArtisticPayload.artistic_profile;
@@ -5064,6 +5133,10 @@ function initializeApp() {
     ta.style.height = "auto";
     ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
     updateSendButtonState();
+  });
+
+  bindById("artPreferenceNote", "input", () => {
+    refreshArtisticDraftUi();
   });
 
   bindById("chatInput", "keydown", (event) => {

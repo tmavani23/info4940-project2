@@ -634,6 +634,18 @@ def _apply_saved_artistic_panel_state_for_coding(
     )
 
 
+def _get_pending_artistic_transition_payload(
+    pending: Optional["PendingArtisticDecision"],
+) -> tuple[str, str]:
+    if not pending:
+        return "", ""
+    artistic_profile = _clean_text(pending.proposed_artistic_profile)
+    artistic_confidence = _normalize_confidence(pending.proposed_artistic_confidence or "")
+    if not artistic_profile or not _confidence_allows_advance(artistic_confidence):
+        return "", ""
+    return artistic_profile, artistic_confidence
+
+
 def _parse_canonical_art_direction_command(text: str) -> Optional[str]:
     cleaned = _collapse_spaces(text)
     if not cleaned:
@@ -678,10 +690,23 @@ def _get_last_assistant_text(session: "SessionState") -> str:
 def _build_code_start_confirmation_prompt(session: "SessionState", user_reply: str) -> str:
     last_assistant = _safe_summary_text(_get_last_assistant_text(session), limit=240)
     reply = _clean_text(user_reply) or "Yes"
+    current = session.current_version
     prompt_lines = [
         f'The user confirmed they want to start coding now. Their reply was: "{reply}".',
-        "Create the first runnable p5.js sketch based on the current emotional understanding.",
+        "Use the current artistic profile as the source of truth for the implementation.",
+        f"Current emotion profile: {current.emotion_profile or '(empty)'}",
+        f"Current artistic profile: {current.artistic_profile or '(empty)'}",
+        f"Current sketch exists: {'yes' if bool(current.code) else 'no'}",
+        "Apply code changes now instead of brainstorming. Return runnable p5.js and set should_create_version to true.",
     ]
+    if current.code:
+        prompt_lines.append(
+            "Revise the existing sketch so it matches the latest artistic direction, and replace earlier motion, color, composition, or texture choices when they conflict with the updated profile."
+        )
+    else:
+        prompt_lines.append(
+            "Create the first runnable p5.js sketch based on the current emotional understanding and artistic direction."
+        )
     if last_assistant:
         prompt_lines.append(
             f"Use the assistant's immediately previous coding suggestion if it still fits: {last_assistant}"
@@ -1328,6 +1353,249 @@ def _build_artistic_option_preview_codes(options: list[str], emotion_profile: st
     return [_build_artistic_option_preview_code(option, emotion_profile) for option in options[:3]]
 
 
+def _build_local_p5_code_from_direction(artistic_profile: str, emotion_profile: str = "") -> str:
+    text = f"{_clean_text(artistic_profile)} {_clean_text(emotion_profile)}".lower()
+
+    palette = [(109, 133, 255), (26, 39, 69), (10, 17, 32)]
+    background = (12, 16, 26)
+    if _contains_any(text, ["warm", "ember", "sunset", "gold", "orange", "red"]):
+        palette = [(255, 181, 107), (176, 75, 88), (53, 23, 31)]
+        background = (28, 13, 18)
+    elif _contains_any(text, ["monochrome", "black", "white", "stark", "charcoal", "grayscale"]):
+        palette = [(238, 242, 248), (108, 117, 128), (21, 26, 32)]
+        background = (11, 13, 18)
+    elif _contains_any(text, ["dream", "glow", "luminous", "neon", "ethereal"]):
+        palette = [(159, 232, 255), (108, 92, 255), (19, 22, 47)]
+        background = (10, 11, 28)
+    elif _contains_any(text, ["green", "teal", "sea", "ocean"]):
+        palette = [(126, 240, 202), (31, 91, 99), (7, 29, 36)]
+        background = (7, 16, 22)
+
+    motion_mode = "gentle"
+    motion_speed = 0.006
+    drift_x = 18
+    drift_y = 12
+    rotation_amount = 0.1
+    if _contains_any(text, ["still", "static", "quiet", "frozen", "pause"]):
+        motion_mode = "still"
+        motion_speed = 0.0015
+        drift_x = 4
+        drift_y = 3
+        rotation_amount = 0.02
+    elif _contains_any(text, ["dynamic", "frantic", "swirl", "burst", "fast", "pulse", "chaotic"]):
+        motion_mode = "dynamic"
+        motion_speed = 0.02
+        drift_x = 42
+        drift_y = 28
+        rotation_amount = 0.5
+
+    composition_mode = "layered"
+    node_count = 18
+    min_size = 14
+    max_size = 32
+    if _contains_any(text, ["minimal", "sparse", "negative space", "open"]):
+        composition_mode = "minimal"
+        node_count = 9
+        min_size = 18
+        max_size = 38
+    elif _contains_any(text, ["dense", "crowded", "cluster", "packed", "storm"]):
+        composition_mode = "dense"
+        node_count = 30
+        min_size = 10
+        max_size = 26
+
+    shape_mode = "organic"
+    if _contains_any(text, ["geometric", "grid", "sharp", "angular", "rect", "line"]):
+        shape_mode = "geometric"
+    elif _contains_any(text, ["mixed", "mixed forms"]):
+        shape_mode = "mixed"
+
+    texture_mode = "smooth"
+    if _contains_any(text, ["grain", "textured", "dust", "rough"]):
+        texture_mode = "grainy"
+    elif _contains_any(text, ["glow", "mist", "haze", "soft light", "luminous"]):
+        texture_mode = "glowing"
+
+    high_contrast = _contains_any(text, ["high contrast", "stark"])
+    if high_contrast:
+        background = (6, 8, 12)
+        palette = [(245, 247, 255), (132, 158, 255), (12, 16, 28)]
+
+    atmosphere = "calm"
+    if _contains_any(text, ["tense", "uneasy", "anxious"]):
+        atmosphere = "tense"
+    elif _contains_any(text, ["dream", "ethereal", "dreamlike"]):
+        atmosphere = "dreamlike"
+    elif _contains_any(text, ["dramatic", "theatrical"]):
+        atmosphere = "dramatic"
+
+    seed = sum((idx + 1) * ord(ch) for idx, ch in enumerate(text or "art")) % 997
+    emotion_label = _clean_text(emotion_profile) or "The emotion is still unfolding."
+    artistic_label = _clean_text(artistic_profile) or "Use a gentle abstract composition."
+
+    return f"""// Local fallback sketch generated from the current artistic direction.
+// Tweak the parameters below if you want to adjust the motion, density, or palette.
+const EMOTION_PROFILE = {json.dumps(emotion_label)};
+const ARTISTIC_PROFILE = {json.dumps(artistic_label)};
+const PALETTE = {json.dumps(palette)};
+const BACKGROUND_COLOR = {json.dumps(background)};
+const NODE_COUNT = {node_count};
+const MIN_SIZE = {min_size};
+const MAX_SIZE = {max_size};
+const MOTION_MODE = {json.dumps(motion_mode)};
+const MOTION_SPEED = {motion_speed};
+const DRIFT_X = {drift_x};
+const DRIFT_Y = {drift_y};
+const ROTATION_AMOUNT = {rotation_amount};
+const SHAPE_MODE = {json.dumps(shape_mode)};
+const TEXTURE_MODE = {json.dumps(texture_mode)};
+const COMPOSITION_MODE = {json.dumps(composition_mode)};
+const ATMOSPHERE = {json.dumps(atmosphere)};
+const HIGH_CONTRAST = {str(high_contrast).lower()};
+const SEED = {seed};
+
+let nodes = [];
+
+function setup() {{
+  createCanvas(windowWidth, windowHeight);
+  rectMode(CENTER);
+  noStroke();
+  initializeNodes();
+}}
+
+function initializeNodes() {{
+  randomSeed(SEED);
+  noiseSeed(SEED);
+  nodes = [];
+
+  for (let i = 0; i < NODE_COUNT; i += 1) {{
+    const spreadX = COMPOSITION_MODE === "minimal" ? width * 0.34 : COMPOSITION_MODE === "dense" ? width * 0.2 : width * 0.27;
+    const spreadY = COMPOSITION_MODE === "minimal" ? height * 0.3 : COMPOSITION_MODE === "dense" ? height * 0.24 : height * 0.28;
+    nodes.push({{
+      baseX: width * 0.5 + random(-spreadX, spreadX),
+      baseY: height * 0.5 + random(-spreadY, spreadY),
+      size: random(MIN_SIZE, MAX_SIZE),
+      phase: random(TWO_PI),
+      orbit: random(0.55, 1.5),
+      tilt: random(-1, 1),
+      colorIndex: i % PALETTE.length,
+      layerOffset: random(-0.18, 0.18)
+    }});
+  }}
+}}
+
+function drawBackgroundWash() {{
+  background(BACKGROUND_COLOR[0], BACKGROUND_COLOR[1], BACKGROUND_COLOR[2]);
+
+  const washAlpha = ATMOSPHERE === "dramatic" ? 34 : ATMOSPHERE === "dreamlike" ? 24 : 16;
+  noStroke();
+  for (let i = 0; i < PALETTE.length; i += 1) {{
+    const col = PALETTE[i];
+    fill(col[0], col[1], col[2], washAlpha);
+    const radius = width * (0.32 + i * 0.08);
+    ellipse(width * (0.28 + i * 0.22), height * (0.26 + i * 0.16), radius, radius);
+  }}
+}}
+
+function drawGlow(x, y, size, col) {{
+  fill(col[0], col[1], col[2], 24);
+  ellipse(x, y, size * 2.2, size * 2.2);
+}}
+
+function drawNodeShape(node, x, y, size, rotation, col, alphaScale) {{
+  fill(col[0], col[1], col[2], 150 * alphaScale);
+  push();
+  translate(x, y);
+  rotate(rotation);
+
+  if (SHAPE_MODE === "geometric") {{
+    rect(0, 0, size, size * 0.78, size * 0.16);
+  }} else if (SHAPE_MODE === "mixed" && node.colorIndex % 2 === 0) {{
+    rect(0, 0, size * 0.88, size * 0.88, size * 0.14);
+  }} else {{
+    ellipse(0, 0, size, size * 0.82);
+  }}
+
+  pop();
+}}
+
+function drawTexture() {{
+  if (TEXTURE_MODE === "grainy") {{
+    stroke(255, 255, 255, 18);
+    for (let i = 0; i < 110; i += 1) {{
+      point((i * 37 + frameCount + SEED) % width, (i * 19 + SEED * 3) % height);
+    }}
+    noStroke();
+  }}
+}}
+
+function draw() {{
+  drawBackgroundWash();
+
+  for (let i = 0; i < nodes.length; i += 1) {{
+    const node = nodes[i];
+    const t = frameCount * MOTION_SPEED * node.orbit + node.phase;
+    const motionBlend = MOTION_MODE === "still" ? 0.18 : MOTION_MODE === "dynamic" ? 1.45 : 0.72;
+    const x = node.baseX + sin(t * 1.3) * DRIFT_X * motionBlend + cos(t * 0.55) * DRIFT_X * 0.24;
+    const y = node.baseY + cos(t * 1.05) * DRIFT_Y * motionBlend + sin(t * 0.42) * DRIFT_Y * 0.18;
+    const sizePulse = node.size + sin(t * 1.1) * (MOTION_MODE === "dynamic" ? 5 : 2);
+    const rotation = sin(t + node.tilt) * ROTATION_AMOUNT;
+    const col = PALETTE[node.colorIndex];
+    const alphaScale = COMPOSITION_MODE === "dense" ? 0.95 : COMPOSITION_MODE === "minimal" ? 0.72 : 0.84;
+
+    if (TEXTURE_MODE === "glowing" || ATMOSPHERE === "dreamlike") {{
+      drawGlow(x, y, sizePulse, col);
+    }}
+
+    drawNodeShape(node, x, y, sizePulse, rotation, col, alphaScale);
+  }}
+
+  drawTexture();
+
+  if (HIGH_CONTRAST) {{
+    stroke(255, 255, 255, 26);
+    line(width * 0.16, height * 0.82, width * 0.84, height * 0.18);
+    noStroke();
+  }}
+}}
+
+function windowResized() {{
+  resizeCanvas(windowWidth, windowHeight);
+  initializeNodes();
+}}
+""".strip()
+
+
+def _build_local_forced_implementation_payload(
+    *,
+    emotion_profile: str,
+    emotion_confidence: str,
+    emotion_gaps: list[str],
+    artistic_profile: str,
+    artistic_confidence: str,
+) -> dict:
+    code = _build_local_p5_code_from_direction(
+        artistic_profile=artistic_profile,
+        emotion_profile=emotion_profile,
+    )
+    return {
+        "message": (
+            "I updated the sketch to follow the latest artistic direction. "
+            "This pass resets conflicting earlier choices so the new motion, palette, and form language show up clearly."
+        ),
+        "commit_message": "Applied updated artistic direction to the sketch",
+        "emotion_profile": emotion_profile,
+        "emotion_confidence": emotion_confidence,
+        "emotion_gaps": emotion_gaps,
+        "artistic_profile": artistic_profile,
+        "artistic_confidence": artistic_confidence,
+        "code": code,
+        "should_create_version": True,
+        "offers_artistic_alternatives": False,
+        "artistic_options": [],
+    }
+
+
 def _sanitize_artistic_options_payload(
     raw: dict,
     current: VersionNode,
@@ -1775,6 +2043,10 @@ def api_set_phase():
     if session.phase == PHASE_ARTISTIC and target_phase == PHASE_CODE:
         direct_artistic_profile = _clean_text(data.get("artistic_profile"))
         direct_artistic_confidence = _normalize_confidence(data.get("artistic_confidence") or "")
+        if not direct_artistic_profile:
+            direct_artistic_profile, direct_artistic_confidence = _get_pending_artistic_transition_payload(
+                session.pending_artistic_decision
+            )
         if not direct_artistic_profile and not _can_unlock_phase(session, PHASE_CODE):
             direct_artistic_profile = _build_artistic_profile_from_panel_state(session.artistic_panel_state)
             direct_artistic_confidence = _infer_artistic_confidence_from_panel_state(session.artistic_panel_state)
@@ -1830,6 +2102,8 @@ def api_chat():
         _save_artistic_panel_state(session, data.get("artistic_panel_state"))
     direct_artistic_profile = _clean_text(data.get("artistic_profile"))
     direct_artistic_confidence = _normalize_confidence(data.get("artistic_confidence") or "")
+    intent_hint = _clean_text(data.get("intent_hint"))
+    force_implement_current_direction = intent_hint == "implement_current_art_direction"
 
     message = _clean_text(data.get("message"))
     image = _clean_text(data.get("image"))
@@ -1949,12 +2223,24 @@ def api_chat():
                 summary="Saved artistic panel selections for direct implementation",
                 source="user",
             )
-        elif PHASE_CODE not in session.unlocked_phases and not _can_unlock_phase(session, PHASE_CODE):
-            _apply_saved_artistic_panel_state_for_coding(
-                session,
-                summary="Saved artistic panel selections for direct implementation",
-                source="user",
+        else:
+            pending_artistic_profile, pending_artistic_confidence = _get_pending_artistic_transition_payload(
+                session.pending_artistic_decision
             )
+            if pending_artistic_profile:
+                _apply_direct_artistic_profile(
+                    session,
+                    artistic_profile=pending_artistic_profile,
+                    artistic_confidence=pending_artistic_confidence,
+                    summary="Saved generated artistic direction for implementation",
+                    source="assistant",
+                )
+            elif PHASE_CODE not in session.unlocked_phases and not _can_unlock_phase(session, PHASE_CODE):
+                _apply_saved_artistic_panel_state_for_coding(
+                    session,
+                    summary="Saved artistic panel selections for direct implementation",
+                    source="user",
+                )
         if PHASE_CODE not in session.unlocked_phases and not _can_unlock_phase(session, PHASE_CODE):
             assistant_text = (
                 "Choose one of the artwork options, accept the draft direction, or describe the visuals you want first. "
@@ -1987,6 +2273,7 @@ def api_chat():
         session.phase = PHASE_CODE
         _mark_phase_visited(session, PHASE_CODE)
         session.pending_artistic_decision = None
+        force_implement_current_direction = True
         user_text_for_model = _build_code_start_confirmation_prompt(session, message)
 
     pending = session.pending_artistic_decision
@@ -2280,6 +2567,26 @@ def api_chat():
     llm_should_create_version = sanitized["should_create_version"]
     offers_artistic_alternatives = sanitized["offers_artistic_alternatives"]
     artistic_options = sanitized["artistic_options"]
+
+    if session.phase == PHASE_CODE and force_implement_current_direction:
+        needs_local_regen = not _clean_text(new_code) or new_code == old.code or not llm_should_create_version
+        if needs_local_regen and _clean_text(new_artistic):
+            sanitized = _build_local_forced_implementation_payload(
+                emotion_profile=new_emotion,
+                emotion_confidence=new_conf,
+                emotion_gaps=new_gaps,
+                artistic_profile=new_artistic,
+                artistic_confidence=new_artistic_conf or old.artistic_confidence or "medium",
+            )
+            new_emotion = sanitized["emotion_profile"]
+            new_artistic = sanitized["artistic_profile"]
+            new_artistic_conf = sanitized["artistic_confidence"]
+            new_code = sanitized["code"]
+            new_conf = sanitized["emotion_confidence"]
+            new_gaps = sanitized["emotion_gaps"]
+            llm_should_create_version = sanitized["should_create_version"]
+            offers_artistic_alternatives = sanitized["offers_artistic_alternatives"]
+            artistic_options = sanitized["artistic_options"]
 
     if session.phase == PHASE_CODE and new_code and new_code != old.code:
         code_ok, code_issue = _is_probably_complete_p5_code(new_code)
