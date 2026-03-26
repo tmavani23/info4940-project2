@@ -435,7 +435,6 @@ button.ghost {
   display: flex;
   flex-direction: column;
   gap: 7px;
-  z-index: 1;
 }
 
 .template-row {
@@ -726,6 +725,202 @@ button.ghost {
 
 .artistic-studio[hidden] {
   display: none !important;
+}
+
+.artistic-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 11, 18, 0.34);
+  z-index: 70;
+  pointer-events: auto;
+}
+
+.artistic-modal-backdrop[hidden] {
+  display: none !important;
+}
+
+body.artistic-modal-active .artistic-studio {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(980px, calc(100vw - 120px));
+  max-height: min(78vh, 820px);
+  padding: 22px 24px 24px;
+  gap: 16px;
+  border-radius: 24px;
+  border-color: rgba(123, 162, 255, 0.38);
+  box-shadow: 0 34px 90px rgba(2, 6, 14, 0.56);
+  filter: none;
+  backdrop-filter: none;
+  isolation: isolate;
+  z-index: 80;
+  pointer-events: auto;
+}
+
+body.artistic-modal-active .artistic-studio-head h3 {
+  font-size: 28px;
+  margin-top: 2px;
+}
+
+body.artistic-modal-active .artistic-copy {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+body.artistic-modal-active .art-pref-group {
+  padding: 12px 13px;
+}
+
+body.artistic-modal-active .art-pref-group h4 {
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+body.artistic-modal-active .art-pref-chip {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+body.artistic-modal-active .art-note {
+  min-height: 112px;
+}
+
+body.artistic-modal-active .art-option-card {
+  min-height: 296px;
+}
+
+body.artistic-modal-active .art-option-preview {
+  height: 154px;
+}
+
+body.artistic-modal-active .art-option-summary {
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+body.artistic-modal-active #messages {
+  opacity: 0.72;
+  filter: none;
+}
+
+body.artistic-modal-active #previewStrip,
+body.artistic-modal-active #templateLabel,
+body.artistic-modal-active #templateRow,
+body.artistic-modal-active .input-bar {
+  opacity: 0.18;
+  pointer-events: none;
+  filter: none;
+}
+
+.artistic-studio-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.artistic-inline-open {
+  align-self: flex-start;
+}
+
+.artistic-inline-open[hidden] {
+  display: none !important;
+}
+
+.artistic-guidance {
+  border: 1px solid rgba(143, 180, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(19, 29, 44, 0.9);
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #d5e3ff;
+}
+
+.artistic-guidance strong {
+  color: #ffffff;
+}
+
+.artistic-guidance[hidden] {
+  display: none !important;
+}
+
+.artistic-guidance.ready {
+  border-color: rgba(77, 212, 166, 0.26);
+  background: rgba(18, 33, 31, 0.92);
+}
+
+.artistic-guidance.loading {
+  border-color: rgba(143, 180, 255, 0.3);
+}
+
+.artistic-modal-footer {
+  position: sticky;
+  bottom: -24px;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0 4px;
+  background: linear-gradient(180deg, rgba(13, 17, 26, 0), rgba(13, 17, 26, 0.96) 28%);
+}
+
+.artistic-modal-footer-copy {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #b8c8ea;
+  max-width: 560px;
+}
+
+.artistic-modal-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.artistic-modal-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(11, 15, 23, 0.62);
+  z-index: 3;
+}
+
+.artistic-modal-loading[hidden] {
+  display: none !important;
+}
+
+.artistic-modal-loading-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(143, 180, 255, 0.28);
+  background: rgba(16, 23, 34, 0.96);
+  box-shadow: 0 16px 42px rgba(2, 6, 14, 0.32);
+}
+
+.artistic-modal-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(143, 180, 255, 0.22);
+  border-top-color: #8fb4ff;
+  animation: artisticSpin 0.8s linear infinite;
+}
+
+@keyframes artisticSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .artistic-studio-head {
@@ -1758,6 +1953,34 @@ button.ghost {
   .tour-card {
     width: min(420px, calc(100vw - 24px));
   }
+
+  body.artistic-modal-active .artistic-studio {
+    width: min(94vw, 760px);
+    max-height: 88vh;
+    padding: 18px 16px 18px;
+  }
+
+  body.artistic-modal-active .artistic-studio-head h3 {
+    font-size: 22px;
+  }
+
+  body.artistic-modal-active .art-option-preview {
+    height: 126px;
+  }
+
+  .artistic-modal-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .artistic-modal-footer-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .artistic-modal-footer-actions button {
+    width: 100%;
+  }
 }
 </style>
 </head>
@@ -1806,6 +2029,7 @@ button.ghost {
   </div>
 
   <div id="fullscreenBackdrop" class="fullscreen-backdrop" hidden></div>
+  <div id="artisticStudioBackdrop" class="artistic-modal-backdrop" hidden></div>
 
   <main class="workspace">
     <section id="chatPanel" class="panel chat-pane pane-expandable" data-pane-id="chat">
@@ -1816,13 +2040,17 @@ button.ghost {
       <div id="messages" class="messages"></div>
 
       <div class="input-wrap">
-        <section id="artisticStudio" class="artistic-studio" hidden>
+        <button id="openArtisticModalBtn" class="ghost artistic-inline-open" type="button" hidden>Open Artistic Discovery</button>
+        <section id="artisticStudio" class="artistic-studio" role="dialog" aria-modal="true" aria-labelledby="artisticStudioTitle" hidden>
           <div class="artistic-studio-head">
             <div>
               <div class="artistic-kicker">Artistic Discovery</div>
-              <h3>Shape the artwork before we code it</h3>
+              <h3 id="artisticStudioTitle">Shape the artwork before we code it</h3>
             </div>
-            <button id="clearArtPrefsBtn" class="ghost" type="button">Clear</button>
+            <div class="artistic-studio-actions">
+              <button id="clearArtPrefsBtn" class="ghost" type="button">Clear</button>
+              <button id="closeArtisticModalBtn" class="ghost" type="button">Close</button>
+            </div>
           </div>
 
           <p id="artisticStudioCopy" class="artistic-copy">
@@ -1849,6 +2077,24 @@ button.ghost {
               </div>
             </div>
             <div id="artOptionCards" class="art-option-cards"></div>
+          </div>
+
+          <div id="artisticStudioGuidance" class="artistic-guidance" aria-live="polite" hidden></div>
+
+          <div class="artistic-modal-footer">
+            <p id="artisticModalFooterCopy" class="artistic-modal-footer-copy">
+              You can stay here to shape the visual direction, or close this modal and type instructions directly in chat.
+            </p>
+            <div class="artistic-modal-footer-actions">
+              <button id="continueFromArtisticBtn" class="primary" type="button">Continue to Coding</button>
+            </div>
+          </div>
+
+          <div id="artisticModalLoading" class="artistic-modal-loading" hidden>
+            <div class="artistic-modal-loading-card">
+              <span class="artistic-modal-spinner" aria-hidden="true"></span>
+              <p id="artisticModalLoadingText">Generating artwork options...</p>
+            </div>
           </div>
         </section>
 
@@ -2289,6 +2535,8 @@ let activeTourKind = "app";
 let isDownloadMenuOpen = false;
 let previewExportRequests = new Map();
 let artPreferenceSelections = {};
+let artisticModalDismissed = false;
+let lastRenderedPhase = "";
 
 const $ = (id) => document.getElementById(id);
 
@@ -2422,11 +2670,58 @@ function getPreviousPhase(phase) {
   return index > 0 ? PHASE_FLOW[index - 1].id : null;
 }
 
-function initializeArtPreferenceSelections() {
-  artPreferenceSelections = {};
+function buildEmptyArtPreferenceSelections() {
+  const selections = {};
   ARTISTIC_PREFERENCE_GROUPS.forEach((group) => {
-    artPreferenceSelections[group.key] = "";
+    selections[group.key] = "";
   });
+  return selections;
+}
+
+function initializeArtPreferenceSelections() {
+  artPreferenceSelections = buildEmptyArtPreferenceSelections();
+}
+
+function normalizeArtisticPanelState(panelState) {
+  const normalized = {
+    selections: buildEmptyArtPreferenceSelections(),
+    note: "",
+  };
+  if (!panelState || typeof panelState !== "object") {
+    return normalized;
+  }
+  if (panelState.selections && typeof panelState.selections === "object") {
+    ARTISTIC_PREFERENCE_GROUPS.forEach((group) => {
+      const value = panelState.selections[group.key];
+      normalized.selections[group.key] = typeof value === "string" ? value.trim() : "";
+    });
+  }
+  normalized.note = typeof panelState.note === "string" ? panelState.note.trim() : "";
+  return normalized;
+}
+
+function getArtisticPanelStatePayload() {
+  const note = $("artPreferenceNote");
+  return {
+    selections: { ...buildEmptyArtPreferenceSelections(), ...artPreferenceSelections },
+    note: note ? note.value.trim() : "",
+  };
+}
+
+function artisticPanelStateHasUnsavedChanges(state) {
+  const saved = normalizeArtisticPanelState(state && state.artistic_panel_state);
+  const current = normalizeArtisticPanelState(getArtisticPanelStatePayload());
+  return JSON.stringify(saved) !== JSON.stringify(current);
+}
+
+function syncArtisticPanelFromState(state) {
+  const panelState = normalizeArtisticPanelState(state && state.artistic_panel_state);
+  artPreferenceSelections = panelState.selections;
+  const note = $("artPreferenceNote");
+  if (note) {
+    note.value = panelState.note;
+  }
+  renderArtPreferenceGroups();
 }
 
 function getArtPreferenceSelectionsSummary() {
@@ -2801,22 +3096,58 @@ function renderArtOptionCards(pending) {
   });
 }
 
+function openArtisticModal() {
+  artisticModalDismissed = false;
+  if (appState) {
+    renderArtisticStudio(appState);
+  }
+}
+
+function closeArtisticModal() {
+  artisticModalDismissed = true;
+  if (appState) {
+    renderArtisticStudio(appState);
+  }
+}
+
 function renderArtisticStudio(state) {
   const studio = $("artisticStudio");
+  const backdrop = $("artisticStudioBackdrop");
+  const openBtn = $("openArtisticModalBtn");
   const copy = $("artisticStudioCopy");
   const optionPanel = $("artOptionPanel");
   const draft = $("artDraftProfile");
   const refreshBtn = $("refreshArtOptionsBtn");
-  if (!studio || !copy || !optionPanel || !draft || !refreshBtn) return;
+  const guidance = $("artisticStudioGuidance");
+  const continueBtn = $("continueFromArtisticBtn");
+  const footerCopy = $("artisticModalFooterCopy");
+  const loading = $("artisticModalLoading");
+  const loadingText = $("artisticModalLoadingText");
+  if (!studio || !copy || !optionPanel || !draft || !refreshBtn || !guidance || !continueBtn || !footerCopy || !loading || !loadingText) return;
 
   const isArtisticPhase = !!(state && state.phase === "artistic_discovery");
   const pending = state && state.pending_artistic_decision ? state.pending_artistic_decision : null;
-  studio.hidden = !isArtisticPhase;
-  studio.style.display = isArtisticPhase ? "flex" : "none";
-  studio.setAttribute("aria-hidden", isArtisticPhase ? "false" : "true");
-  if (!isArtisticPhase) {
+  const selectionSummary = getArtPreferenceSelectionsSummary();
+  const selectionCount = selectionSummary.selections.length + (selectionSummary.note ? 1 : 0);
+  const showModal = isArtisticPhase && !artisticModalDismissed;
+  const canContinue = !!(state && canAdvanceFromCurrentPhase(state));
+
+  document.body.classList.toggle("artistic-modal-active", showModal);
+  if (backdrop) {
+    backdrop.hidden = !showModal;
+    backdrop.setAttribute("aria-hidden", showModal ? "false" : "true");
+  }
+  if (openBtn) {
+    openBtn.hidden = !isArtisticPhase || showModal;
+  }
+  studio.hidden = !showModal;
+  studio.style.display = showModal ? "flex" : "none";
+  studio.setAttribute("aria-hidden", showModal ? "false" : "true");
+  if (!showModal) {
     optionPanel.hidden = true;
     draft.textContent = "";
+    guidance.hidden = true;
+    loading.hidden = true;
     return;
   }
 
@@ -2829,6 +3160,33 @@ function renderArtisticStudio(state) {
     ? pending.proposed_artistic_profile
     : "Your current artistic direction draft will appear here after you generate options.";
   refreshBtn.disabled = isSending || isRecording;
+  continueBtn.disabled = !canContinue || isSending || isRecording;
+  footerCopy.textContent = canContinue
+    ? "This visual direction is ready to move into coding. You can continue now or keep refining the artistic choices here."
+    : "Stay in this modal to shape the artistic direction, or close it if you prefer to type instructions directly into chat.";
+
+  if (isSending) {
+    loading.hidden = false;
+    loadingText.textContent = pending
+      ? "Refreshing artwork directions and previews..."
+      : "Generating artwork directions and previews...";
+    guidance.hidden = true;
+  } else {
+    loading.hidden = true;
+    if (pending && (pending.alternatives || []).length) {
+      guidance.hidden = false;
+      guidance.className = "artistic-guidance ready";
+      guidance.innerHTML = "<strong>Review the artwork options below.</strong> Choose one, ask for more options, or continue straight to coding from this modal.";
+    } else if (selectionCount > 0) {
+      guidance.hidden = false;
+      guidance.className = "artistic-guidance";
+      guidance.innerHTML = "<strong>Next step:</strong> scroll down to the action area and generate artwork options when these styling choices feel right.";
+    } else {
+      guidance.hidden = false;
+      guidance.className = "artistic-guidance";
+      guidance.innerHTML = "<strong>Start by choosing a few visual tags.</strong> Then scroll down to generate artwork options or continue directly to coding once the direction feels clear.";
+    }
+  }
   renderArtOptionCards(pending);
 }
 
@@ -2935,6 +3293,11 @@ function inferArtisticConfidenceFromSelections() {
 
 function getDirectArtisticTransitionPayload(targetPhase) {
   if (!appState || appState.phase !== "artistic_discovery" || targetPhase !== "code_generation") {
+    return null;
+  }
+  const version = appState.current_version || {};
+  const hasSavedDirection = confidenceAllowsAdvance(version.artistic_confidence) && !!(version.artistic_profile || "").trim();
+  if (hasSavedDirection && !artisticPanelStateHasUnsavedChanges(appState)) {
     return null;
   }
   const artisticProfile = buildDirectArtisticProfileFromSelections();
@@ -4184,8 +4547,13 @@ function getVersionById(versionId) {
 }
 
 function renderState(state) {
+  if (state && state.phase === "artistic_discovery" && lastRenderedPhase !== "artistic_discovery") {
+    artisticModalDismissed = false;
+  }
+  lastRenderedPhase = state && state.phase ? state.phase : "";
   appState = state;
   sessionId = state.session_id;
+  syncArtisticPanelFromState(state);
   $("phaseBadge").textContent = formatPhase(state.phase);
   $("versionPill").textContent = formatVersionPill(state.current_version);
   updateComposerPanels(state);
@@ -4377,6 +4745,7 @@ async function setPhase(targetPhase, extraPayload = null) {
     body: JSON.stringify({
       session_id: sessionId,
       phase: targetPhase,
+      artistic_panel_state: getArtisticPanelStatePayload(),
       ...(extraPayload || {}),
     }),
   });
@@ -4433,6 +4802,12 @@ async function sendChat(forcedText = null) {
   const optimisticMessage = buildOptimisticMessage(text, draftMedia);
 
   const payload = { session_id: sessionId, message: text };
+  payload.artistic_panel_state = getArtisticPanelStatePayload();
+  const directArtisticPayload = getDirectArtisticTransitionPayload("code_generation");
+  if (directArtisticPayload) {
+    payload.artistic_profile = directArtisticPayload.artistic_profile;
+    payload.artistic_confidence = directArtisticPayload.artistic_confidence;
+  }
   if (activeMedia) {
     if (activeMedia.type === "image") {
       payload.image = activeMedia.dataUrl;
@@ -4657,9 +5032,14 @@ function initializeApp() {
   });
 
   bindById("fullscreenBackdrop", "click", closeFullscreenPane);
+  bindById("artisticStudioBackdrop", "click", closeArtisticModal);
 
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      if (appState && appState.phase === "artistic_discovery" && !artisticModalDismissed) {
+        closeArtisticModal();
+        return;
+      }
       if (isDownloadMenuOpen) {
         closeDownloadMenu();
         return;
@@ -4708,8 +5088,13 @@ function initializeApp() {
     }
   });
   bindById("clearArtPrefsBtn", "click", clearArtisticStudioInputs);
+  bindById("closeArtisticModalBtn", "click", closeArtisticModal);
+  bindById("openArtisticModalBtn", "click", openArtisticModal);
   bindById("generateArtOptionsBtn", "click", generateArtOptionsFromStudio);
   bindById("refreshArtOptionsBtn", "click", refreshArtOptionsFromStudio);
+  bindById("continueFromArtisticBtn", "click", async () => {
+    await setPhase("code_generation", getDirectArtisticTransitionPayload("code_generation"));
+  });
   bindById("downloadBtn", "click", (event) => {
     event.stopPropagation();
     toggleDownloadMenu();

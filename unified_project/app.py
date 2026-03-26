@@ -48,6 +48,17 @@ PHASE_EMOTION = "emotional_discovery"
 PHASE_ARTISTIC = "artistic_discovery"
 PHASE_CODE = "code_generation"
 PHASE_ORDER = [PHASE_EMOTION, PHASE_ARTISTIC, PHASE_CODE]
+ARTISTIC_PREFERENCE_GROUPS = (
+    ("detail", "Detail"),
+    ("motion", "Motion"),
+    ("palette", "Palette"),
+    ("shapes", "Shape language"),
+    ("composition", "Composition"),
+    ("texture", "Texture"),
+    ("atmosphere", "Atmosphere"),
+)
+ARTISTIC_PREFERENCE_KEYS = tuple(key for key, _ in ARTISTIC_PREFERENCE_GROUPS)
+ARTISTIC_PREFERENCE_LABELS = {key: label for key, label in ARTISTIC_PREFERENCE_GROUPS}
 
 
 BASE_PROMPT = """
@@ -72,7 +83,7 @@ You are in emotional discovery mode. Do not generate new code unless the user ex
 Conversation goals:
 - Summarize the current emotional understanding.
 - Ask one useful follow-up that closes the biggest gap.
-- Remind them they can move to coding when ready.
+- Remind them they can move to artistic discovery stage when ready.
 - Explicitly state that you may still misunderstand parts of their emotional experience and that they can correct you at any time.
 - Keep the message short and supportive.
 - Structure the `message` so it is easy to scan, using simple markdown paragraphs or bullets.
@@ -496,6 +507,133 @@ def _update_current_artistic_state(
     version.artistic_confidence = artistic_confidence
 
 
+def _empty_artistic_panel_selections() -> dict[str, str]:
+    return {key: "" for key in ARTISTIC_PREFERENCE_KEYS}
+
+
+@dataclass
+class ArtisticPanelState:
+    selections: dict[str, str] = field(default_factory=_empty_artistic_panel_selections)
+    note: str = ""
+
+
+def _normalize_artistic_panel_state(value: Any) -> "ArtisticPanelState":
+    selections = _empty_artistic_panel_selections()
+    note = ""
+    if isinstance(value, ArtisticPanelState):
+        raw_selections = value.selections
+        note = _clean_text(value.note)
+    elif isinstance(value, dict):
+        raw_selections = value.get("selections")
+        note = _clean_text(value.get("note"))
+    else:
+        raw_selections = None
+    if isinstance(raw_selections, dict):
+        for key in ARTISTIC_PREFERENCE_KEYS:
+            selections[key] = _clean_text(raw_selections.get(key))
+    return ArtisticPanelState(selections=selections, note=note)
+
+
+def _serialize_artistic_panel_state(value: Optional["ArtisticPanelState"]) -> dict[str, Any]:
+    state = _normalize_artistic_panel_state(value)
+    return {
+        "selections": dict(state.selections),
+        "note": state.note,
+    }
+
+
+def _summarize_artistic_panel_state(value: Optional["ArtisticPanelState"]) -> tuple[list[str], str]:
+    state = _normalize_artistic_panel_state(value)
+    selections = []
+    for key in ARTISTIC_PREFERENCE_KEYS:
+        selected = _clean_text(state.selections.get(key))
+        if selected:
+            selections.append(f"{ARTISTIC_PREFERENCE_LABELS[key]}: {selected}")
+    return selections, state.note
+
+
+def _build_artistic_profile_from_panel_state(value: Optional["ArtisticPanelState"]) -> str:
+    selections, note = _summarize_artistic_panel_state(value)
+    if not selections and not note:
+        return ""
+    parts = []
+    if selections:
+        parts.append(f"Use this visual direction: {'; '.join(selections)}.")
+    if note:
+        parts.append(f"User note: {note}.")
+    parts.append("Implement this direction directly instead of generating comparison options.")
+    return " ".join(parts)
+
+
+def _infer_artistic_confidence_from_panel_state(value: Optional["ArtisticPanelState"]) -> str:
+    selections, note = _summarize_artistic_panel_state(value)
+    if len(selections) >= 3 or (len(selections) >= 2 and note):
+        return "high"
+    if selections or note:
+        return "medium"
+    return ""
+
+
+def _save_artistic_panel_state(session: "SessionState", value: Any) -> ArtisticPanelState:
+    session.artistic_panel_state = _normalize_artistic_panel_state(value)
+    return session.artistic_panel_state
+
+
+def _apply_direct_artistic_profile(
+    session: "SessionState",
+    *,
+    artistic_profile: str,
+    artistic_confidence: str,
+    summary: str,
+    source: str = "user",
+) -> bool:
+    profile = _clean_text(artistic_profile)
+    confidence = _normalize_confidence(artistic_confidence or "")
+    if not profile:
+        return False
+    current = session.current_version
+    if _has_artistic_change(current.artistic_profile, profile) or current.artistic_confidence != confidence:
+        create_version(
+            session,
+            emotion_profile=current.emotion_profile,
+            artistic_profile=profile,
+            artistic_confidence=confidence,
+            code=current.code,
+            emotion_confidence=current.emotion_confidence,
+            emotion_gaps=current.emotion_gaps,
+            summary=summary,
+            source=source,
+        )
+    else:
+        _update_current_artistic_state(
+            current,
+            artistic_profile=profile,
+            artistic_confidence=confidence,
+        )
+    if _confidence_allows_advance(confidence):
+        _unlock_phase(session, PHASE_CODE)
+    return True
+
+
+def _apply_saved_artistic_panel_state_for_coding(
+    session: "SessionState",
+    *,
+    summary: str,
+    source: str = "user",
+) -> bool:
+    artistic_profile = _build_artistic_profile_from_panel_state(session.artistic_panel_state)
+    artistic_confidence = _infer_artistic_confidence_from_panel_state(session.artistic_panel_state)
+    if not artistic_profile or not _confidence_allows_advance(artistic_confidence):
+        return False
+    return _apply_direct_artistic_profile(
+        session,
+        artistic_profile=artistic_profile,
+        artistic_confidence=artistic_confidence,
+        summary=summary,
+        source=source,
+    )
+
+
 def _parse_canonical_art_direction_command(text: str) -> Optional[str]:
     cleaned = _collapse_spaces(text)
     if not cleaned:
@@ -850,6 +988,7 @@ class SessionState:
     current_version_id: Optional[str] = None
     branch_counter: int = 1
     pending_artistic_decision: Optional[PendingArtisticDecision] = None
+    artistic_panel_state: ArtisticPanelState = field(default_factory=ArtisticPanelState)
     unlocked_phases: list[str] = field(default_factory=lambda: [PHASE_EMOTION])
     visited_phases: list[str] = field(default_factory=lambda: [PHASE_EMOTION])
 
@@ -1575,6 +1714,7 @@ def serialize_state(session: SessionState) -> dict:
         "branch_heads": dict(session.branch_heads),
         "active_branch": session.active_branch,
         "pending_artistic_decision": serialize_pending_artistic_decision(session.pending_artistic_decision),
+        "artistic_panel_state": _serialize_artistic_panel_state(session.artistic_panel_state),
     }
 
 
@@ -1627,38 +1767,25 @@ def api_set_phase():
         return jsonify({"error": "Missing session_id or phase"}), 400
 
     session = get_or_create_session(sid)
+    if "artistic_panel_state" in data:
+        _save_artistic_panel_state(session, data.get("artistic_panel_state"))
     if target_phase not in PHASE_ORDER:
         return jsonify({"error": "Invalid phase"}), 400
 
     if session.phase == PHASE_ARTISTIC and target_phase == PHASE_CODE:
         direct_artistic_profile = _clean_text(data.get("artistic_profile"))
         direct_artistic_confidence = _normalize_confidence(data.get("artistic_confidence") or "")
+        if not direct_artistic_profile and not _can_unlock_phase(session, PHASE_CODE):
+            direct_artistic_profile = _build_artistic_profile_from_panel_state(session.artistic_panel_state)
+            direct_artistic_confidence = _infer_artistic_confidence_from_panel_state(session.artistic_panel_state)
         if direct_artistic_profile:
-            current = session.current_version
-            if (
-                _has_artistic_change(current.artistic_profile, direct_artistic_profile)
-                or current.artistic_confidence != direct_artistic_confidence
-            ):
-                summary = "Saved artistic panel selections for direct implementation"
-                create_version(
-                    session,
-                    emotion_profile=current.emotion_profile,
-                    artistic_profile=direct_artistic_profile,
-                    artistic_confidence=direct_artistic_confidence,
-                    code=current.code,
-                    emotion_confidence=current.emotion_confidence,
-                    emotion_gaps=current.emotion_gaps,
-                    summary=summary,
-                    source="user",
-                )
-            else:
-                _update_current_artistic_state(
-                    current,
-                    artistic_profile=direct_artistic_profile,
-                    artistic_confidence=direct_artistic_confidence,
-                )
-            if _confidence_allows_advance(direct_artistic_confidence):
-                _unlock_phase(session, PHASE_CODE)
+            _apply_direct_artistic_profile(
+                session,
+                artistic_profile=direct_artistic_profile,
+                artistic_confidence=direct_artistic_confidence,
+                summary="Saved artistic panel selections for direct implementation",
+                source="user",
+            )
 
     if target_phase not in session.unlocked_phases and not _can_unlock_phase(session, target_phase):
         return jsonify({"error": _phase_locked_message(target_phase)}), 400
@@ -1699,6 +1826,10 @@ def api_set_phase():
 def api_chat():
     data = request.get_json(silent=True) or {}
     session = get_or_create_session(data.get("session_id"))
+    if "artistic_panel_state" in data:
+        _save_artistic_panel_state(session, data.get("artistic_panel_state"))
+    direct_artistic_profile = _clean_text(data.get("artistic_profile"))
+    direct_artistic_confidence = _normalize_confidence(data.get("artistic_confidence") or "")
 
     message = _clean_text(data.get("message"))
     image = _clean_text(data.get("image"))
@@ -1810,6 +1941,20 @@ def api_chat():
             _mark_phase_visited(session, PHASE_CODE)
             user_text_for_model = _build_code_start_confirmation_prompt(session, message)
     elif session.phase == PHASE_ARTISTIC and (actions["confirm_start_coding"] or actions["code_request"]):
+        if direct_artistic_profile:
+            _apply_direct_artistic_profile(
+                session,
+                artistic_profile=direct_artistic_profile,
+                artistic_confidence=direct_artistic_confidence,
+                summary="Saved artistic panel selections for direct implementation",
+                source="user",
+            )
+        elif PHASE_CODE not in session.unlocked_phases and not _can_unlock_phase(session, PHASE_CODE):
+            _apply_saved_artistic_panel_state_for_coding(
+                session,
+                summary="Saved artistic panel selections for direct implementation",
+                source="user",
+            )
         if PHASE_CODE not in session.unlocked_phases and not _can_unlock_phase(session, PHASE_CODE):
             assistant_text = (
                 "Choose one of the artwork options, accept the draft direction, or describe the visuals you want first. "
