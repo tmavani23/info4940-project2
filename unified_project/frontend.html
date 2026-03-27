@@ -1212,6 +1212,34 @@ button.ghost {
   margin-top: 4px;
 }
 
+.tour-examples {
+  margin-top: 12px;
+}
+
+.tour-examples-label {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #9fb1d8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tour-examples-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.tour-example-img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #2a3650;
+  display: block;
+}
+
 .tour-branch-demo {
   padding: 12px;
   border: 1px solid #33405a;
@@ -1526,6 +1554,15 @@ const TOUR_WELCOME_COPY = [
   "This studio helps you turn emotions, memories, and lived experiences into expressive p5.js sketches with an AI collaborator.",
   "Take a quick tour to see how the chat, profile, preview, and versioning tools work together.",
 ];
+const TOUR_WELCOME_HTML = `
+  <div class="tour-examples">
+    <p class="tour-examples-label">Here are some examples of how you can visualize your feelings:</p>
+    <div class="tour-examples-grid">
+      <img src="/good_examples/ex_1.jpg" alt="Example sketch 1" class="tour-example-img" />
+      <img src="/good_examples/ex_2.png" alt="Example sketch 2" class="tour-example-img" />
+    </div>
+  </div>
+`;
 const HISTORY_BRANCH_TOUR_HTML = `
   <div class="tour-branch-demo">
     <svg viewBox="0 0 320 122" aria-hidden="true">
@@ -2239,6 +2276,7 @@ function getTourConfig(kind = activeTourKind) {
     kind: "app",
     introTitle: "Welcome to Emotion Sketch Studio",
     introCopy: TOUR_WELCOME_COPY,
+    introHtml: TOUR_WELCOME_HTML,
     introLabel: "Welcome",
     steps: TOUR_STEPS,
     focusId: "helpBtn",
@@ -2447,7 +2485,7 @@ function renderTourStep() {
     overlay.classList.add("welcome-mode");
     stepLabel.textContent = config.introLabel;
     title.textContent = config.introTitle;
-    setTourBody(config.introCopy);
+    setTourBody(config.introCopy, config.introHtml || "");
     nextBtn.textContent = "Enter";
     backBtn.textContent = "Back";
     backBtn.disabled = false;

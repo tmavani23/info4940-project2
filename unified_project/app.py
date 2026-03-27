@@ -1509,6 +1509,11 @@ def debug_page():
     return send_from_directory(BASE_DIR, "debug.html")
 
 
+@app.route("/good_examples/<path:filename>", methods=["GET"])
+def good_examples(filename):
+    return send_from_directory(BASE_DIR / "good_examples", filename)
+
+
 @app.route("/api/state", methods=["GET"])
 def api_state():
     sid = request.args.get("session_id")
