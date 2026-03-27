@@ -105,6 +105,7 @@ Constraints:
 - emotion_confidence must be exactly low, medium, or high.
 - emotion_gaps must be an array (possibly empty).
 - commit_message should be one concise line describing discovery progress.
+- In your `message`, do not repeat your emotional understanding - that should be put into `emotion_profile`. Simply remind the user to check the emotional profiles pane for the current understanding.
 - In your `message`, always state that your emotional interpretation may be imperfect and the user can correct you at any time.
 - In your `message`, use only simple markdown supported by chat UIs: paragraphs, `-` bullets, numbered lists, and `**bold**`.
 - Keep the `message` compact and scannable. Do not return a large wall of text.
@@ -2732,9 +2733,17 @@ def api_save_version():
     session = get_or_create_session(sid)
     old = session.current_version
 
-    emotion_profile = _ensure_emotion_prefix(_clean_text(data.get("emotion_profile"))) or old.emotion_profile
-    artistic_profile = _clean_text(data.get("artistic_profile")) or old.artistic_profile
-    code = _clean_text(data.get("code")) or old.code
+    emotion_profile = old.emotion_profile
+    artistic_profile = old.artistic_profile
+    code = old.code
+
+    if "emotion_profile" in data:
+        emotion_profile = _ensure_emotion_prefix(_clean_text(data.get("emotion_profile")))
+    if "artistic_profile" in data:
+        artistic_profile = _clean_text(data.get("artistic_profile"))
+    if "code" in data:
+        code = _clean_text(data.get("code"))
+
     summary = _clean_text(data.get("summary")) or _build_commit_summary(
         old, emotion_profile, artistic_profile, code, source="user"
     )

@@ -16,24 +16,27 @@
 }
 
 :root {
-  --bg: #0f1013;
-  --surface: #16181e;
-  --surface-2: #1e222c;
-  --surface-3: #262b38;
-  --border: #32384a;
-  --text: #e6e9f2;
-  --muted: #97a0b6;
-  --accent: #5f8df7;
-  --accent-2: #7ea5ff;
-  --ok: #4dd4a6;
-  --danger: #ef5d74;
-  --radius: 14px;
+  --bg: #f4eee4;
+  --surface: #fcf8f2;
+  --surface-2: #f3ece2;
+  --surface-3: #e9dfd1;
+  --border: #d8cdbd;
+  --text: #3d3832;
+  --muted: #7c756c;
+  --accent: #d97757;
+  --accent-2: #c8694a;
+  --ok: #1f8b80;
+  --danger: #c56e73;
+  --radius: 18px;
+  --shadow-soft: rgba(85, 69, 48, 0.08);
+  --shadow-medium: rgba(85, 69, 48, 0.14);
+  --shadow-strong: rgba(85, 69, 48, 0.18);
 }
 
 body {
   height: 100vh;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: radial-gradient(1200px 700px at 0% 0%, #1a1e2a 0%, var(--bg) 55%);
+  background: radial-gradient(1200px 700px at 0% 0%, #fbf7f0 0%, #f3ede2 56%, var(--bg) 100%);
   color: var(--text);
   overflow: hidden;
 }
@@ -881,9 +884,16 @@ body.artistic-modal-active .input-bar {
   justify-content: flex-end;
 }
 
+#continueFromArtisticBtn.continue-cta-glow {
+  animation: continueCtaPulse 1.9s ease-in-out infinite;
+}
+
 .artistic-modal-loading {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 100%;
   display: grid;
   place-items: center;
   background: rgba(11, 15, 23, 0.62);
@@ -920,6 +930,21 @@ body.artistic-modal-active .input-bar {
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes continueCtaPulse {
+  0%, 100% {
+    box-shadow:
+      0 10px 22px rgba(217, 119, 87, 0.18),
+      0 0 0 0 rgba(217, 119, 87, 0.18);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow:
+      0 14px 28px rgba(217, 119, 87, 0.24),
+      0 0 0 8px rgba(217, 119, 87, 0.08);
+    transform: translateY(-1px);
   }
 }
 
@@ -1031,6 +1056,38 @@ body.artistic-modal-active .input-bar {
   flex-wrap: wrap;
 }
 
+.art-custom-idea {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 13px;
+  border-radius: 16px;
+  border: 1px solid rgba(83, 97, 129, 0.75);
+  background: rgba(17, 23, 35, 0.88);
+}
+
+.art-custom-idea.selected {
+  border-color: rgba(217, 119, 87, 0.42);
+  box-shadow: 0 16px 34px rgba(176, 118, 79, 0.16);
+}
+
+.art-custom-idea.unsaved,
+.art-option-card.unsaved {
+  border-color: rgba(198, 154, 78, 0.42);
+  box-shadow: 0 14px 28px rgba(161, 124, 60, 0.12);
+}
+
+.art-custom-idea-copy {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #b9c8e7;
+}
+
+.art-custom-idea-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .art-option-panel {
   display: flex;
   flex-direction: column;
@@ -1067,6 +1124,13 @@ body.artistic-modal-active .input-bar {
   display: flex;
   flex-direction: column;
   min-height: 214px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
+}
+
+.art-option-card.selected {
+  border-color: rgba(217, 119, 87, 0.46);
+  box-shadow: 0 18px 36px rgba(176, 118, 79, 0.18);
+  transform: translateY(-1px);
 }
 
 .art-option-preview {
@@ -1207,6 +1271,27 @@ body.artistic-modal-active .input-bar {
   color: #eef4ff;
 }
 
+.art-option-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff7f1;
+  background: linear-gradient(135deg, #df8862, #cc714e);
+  border: 1px solid rgba(217, 119, 87, 0.34);
+}
+
+.art-option-badge.unsaved {
+  color: #fff8ee;
+  background: linear-gradient(135deg, #c69a4e, #a97a33);
+  border-color: rgba(198, 154, 78, 0.34);
+}
+
 .art-option-tags {
   display: flex;
   flex-wrap: wrap;
@@ -1227,12 +1312,42 @@ body.artistic-modal-active .input-bar {
   font-size: 11px;
   line-height: 1.45;
   color: #c6d3ef;
-  flex: 1;
-  line-clamp: 4;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+}
+
+.art-option-editor {
+  width: 100%;
+  min-height: 92px;
+  resize: vertical;
+  border-radius: 12px;
+  border: 1px solid #46506b;
+  background: #131b29;
+  color: #e8eefc;
+  padding: 10px 11px;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.art-option-editor:focus {
+  outline: 1px solid rgba(143, 180, 255, 0.55);
+  border-color: #8fb4ff;
+}
+
+.art-option-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.art-option-actions button {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.art-option-save[hidden],
+#saveCustomArtIdeaBtn[hidden] {
+  display: none !important;
 }
 
 .art-option-choose {
@@ -1245,6 +1360,20 @@ body.artistic-modal-active .input-bar {
 
 .art-option-choose:hover:not(:disabled) {
   background: linear-gradient(135deg, #355089, #23345b);
+}
+
+.art-option-choose.is-selected {
+  background: linear-gradient(135deg, #e6b79f, #de9b7b);
+  border-color: rgba(217, 119, 87, 0.4);
+  color: #6f3f2d;
+  box-shadow: none;
+}
+
+.art-option-choose.is-muted {
+  background: #efe4d7;
+  border-color: rgba(216, 205, 189, 0.9);
+  color: #8d7a69;
+  box-shadow: none;
 }
 
 @keyframes artPreviewDrift {
@@ -1433,10 +1562,139 @@ body.artistic-modal-active .input-bar {
   gap: 8px;
 }
 
+.diff-token-add,
+.diff-token-del {
+  border-radius: 2px;
+  padding: 0 0.02em;
+  -webkit-box-decoration-break: slice;
+  box-decoration-break: slice;
+}
+
+.diff-token-add {
+  color: #d9ffe1;
+  background: rgba(66, 171, 102, 0.3);
+}
+
+.diff-token-del {
+  color: #b15b50;
+  background: rgba(217, 119, 87, 0.14);
+  text-decoration: line-through;
+}
+
 .profile-divider {
   margin: 4px 0;
   border: none;
   border-top: 1px dashed #45506a;
+}
+
+#emotionProfileGroup .CodeMirror,
+#artisticProfileGroup .CodeMirror {
+  width: 100%;
+  flex: none;
+  min-height: 100px;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fbf7f0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+#emotionProfileGroup .CodeMirror-focused,
+#artisticProfileGroup .CodeMirror-focused {
+  border-color: var(--accent);
+}
+
+#emotionProfileGroup .CodeMirror-gutters,
+#artisticProfileGroup .CodeMirror-gutters {
+  display: none;
+}
+
+#emotionProfileGroup .CodeMirror-scroll,
+#artisticProfileGroup .CodeMirror-scroll {
+  min-height: 100px;
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#emotionProfileGroup .CodeMirror-lines,
+#artisticProfileGroup .CodeMirror-lines {
+  padding: 9px 10px;
+}
+
+.profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+#emotionProfileGroup .CodeMirror pre,
+#artisticProfileGroup .CodeMirror pre,
+#emotionProfileGroup .CodeMirror span:not(.diff-token-add):not(.diff-token-del):not(.cm-diff-deleted-widget),
+#artisticProfileGroup .CodeMirror span:not(.diff-token-add):not(.diff-token-del):not(.cm-diff-deleted-widget),
+#emotionProfileGroup .CodeMirror-line span:not(.diff-token-add):not(.diff-token-del):not(.cm-diff-deleted-widget),
+#artisticProfileGroup .CodeMirror-line span:not(.diff-token-add):not(.diff-token-del):not(.cm-diff-deleted-widget) {
+  color: var(--text) !important;
+}
+
+.cm-diff-deleted-widget {
+  display: inline;
+  white-space: pre-wrap;
+  pointer-events: none;
+  vertical-align: baseline;
+}
+
+.cm-diff-code-widget {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+  align-items: flex-start;
+  padding: 4px 12px;
+  font-size: 12px;
+  line-height: 1.55;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  color: #ffd7df;
+  background: rgba(204, 78, 104, 0.22);
+}
+
+.cm-diff-code-prefix {
+  text-align: center;
+  font-weight: 700;
+  color: #ff9aae;
+  user-select: none;
+}
+
+.cm-diff-code-content {
+  white-space: pre-wrap;
+  min-width: 0;
+}
+
+.cm-diff-line-insert-wrap {
+  position: relative;
+  background: rgba(66, 171, 102, 0.22);
+}
+
+.cm-diff-code-insert,
+.cm-diff-code-insert * {
+  color: #d9ffe1 !important;
+  background: transparent !important;
+}
+
+.cm-diff-code-delete-text {
+  color: #ffd7df;
+}
+
+.cm-diff-code-prefix--insert {
+  display: inline-block;
+  width: 18px;
+  margin-right: 10px;
+  text-align: center;
+  font-weight: 700;
+  color: #8deda8;
+  user-select: none;
 }
 
 .right-pane {
@@ -1536,13 +1794,13 @@ body.artistic-modal-active .input-bar {
   font-size: 12px;
   line-height: 1.55;
   font-family: "SF Mono", Menlo, Consolas, monospace;
-  background: #141824;
+  background: #fbf7f0;
   color: #cdd7f2;
 }
 
 .CodeMirror-gutters {
   border-right: 1px solid #2a3040;
-  background: #111521;
+  background: #f1e8dc;
 }
 
 .console-log {
@@ -1750,7 +2008,7 @@ body.artistic-modal-active .input-bar {
 .tour-overlay {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 90;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
@@ -1925,6 +2183,555 @@ body.artistic-modal-active .input-bar {
   pointer-events: none;
 }
 
+/* Warm palette inspired by the reference image */
+.app-header {
+  background: rgba(250, 246, 239, 0.86);
+  border-bottom-color: rgba(216, 205, 189, 0.8);
+}
+
+.brand-dot,
+.assistant-avatar {
+  background: linear-gradient(135deg, #e08b63, #cf6f4f);
+}
+
+.user-avatar {
+  background: #b6aa9a;
+  color: #fffaf4;
+}
+
+.download-menu,
+.panel,
+.history-pane,
+.tour-card {
+  background: rgba(252, 248, 242, 0.92);
+  border-color: rgba(216, 205, 189, 0.9);
+  box-shadow: 0 18px 40px var(--shadow-soft);
+  backdrop-filter: blur(18px);
+}
+
+.download-menu-title,
+.phase-badge,
+.tour-step-label,
+.artistic-kicker,
+.template-label::before {
+  color: #966449;
+}
+
+.phase-badge,
+.tour-step-label,
+.template-label::before {
+  background: rgba(217, 119, 87, 0.1);
+  border-color: rgba(217, 119, 87, 0.25);
+}
+
+button {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: rgba(216, 205, 189, 0.95);
+}
+
+button:hover:not(:disabled) {
+  background: var(--surface-3);
+  border-color: rgba(217, 119, 87, 0.45);
+}
+
+button.primary,
+.implement-cta,
+.art-option-choose {
+  background: linear-gradient(135deg, #df8862, #cc714e);
+  border-color: #cf724f;
+  color: #fff8f3;
+  box-shadow: 0 10px 22px rgba(217, 119, 87, 0.18);
+}
+
+button.primary:hover:not(:disabled),
+.implement-cta:hover:not(:disabled),
+.art-option-choose:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e39977, #d47c5c);
+  border-color: #d47c5c;
+}
+
+.pane-expand-btn,
+.code-tab,
+.history-help,
+.close-history,
+.history-trigger {
+  background: #f2ebe2;
+  border-color: rgba(210, 198, 183, 0.95);
+  color: #6d6459;
+}
+
+.code-tab.active {
+  background: rgba(217, 119, 87, 0.14);
+  border-color: rgba(217, 119, 87, 0.34);
+  color: #8f563c;
+}
+
+.assistant .bubble,
+.chat-loading .bubble,
+.chat-typing .bubble {
+  background: #f8f2e9;
+  border: 1px solid rgba(220, 209, 193, 0.95);
+  color: #433d36;
+}
+
+.assistant .bubble h3,
+.assistant .bubble h4 {
+  color: #3f3933;
+}
+
+.assistant .bubble strong {
+  color: #4a3528;
+  background: linear-gradient(135deg, rgba(230, 154, 116, 0.26), rgba(245, 212, 187, 0.7));
+  box-shadow: 0 0 0 1px rgba(217, 119, 87, 0.14);
+}
+
+.assistant .bubble code {
+  background: #efe6da;
+  border-color: rgba(208, 194, 176, 0.95);
+  color: #5a5148;
+}
+
+.user .bubble {
+  background: #d97757;
+  color: #fff8f3;
+}
+
+.system .bubble {
+  background: rgba(217, 119, 87, 0.08);
+  border-color: rgba(217, 119, 87, 0.32);
+  color: #89624c;
+}
+
+.typing-dots span {
+  background: #d2b39d;
+}
+
+.input-wrap,
+.code-tabs,
+.code-actions,
+.history-pane,
+.history-head,
+.history-footer {
+  background: rgba(246, 239, 229, 0.9);
+}
+
+.input-wrap,
+.code-actions,
+.history-head,
+.history-footer {
+  border-color: rgba(216, 205, 189, 0.9);
+}
+
+.template-row.scrollable {
+  scrollbar-color: #c3b19d #efe8dd;
+}
+
+.template-row.scrollable::-webkit-scrollbar-track {
+  background: #efe8dd;
+}
+
+.template-row.scrollable::-webkit-scrollbar-thumb {
+  background: #c3b19d;
+}
+
+.template-label {
+  color: #6f665d;
+}
+
+.template-chip {
+  background: linear-gradient(180deg, #fbf6ef, #f1e9de);
+  border-color: rgba(214, 201, 184, 0.95);
+  color: #4a433b;
+  box-shadow: 0 8px 18px rgba(114, 94, 67, 0.08);
+}
+
+.template-chip::after {
+  color: #b06e50;
+}
+
+.template-chip:hover:not(:disabled),
+.template-chip.decision {
+  background: linear-gradient(180deg, #f8efe5, #efe4d6);
+  border-color: rgba(217, 119, 87, 0.34);
+  color: #3f382f;
+  box-shadow: 0 10px 22px rgba(114, 94, 67, 0.12);
+}
+
+.preview-strip,
+.input-bar,
+.profile-content textarea,
+.profile-content input,
+#emotionProfileGroup .CodeMirror,
+#artisticProfileGroup .CodeMirror,
+.art-note,
+.preview-frame,
+.code-editor,
+.CodeMirror,
+.code-editor-shell,
+.code-tab-panel,
+.console-log,
+.history-help,
+.close-history {
+  background: #fbf7f0;
+  color: var(--text);
+}
+
+.preview-strip,
+.input-bar,
+.profile-content textarea,
+.profile-content input,
+#emotionProfileGroup .CodeMirror,
+#artisticProfileGroup .CodeMirror,
+.art-note,
+.console-entry,
+.confidence-bar {
+  border-color: rgba(216, 205, 189, 0.95);
+}
+
+.icon-btn:hover:not(:disabled) {
+  color: var(--text);
+  background: #ece3d8;
+}
+
+.chat-input::placeholder,
+.preview-name,
+.confidence-hint,
+.gaps-text,
+.artistic-copy,
+.art-draft-profile,
+.art-option-summary,
+.tour-body,
+.tour-branch-caption,
+.console-empty,
+.console-time {
+  color: #7f756a;
+}
+
+.send-btn {
+  background: #e6ddcf;
+  color: #8b7f72;
+}
+
+.send-btn.active {
+  background: var(--accent);
+  color: #fff8f3;
+}
+
+.readonly,
+.confidence-bar {
+  background: #f0e7db;
+}
+
+.profile-divider,
+.art-option-panel {
+  border-top-color: rgba(214, 201, 184, 0.85);
+}
+
+.diff-token-add {
+  color: #2f6b52;
+  background: rgba(79, 160, 122, 0.18);
+}
+
+.diff-token-del {
+  color: #b15b50;
+  background: rgba(217, 119, 87, 0.14);
+}
+
+.cm-diff-code-widget {
+  color: #b15b50;
+  background: rgba(217, 119, 87, 0.14);
+}
+
+.cm-diff-code-prefix,
+.cm-diff-code-delete-text {
+  color: #b15b50;
+}
+
+.cm-diff-line-insert-wrap {
+  background: rgba(79, 160, 122, 0.16);
+}
+
+.cm-diff-line-insert-wrap::before,
+.cm-diff-code-insert,
+.cm-diff-code-insert * {
+  color: #2f6b52 !important;
+}
+
+.CodeMirror-gutters {
+  background: #f1e8dc;
+  border-right-color: rgba(216, 205, 189, 0.95);
+}
+
+.CodeMirror pre,
+.CodeMirror-line span,
+.CodeMirror-line,
+.CodeMirror-linenumber {
+  color: var(--text);
+}
+
+#emotionProfileGroup .CodeMirror span.cm-keyword,
+#emotionProfileGroup .CodeMirror span.cm-atom,
+#emotionProfileGroup .CodeMirror span.cm-number,
+#emotionProfileGroup .CodeMirror span.cm-def,
+#emotionProfileGroup .CodeMirror span.cm-variable,
+#emotionProfileGroup .CodeMirror span.cm-variable-2,
+#emotionProfileGroup .CodeMirror span.cm-variable-3,
+#emotionProfileGroup .CodeMirror span.cm-property,
+#emotionProfileGroup .CodeMirror span.cm-operator,
+#emotionProfileGroup .CodeMirror span.cm-comment,
+#emotionProfileGroup .CodeMirror span.cm-string,
+#emotionProfileGroup .CodeMirror span.cm-string-2,
+#emotionProfileGroup .CodeMirror span.cm-meta,
+#emotionProfileGroup .CodeMirror span.cm-qualifier,
+#emotionProfileGroup .CodeMirror span.cm-builtin,
+#emotionProfileGroup .CodeMirror span.cm-bracket,
+#emotionProfileGroup .CodeMirror span.cm-tag,
+#emotionProfileGroup .CodeMirror span.cm-attribute,
+#emotionProfileGroup .CodeMirror span.cm-hr,
+#emotionProfileGroup .CodeMirror span.cm-link,
+#artisticProfileGroup .CodeMirror span.cm-keyword,
+#artisticProfileGroup .CodeMirror span.cm-atom,
+#artisticProfileGroup .CodeMirror span.cm-number,
+#artisticProfileGroup .CodeMirror span.cm-def,
+#artisticProfileGroup .CodeMirror span.cm-variable,
+#artisticProfileGroup .CodeMirror span.cm-variable-2,
+#artisticProfileGroup .CodeMirror span.cm-variable-3,
+#artisticProfileGroup .CodeMirror span.cm-property,
+#artisticProfileGroup .CodeMirror span.cm-operator,
+#artisticProfileGroup .CodeMirror span.cm-comment,
+#artisticProfileGroup .CodeMirror span.cm-string,
+#artisticProfileGroup .CodeMirror span.cm-string-2,
+#artisticProfileGroup .CodeMirror span.cm-meta,
+#artisticProfileGroup .CodeMirror span.cm-qualifier,
+#artisticProfileGroup .CodeMirror span.cm-builtin,
+#artisticProfileGroup .CodeMirror span.cm-bracket,
+#artisticProfileGroup .CodeMirror span.cm-tag,
+#artisticProfileGroup .CodeMirror span.cm-attribute,
+#artisticProfileGroup .CodeMirror span.cm-hr,
+#artisticProfileGroup .CodeMirror span.cm-link {
+  color: var(--text) !important;
+}
+
+.CodeMirror-cursor {
+  border-left-color: #7b6b5c !important;
+}
+
+.CodeMirror-selected {
+  background: rgba(217, 119, 87, 0.12) !important;
+}
+
+.CodeMirror-linenumber {
+  color: #9a8f82;
+}
+
+.console-entry {
+  background: #f6efe5;
+}
+
+.console-entry.error {
+  background: rgba(197, 110, 115, 0.12);
+  border-color: rgba(197, 110, 115, 0.3);
+  color: #964f59;
+}
+
+.console-entry.warn {
+  background: rgba(198, 154, 78, 0.12);
+  border-color: rgba(198, 154, 78, 0.28);
+  color: #876636;
+}
+
+.console-entry.info {
+  background: rgba(217, 119, 87, 0.08);
+  border-color: rgba(217, 119, 87, 0.22);
+  color: #8d624e;
+}
+
+.stage-node,
+.art-custom-idea,
+.art-pref-group,
+.art-option-card,
+.tour-branch-demo,
+.artistic-guidance,
+.artistic-modal-loading-card {
+  background: #faf5ee;
+  border-color: rgba(216, 205, 189, 0.92);
+  color: #473f37;
+  box-shadow: 0 10px 24px rgba(113, 96, 72, 0.08);
+}
+
+.art-option-card.selected {
+  background: linear-gradient(180deg, #fff9f3, #f6ebde);
+  border-color: rgba(217, 119, 87, 0.4);
+  box-shadow: 0 16px 34px rgba(154, 114, 81, 0.16);
+}
+
+.art-option-card.selected .art-option-label,
+.art-option-card.selected .art-option-summary {
+  color: #5b4639;
+}
+
+.art-option-card.selected .art-option-tag {
+  background: rgba(217, 119, 87, 0.12);
+  border-color: rgba(217, 119, 87, 0.2);
+}
+
+.art-custom-idea.unsaved,
+.art-option-card.unsaved {
+  border-color: rgba(198, 154, 78, 0.34);
+  box-shadow: 0 14px 30px rgba(173, 136, 74, 0.14);
+}
+
+.art-custom-idea.selected {
+  background: linear-gradient(180deg, #fff9f3, #f6ebde);
+  border-color: rgba(217, 119, 87, 0.36);
+}
+
+.art-custom-idea-copy {
+  color: #7f756a;
+}
+
+.stage-node:hover:not(:disabled),
+.art-pref-chip:hover:not(:disabled) {
+  background: #f4ece1;
+  border-color: rgba(217, 119, 87, 0.3);
+  box-shadow: 0 12px 24px rgba(113, 96, 72, 0.12);
+}
+
+.stage-node.current,
+.art-pref-chip.selected,
+.artistic-guidance.loading {
+  background: linear-gradient(135deg, rgba(217, 119, 87, 0.12), rgba(250, 245, 238, 0.94));
+  border-color: rgba(217, 119, 87, 0.3);
+  box-shadow: 0 14px 28px rgba(154, 114, 81, 0.16);
+}
+
+.stage-node.complete,
+.artistic-guidance.ready {
+  background: linear-gradient(180deg, rgba(217, 119, 87, 0.08), rgba(250, 245, 238, 0.96));
+  border-color: rgba(217, 119, 87, 0.22);
+  box-shadow: 0 10px 24px rgba(113, 96, 72, 0.1);
+}
+
+.stage-node.locked {
+  background: #f0e8dc;
+}
+
+.stage-index {
+  border-color: rgba(217, 119, 87, 0.25);
+  background: rgba(217, 119, 87, 0.08);
+  color: #a06245;
+}
+
+.stage-node.complete .stage-index {
+  border-color: rgba(217, 119, 87, 0.22);
+  background: rgba(217, 119, 87, 0.08);
+  color: #9a6247;
+}
+
+.stage-desc,
+.stage-flow-hint,
+.stage-connector,
+.artistic-modal-footer-copy {
+  color: #8a7f74;
+}
+
+.artistic-studio {
+  background:
+    radial-gradient(circle at top right, rgba(217, 119, 87, 0.12), transparent 32%),
+    linear-gradient(180deg, rgba(252, 248, 242, 0.98), rgba(245, 237, 226, 0.98));
+  border-color: rgba(216, 205, 189, 0.9);
+}
+
+.artistic-modal-backdrop,
+.fullscreen-backdrop.active,
+.tour-scrim {
+  background: rgba(91, 76, 57, 0.16);
+}
+
+body.artistic-modal-active .artistic-studio {
+  border-color: rgba(216, 205, 189, 0.92);
+  box-shadow: 0 30px 90px rgba(95, 78, 58, 0.2);
+}
+
+.artistic-modal-footer {
+  background: linear-gradient(180deg, rgba(252, 248, 242, 0), rgba(245, 237, 226, 0.96) 28%);
+}
+
+.artistic-modal-loading {
+  background: rgba(244, 236, 226, 0.62);
+  backdrop-filter: blur(1px);
+}
+
+.artistic-modal-loading-card {
+  background: rgba(252, 248, 242, 0.96);
+}
+
+.artistic-modal-spinner {
+  border-color: rgba(217, 119, 87, 0.2);
+  border-top-color: #d97757;
+}
+
+.art-pref-group h4,
+.art-note-wrap label,
+.art-option-label,
+.tour-title,
+.history-head h3 {
+  color: #3d3832;
+}
+
+.art-pref-chip {
+  border-color: rgba(216, 205, 189, 0.95);
+  background: #f5eee4;
+  color: #675e55;
+}
+
+.art-option-editor {
+  background: #fbf7f0;
+  color: var(--text);
+  border-color: rgba(216, 205, 189, 0.95);
+}
+
+.art-option-editor:focus {
+  outline: 1px solid rgba(217, 119, 87, 0.26);
+  border-color: rgba(217, 119, 87, 0.4);
+}
+
+.art-option-badge.unsaved {
+  color: #fff9f0;
+  background: linear-gradient(135deg, #c69a4e, #ab7c37);
+  border-color: rgba(198, 154, 78, 0.32);
+}
+
+.art-option-tag {
+  background: rgba(217, 119, 87, 0.08);
+  border-color: rgba(217, 119, 87, 0.16);
+  color: #8d5d45;
+}
+
+.art-option-preview.live-preview,
+.art-option-preview-frame,
+.preview-frame {
+  background: #f4ede2;
+}
+
+.history-graph {
+  background: linear-gradient(180deg, rgba(252, 248, 242, 0.72), rgba(244, 236, 226, 0.72));
+}
+
+.version-pill {
+  background: rgba(217, 119, 87, 0.06);
+}
+
+.tour-spotlight {
+  border-color: rgba(217, 119, 87, 0.42);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 0 0 9999px rgba(83, 67, 48, 0.42),
+    0 0 0 1px rgba(217, 119, 87, 0.18),
+    0 14px 36px rgba(83, 67, 48, 0.16);
+}
+
 @media (max-width: 1200px) {
   .workspace {
     grid-template-columns: 1fr;
@@ -2066,7 +2873,21 @@ body.artistic-modal-active .input-bar {
 
           <div class="artistic-actions">
             <button id="generateArtOptionsBtn" class="primary" type="button">Generate 3 Artwork Options</button>
-            <button id="refreshArtOptionsBtn" class="ghost" type="button">More Options</button>
+            <button id="refreshArtOptionsBtn" class="ghost" type="button" hidden>More Options</button>
+          </div>
+
+          <div id="customArtIdeaGroup" class="art-custom-idea">
+            <div class="art-option-head">
+              <div>
+                <div class="artistic-kicker">Your Own Idea</div>
+                <p class="art-custom-idea-copy">Type your own artistic direction here, save it, and then continue to Coding with that version.</p>
+              </div>
+              <span id="customArtIdeaStatus" class="art-option-badge" hidden></span>
+            </div>
+            <textarea id="customArtIdea" class="art-option-editor" rows="4" placeholder="Ex: a sparse amber field with slow drifting dust, long pauses, and one bright pulse near the horizon..."></textarea>
+            <div class="art-custom-idea-actions">
+              <button id="saveCustomArtIdeaBtn" type="button" hidden>Save My Idea</button>
+            </div>
           </div>
 
           <div id="artOptionPanel" class="art-option-panel" hidden>
@@ -2203,6 +3024,10 @@ body.artistic-modal-active .input-bar {
           </div>
           <p id="artisticConfidenceHint" class="confidence-hint"></p>
         </div>
+
+        <div class="profile-actions">
+          <button id="saveProfilesBtn" class="primary" type="button">Save Profiles</button>
+        </div>
       </div>
     </section>
 
@@ -2233,7 +3058,7 @@ body.artistic-modal-active .input-bar {
             </div>
             <div class="code-actions">
               <button id="runBtn" type="button">Run</button>
-              <button id="saveVersionBtn" class="primary" type="button">Save Version</button>
+              <button id="saveCodeBtn" class="primary" type="button">Save Code</button>
             </div>
           </div>
           <div id="consoleTabPanel" class="code-tab-panel">
@@ -2254,7 +3079,8 @@ body.artistic-modal-active .input-bar {
 const API = "/api";
 const STORAGE_KEY_INSTRUCTIONS = "emotion-sketch-seen-instructions";
 const STORAGE_KEY_HISTORY_TUTORIAL = "emotion-sketch-seen-history-tutorial";
-const BRANCH_COLORS = ["#5f8df7", "#e8a742", "#4dd4a6", "#e76891", "#8e79ff", "#66d5d5", "#f5c44d"];
+const STORAGE_KEY_ARTISTIC_EDIT_TUTORIAL = "emotion-sketch-seen-artistic-edit-tutorial";
+const BRANCH_COLORS = ["#d97757", "#c69a4e", "#1f8b80", "#c56e73", "#9a7a68", "#6b948f", "#d4aa63"];
 const ART_DECISION_ACCEPT = "Art Direction Decision: Accept";
 const ART_DECISION_MODIFY = "Art Direction Decision: Modify";
 const ART_DECISION_MORE = "Art Direction Decision: More options";
@@ -2323,20 +3149,31 @@ const TOUR_WELCOME_COPY = [
 const HISTORY_BRANCH_TOUR_HTML = `
   <div class="tour-branch-demo">
     <svg viewBox="0 0 320 122" aria-hidden="true">
-      <path d="M42 38 C88 38, 122 38, 156 38" fill="none" stroke="#76a2ff" stroke-width="3" stroke-linecap="round"></path>
-      <path d="M156 38 C192 38, 224 38, 258 38" fill="none" stroke="#76a2ff" stroke-width="3" stroke-linecap="round"></path>
-      <path d="M156 38 C194 45, 220 68, 258 90" fill="none" stroke="#4dd4a6" stroke-width="3" stroke-linecap="round"></path>
-      <circle cx="42" cy="38" r="7" fill="#76a2ff"></circle>
-      <circle cx="156" cy="38" r="7" fill="#ffffff" stroke="#76a2ff" stroke-width="3"></circle>
-      <circle cx="258" cy="38" r="7" fill="#76a2ff"></circle>
-      <circle cx="258" cy="90" r="7" fill="#4dd4a6"></circle>
-      <text x="22" y="18" fill="#9fb1d8" font-size="11" font-weight="600">Original branch</text>
-      <text x="294" y="23" text-anchor="end" fill="#9fb1d8" font-size="11" font-weight="600">Keep going here</text>
-      <text x="294" y="112" text-anchor="end" fill="#9fe3c7" font-size="11" font-weight="600">New branch after restore</text>
+      <path d="M42 38 C88 38, 122 38, 156 38" fill="none" stroke="#d97757" stroke-width="3" stroke-linecap="round"></path>
+      <path d="M156 38 C192 38, 224 38, 258 38" fill="none" stroke="#d97757" stroke-width="3" stroke-linecap="round"></path>
+      <path d="M156 38 C194 45, 220 68, 258 90" fill="none" stroke="#1f8b80" stroke-width="3" stroke-linecap="round"></path>
+      <circle cx="42" cy="38" r="7" fill="#d97757"></circle>
+      <circle cx="156" cy="38" r="7" fill="#fffaf4" stroke="#d97757" stroke-width="3"></circle>
+      <circle cx="258" cy="38" r="7" fill="#d97757"></circle>
+      <circle cx="258" cy="90" r="7" fill="#1f8b80"></circle>
+      <text x="22" y="18" fill="#8f7f72" font-size="11" font-weight="600">Original branch</text>
+      <text x="294" y="23" text-anchor="end" fill="#8f7f72" font-size="11" font-weight="600">Keep going here</text>
+      <text x="294" y="112" text-anchor="end" fill="#4c7d76" font-size="11" font-weight="600">New branch after restore</text>
     </svg>
     <div class="tour-branch-caption"><strong>Example:</strong> if you restore an older version and keep working from there, the app creates a new branch instead of overwriting the original path.</div>
   </div>
 `;
+const ARTISTIC_EDIT_TOUR_STEPS = [
+  {
+    target: "#artOptionCards .art-option-editor",
+    placement: "top",
+    padding: 14,
+    title: "Edit Option Descriptions",
+    body: [
+      "You can edit any generated option directly in this box."
+    ],
+  },
+];
 const TOUR_STEPS = [
   {
     target: "#chatPanel",
@@ -2523,6 +3360,8 @@ let recordingSeconds = 0;
 let isRecording = false;
 let isSending = false;
 let codeEditorView = null;
+let emotionProfileEditorView = null;
+let artisticProfileEditorView = null;
 let activeCodeTab = "code";
 let consoleEntries = [];
 let tourStepIndex = -1;
@@ -2534,8 +3373,25 @@ let activeTourKind = "app";
 let isDownloadMenuOpen = false;
 let previewExportRequests = new Map();
 let artPreferenceSelections = {};
-let artisticModalDismissed = false;
+let artisticModalDismissed = true;
+let artisticOptionSnapshot = null;
+let artisticOptionEditorDrafts = [];
+let selectedArtisticOptionIndex = null;
+let selectedCustomArtisticIdea = "";
+let artisticOptionSelectionPending = false;
+let shouldRevealGeneratedArtOptions = false;
+let hasHydratedInitialState = false;
 let lastRenderedPhase = "";
+let activeDiffContext = {
+  emotion: { baseline: "" },
+  artistic: { baseline: "" },
+  code: { baseline: "" },
+};
+let activeDiffDecorations = {
+  emotion: createDiffDecorationState(),
+  artistic: createDiffDecorationState(),
+  code: createDiffDecorationState(),
+};
 
 const $ = (id) => document.getElementById(id);
 
@@ -2546,8 +3402,519 @@ function escapeHtml(text) {
     .replace(/>/g, "&gt;");
 }
 
+function normalizeComparableText(text) {
+  return normalizeDiffText(text || "").trim();
+}
+
+function isArtisticDescriptionDirty(draftText, savedText) {
+  return normalizeComparableText(draftText) !== normalizeComparableText(savedText);
+}
+
+function cloneArtisticOptionSnapshot(pending) {
+  if (!pending) return null;
+  return {
+    proposed_artistic_profile: pending.proposed_artistic_profile || "",
+    proposed_artistic_confidence: pending.proposed_artistic_confidence || "",
+    alternatives: Array.isArray(pending.alternatives) ? pending.alternatives.slice() : [],
+    alternative_preview_codes: Array.isArray(pending.alternative_preview_codes)
+      ? pending.alternative_preview_codes.slice()
+      : [],
+  };
+}
+
+function getSelectedArtisticDirectionText(state = appState) {
+  const customIdea = (selectedCustomArtisticIdea || "").trim();
+  if (customIdea) {
+    return customIdea;
+  }
+  const optionState = getVisibleArtisticOptionState(state);
+  if (
+    selectedArtisticOptionIndex == null
+    || !optionState
+    || !Array.isArray(optionState.alternatives)
+    || !optionState.alternatives[selectedArtisticOptionIndex]
+  ) {
+    return "";
+  }
+  return (optionState.alternatives[selectedArtisticOptionIndex] || "").trim();
+}
+
+function getSavedArtisticOptionText(optionState, index) {
+  if (!optionState || !Array.isArray(optionState.alternatives)) return "";
+  return optionState.alternatives[index] || "";
+}
+
+function getArtisticOptionDraftText(optionState, index) {
+  if (typeof artisticOptionEditorDrafts[index] === "string") {
+    return artisticOptionEditorDrafts[index];
+  }
+  return getSavedArtisticOptionText(optionState, index);
+}
+
+function hasUnsavedCustomArtIdeaChanges() {
+  const input = $("customArtIdea");
+  const draft = input ? input.value || "" : "";
+  return !!normalizeComparableText(draft) && isArtisticDescriptionDirty(draft, selectedCustomArtisticIdea);
+}
+
+function hasUnsavedArtisticDescriptionChanges(optionState = getVisibleArtisticOptionState(appState)) {
+  if (hasUnsavedCustomArtIdeaChanges()) {
+    return true;
+  }
+  const options = Array.isArray(optionState && optionState.alternatives) ? optionState.alternatives : [];
+  return options.some((option, index) => isArtisticDescriptionDirty(getArtisticOptionDraftText(optionState, index), option));
+}
+
+function revealGeneratedArtOptions() {
+  const studio = $("artisticStudio");
+  const optionPanel = $("artOptionPanel");
+  if (!studio || !optionPanel || optionPanel.hidden) return;
+  requestAnimationFrame(() => {
+    studio.scrollTo({
+      top: Math.max(0, optionPanel.offsetTop - 18),
+      behavior: "smooth",
+    });
+    if (!hasSeenArtisticEditTutorial() && !isTourOpen()) {
+      setTimeout(() => {
+        if (!hasSeenArtisticEditTutorial() && !isTourOpen() && !optionPanel.hidden) {
+          openTutorial("artistic-edit");
+        }
+      }, 420);
+    }
+  });
+}
+
+function confirmDiscardUnsavedArtisticChanges() {
+  if (!hasUnsavedArtisticDescriptionChanges()) {
+    return true;
+  }
+  return window.confirm("You have unsaved artistic description changes. Close anyway?");
+}
+
+function findMatchingArtisticOptionIndex(options, artisticProfile) {
+  const normalizedProfile = normalizeDiffText(artisticProfile || "");
+  if (!normalizedProfile || !Array.isArray(options) || !options.length) return null;
+  const matchIndex = options.findIndex((option) => normalizeDiffText(option || "") === normalizedProfile);
+  return matchIndex >= 0 ? matchIndex : null;
+}
+
+function syncArtisticOptionSnapshot(state) {
+  const inArtisticPhase = !!(state && state.phase === "artistic_discovery");
+  const pending = state && state.pending_artistic_decision ? state.pending_artistic_decision : null;
+  const currentArtisticProfile = state && state.current_version ? state.current_version.artistic_profile || "" : "";
+
+  if (pending && ((pending.proposed_artistic_profile || "").trim() || (pending.alternatives || []).length)) {
+    artisticOptionSnapshot = cloneArtisticOptionSnapshot(pending);
+    artisticOptionEditorDrafts = artisticOptionSnapshot ? artisticOptionSnapshot.alternatives.slice() : [];
+    selectedArtisticOptionIndex = findMatchingArtisticOptionIndex(
+      artisticOptionSnapshot ? artisticOptionSnapshot.alternatives : [],
+      currentArtisticProfile
+    );
+    selectedCustomArtisticIdea = "";
+    artisticOptionSelectionPending = false;
+    return;
+  }
+
+  if (!inArtisticPhase) {
+    artisticOptionSnapshot = null;
+    artisticOptionEditorDrafts = [];
+    selectedArtisticOptionIndex = null;
+    selectedCustomArtisticIdea = "";
+    artisticOptionSelectionPending = false;
+    return;
+  }
+
+  if (artisticOptionSnapshot) {
+    if (!artisticOptionEditorDrafts.length) {
+      artisticOptionEditorDrafts = artisticOptionSnapshot.alternatives.slice();
+    }
+    const matchedIndex = findMatchingArtisticOptionIndex(artisticOptionSnapshot.alternatives, currentArtisticProfile);
+    if (matchedIndex !== null) {
+      selectedArtisticOptionIndex = matchedIndex;
+    }
+  } else {
+    artisticOptionEditorDrafts = [];
+    selectedArtisticOptionIndex = null;
+  }
+  artisticOptionSelectionPending = false;
+}
+
+function getVisibleArtisticOptionState(state) {
+  const pending = state && state.pending_artistic_decision ? state.pending_artistic_decision : null;
+  if (pending && ((pending.proposed_artistic_profile || "").trim() || (pending.alternatives || []).length)) {
+    return pending;
+  }
+  return artisticOptionSnapshot;
+}
+
 function renderPlainText(text) {
   return escapeHtml(text).replace(/\n/g, "<br>");
+}
+
+function createDiffDecorationState() {
+  return {
+    marks: [],
+    bookmarks: [],
+    lineWidgets: [],
+    lineClasses: [],
+  };
+}
+
+function normalizeDiffText(text) {
+  return (text || "").replace(/\r\n?/g, "\n");
+}
+
+function tokenizeDiffText(text) {
+  const normalized = normalizeDiffText(text);
+  if (!normalized) return [];
+  return normalized.match(/\s+|\w+|[^\w\s]/g) || [];
+}
+
+function tokenizeCodeLines(text) {
+  const normalized = normalizeDiffText(text);
+  return normalized ? normalized.split("\n") : [];
+}
+
+function mergeDiffOperations(operations) {
+  return operations.reduce((merged, op) => {
+    const last = merged[merged.length - 1];
+    if (last && last.type === op.type) {
+      last.value += op.value;
+      return merged;
+    }
+    merged.push({ ...op });
+    return merged;
+  }, []);
+}
+
+function buildDiffOperations(beforeTokens, afterTokens, options = {}) {
+  const { mergeAdjacent = false } = options;
+  if (!beforeTokens.length && !afterTokens.length) return [];
+  if (!beforeTokens.length) {
+    const inserted = afterTokens.map((value) => ({ type: "insert", value }));
+    return mergeAdjacent ? mergeDiffOperations(inserted) : inserted;
+  }
+  if (!afterTokens.length) {
+    const deleted = beforeTokens.map((value) => ({ type: "delete", value }));
+    return mergeAdjacent ? mergeDiffOperations(deleted) : deleted;
+  }
+
+  const rows = beforeTokens.length + 1;
+  const cols = afterTokens.length + 1;
+  const matrix = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+  for (let i = beforeTokens.length - 1; i >= 0; i -= 1) {
+    for (let j = afterTokens.length - 1; j >= 0; j -= 1) {
+      matrix[i][j] = beforeTokens[i] === afterTokens[j]
+        ? matrix[i + 1][j + 1] + 1
+        : Math.max(matrix[i + 1][j], matrix[i][j + 1]);
+    }
+  }
+
+  const operations = [];
+  let beforeIndex = 0;
+  let afterIndex = 0;
+  while (beforeIndex < beforeTokens.length && afterIndex < afterTokens.length) {
+    if (beforeTokens[beforeIndex] === afterTokens[afterIndex]) {
+      operations.push({ type: "equal", value: beforeTokens[beforeIndex] });
+      beforeIndex += 1;
+      afterIndex += 1;
+    } else if (matrix[beforeIndex + 1][afterIndex] >= matrix[beforeIndex][afterIndex + 1]) {
+      operations.push({ type: "delete", value: beforeTokens[beforeIndex] });
+      beforeIndex += 1;
+    } else {
+      operations.push({ type: "insert", value: afterTokens[afterIndex] });
+      afterIndex += 1;
+    }
+  }
+
+  while (beforeIndex < beforeTokens.length) {
+    operations.push({ type: "delete", value: beforeTokens[beforeIndex] });
+    beforeIndex += 1;
+  }
+
+  while (afterIndex < afterTokens.length) {
+    operations.push({ type: "insert", value: afterTokens[afterIndex] });
+    afterIndex += 1;
+  }
+
+  return mergeAdjacent ? mergeDiffOperations(operations) : operations;
+}
+
+function smoothInlineDiffOperations(operations) {
+  const smoothed = [];
+  let index = 0;
+
+  while (index < operations.length) {
+    const current = operations[index];
+    if (
+      current &&
+      current.type !== "equal" &&
+      index + 2 < operations.length &&
+      operations[index + 1].type === "equal" &&
+      /^\s+$/.test(operations[index + 1].value) &&
+      operations[index + 2].type === current.type
+    ) {
+      let value = current.value;
+      let cursor = index;
+      while (
+        cursor + 2 < operations.length &&
+        operations[cursor + 1].type === "equal" &&
+        /^\s+$/.test(operations[cursor + 1].value) &&
+        operations[cursor + 2].type === current.type
+      ) {
+        value += operations[cursor + 1].value + operations[cursor + 2].value;
+        cursor += 2;
+      }
+      smoothed.push({ type: current.type, value });
+      index = cursor + 1;
+      continue;
+    }
+    smoothed.push({ ...current });
+    index += 1;
+  }
+
+  return mergeDiffOperations(smoothed);
+}
+
+function getTextEditorValue(editor, id) {
+  if (editor) return editor.getValue();
+  const field = $(id);
+  return field ? field.value : "";
+}
+
+function setTextEditorValue(editor, id, nextValue) {
+  const next = nextValue || "";
+  if (editor) {
+    if (editor.getValue() !== next) {
+      editor.setValue(next);
+    }
+    editor.refresh();
+    return;
+  }
+  const field = $(id);
+  if (field) {
+    field.value = next;
+  }
+}
+
+function getEmotionProfileValue() {
+  return getTextEditorValue(emotionProfileEditorView, "emotionProfile");
+}
+
+function setEmotionProfileValue(nextValue) {
+  setTextEditorValue(emotionProfileEditorView, "emotionProfile", nextValue);
+}
+
+function getArtisticProfileValue() {
+  return getTextEditorValue(artisticProfileEditorView, "artisticProfile");
+}
+
+function setArtisticProfileValue(nextValue) {
+  setTextEditorValue(artisticProfileEditorView, "artisticProfile", nextValue);
+}
+
+function clearEditorDiffDecorations(key) {
+  const state = activeDiffDecorations[key];
+  const editor = key === "emotion"
+    ? emotionProfileEditorView
+    : key === "artistic"
+      ? artisticProfileEditorView
+      : codeEditorView;
+  if (!state) return;
+  state.marks.forEach((marker) => marker.clear());
+  state.bookmarks.forEach((bookmark) => bookmark.clear());
+  state.lineWidgets.forEach((widget) => widget.clear());
+  if (editor) {
+    state.lineClasses.forEach(({ lineHandle, where, className }) => {
+      editor.removeLineClass(lineHandle, where, className);
+    });
+  }
+  activeDiffDecorations[key] = createDiffDecorationState();
+}
+
+function createDeletedInlineWidget(text) {
+  const span = document.createElement("span");
+  span.className = "diff-token-del cm-diff-deleted-widget";
+  span.textContent = text || " ";
+  return span;
+}
+
+function createDeletedCodeLineWidget(text) {
+  const row = document.createElement("div");
+  row.className = "cm-diff-code-widget";
+
+  const prefix = document.createElement("span");
+  prefix.className = "cm-diff-code-prefix";
+  prefix.textContent = "-";
+
+  const content = document.createElement("span");
+  content.className = "cm-diff-code-content cm-diff-code-delete-text";
+  content.textContent = text || " ";
+
+  row.appendChild(prefix);
+  row.appendChild(content);
+  return row;
+}
+
+function createInsertedCodeMarkerWidget() {
+  const span = document.createElement("span");
+  span.className = "cm-diff-code-prefix--insert";
+  span.textContent = "+";
+  return span;
+}
+
+function applyInlineDiffDecorations(key, editor, beforeText, afterText) {
+  clearEditorDiffDecorations(key);
+  if (!editor) return;
+  const before = normalizeDiffText(beforeText);
+  const after = normalizeDiffText(afterText);
+  if (before === after) return;
+
+  const operations = buildDiffOperations(
+    tokenizeDiffText(before),
+    tokenizeDiffText(after),
+    { mergeAdjacent: true }
+  );
+  const smoothedOperations = smoothInlineDiffOperations(operations);
+
+  editor.operation(() => {
+    let offset = 0;
+    smoothedOperations.forEach((op) => {
+      if (op.type === "equal") {
+        offset += op.value.length;
+        return;
+      }
+      if (op.type === "insert") {
+        if (op.value.length) {
+          activeDiffDecorations[key].marks.push(
+            editor.markText(
+              editor.posFromIndex(offset),
+              editor.posFromIndex(offset + op.value.length),
+              { className: "diff-token-add" }
+            )
+          );
+        }
+        offset += op.value.length;
+        return;
+      }
+      activeDiffDecorations[key].bookmarks.push(
+        editor.setBookmark(editor.posFromIndex(offset), {
+          widget: createDeletedInlineWidget(op.value),
+          insertLeft: true,
+        })
+      );
+    });
+  });
+}
+
+function addInsertedCodeLineDecoration(lineNo) {
+  if (!codeEditorView || lineNo < 0 || lineNo >= codeEditorView.lineCount()) return;
+  const lineHandle = codeEditorView.getLineHandle(lineNo);
+  const lineText = codeEditorView.getLine(lineNo) || "";
+  if (lineHandle) {
+    codeEditorView.addLineClass(lineHandle, "wrap", "cm-diff-line-insert-wrap");
+    activeDiffDecorations.code.lineClasses.push({
+      lineHandle,
+      where: "wrap",
+      className: "cm-diff-line-insert-wrap",
+    });
+  }
+  activeDiffDecorations.code.bookmarks.push(
+    codeEditorView.setBookmark(
+      { line: lineNo, ch: 0 },
+      {
+        widget: createInsertedCodeMarkerWidget(),
+        insertLeft: true,
+      }
+    )
+  );
+  if (lineText.length) {
+    activeDiffDecorations.code.marks.push(
+      codeEditorView.markText(
+        { line: lineNo, ch: 0 },
+        { line: lineNo, ch: lineText.length },
+        { className: "cm-diff-code-insert" }
+      )
+    );
+  }
+}
+
+function addDeletedCodeLineDecoration(afterLine, lineText) {
+  if (!codeEditorView) return;
+  const lineCount = codeEditorView.lineCount();
+  const targetLine = Math.min(afterLine, Math.max(lineCount - 1, 0));
+  const widget = codeEditorView.addLineWidget(
+    targetLine,
+    createDeletedCodeLineWidget(lineText),
+    {
+      above: afterLine < lineCount,
+      coverGutter: false,
+      noHScroll: false,
+      handleMouseEvents: false,
+    }
+  );
+  activeDiffDecorations.code.lineWidgets.push(widget);
+}
+
+function applyCodeDiffDecorations(beforeText, afterText) {
+  clearEditorDiffDecorations("code");
+  if (!codeEditorView) return;
+  const before = normalizeDiffText(beforeText);
+  const after = normalizeDiffText(afterText);
+  if (before === after) return;
+
+  const operations = buildDiffOperations(
+    tokenizeCodeLines(before),
+    tokenizeCodeLines(after)
+  );
+
+  codeEditorView.operation(() => {
+    let afterLine = 0;
+    operations.forEach((op) => {
+      if (op.type === "equal") {
+        afterLine += 1;
+        return;
+      }
+      if (op.type === "insert") {
+        addInsertedCodeLineDecoration(afterLine);
+        afterLine += 1;
+        return;
+      }
+      addDeletedCodeLineDecoration(afterLine, op.value);
+    });
+  });
+}
+
+function buildPaneDiffContext(version, options = {}) {
+  const { usePendingArtistic = false, state = appState } = options;
+  const parent = version && version.parent_id ? getVersionById(version.parent_id) : null;
+  const hasPendingArtisticProfile = Boolean(
+    usePendingArtistic &&
+    state &&
+    state.phase === "artistic_discovery" &&
+    state.pending_artistic_decision &&
+    state.pending_artistic_decision.proposed_artistic_profile
+  );
+  return {
+    emotion: {
+      baseline: parent ? (parent.emotion_profile || "") : "",
+    },
+    artistic: {
+      baseline: hasPendingArtisticProfile
+        ? (version && version.artistic_profile ? version.artistic_profile : "")
+        : parent ? (parent.artistic_profile || "") : "",
+    },
+    code: {
+      baseline: parent ? (parent.code || "") : "",
+    },
+  };
+}
+
+function renderActiveDiffViews() {
+  applyInlineDiffDecorations("emotion", emotionProfileEditorView, activeDiffContext.emotion.baseline, getEmotionProfileValue());
+  applyInlineDiffDecorations("artistic", artisticProfileEditorView, activeDiffContext.artistic.baseline, getArtisticProfileValue());
+  applyCodeDiffDecorations(activeDiffContext.code.baseline, getCodeValue());
 }
 
 function formatTimestampForFilename(date = new Date()) {
@@ -2824,7 +4191,8 @@ function refreshArtisticDraftUi(state = appState) {
   renderStageFlow(state);
   renderArtisticStudio(state);
   if (!isHistoryOpen || !historyPreviewVersionId) {
-    $("artisticProfile").value = buildDetailedArtisticProfileText(state, state.current_version);
+    setArtisticProfileValue(buildDetailedArtisticProfileText(state, state.current_version));
+    renderActiveDiffViews();
   }
 }
 
@@ -3071,13 +4439,32 @@ function inferArtOptionMeta(optionText, index = 0) {
   };
 }
 
-function renderArtOptionCards(pending) {
+function saveEditedArtisticOption(optionState, index, nextText) {
+  const value = (nextText || "").trim();
+  if (!value) return;
+  artisticOptionSnapshot = cloneArtisticOptionSnapshot(optionState) || cloneArtisticOptionSnapshot(artisticOptionSnapshot) || {
+    proposed_artistic_profile: "",
+    proposed_artistic_confidence: "",
+    alternatives: [],
+    alternative_preview_codes: [],
+  };
+  while (artisticOptionSnapshot.alternatives.length <= index) {
+    artisticOptionSnapshot.alternatives.push("");
+  }
+  artisticOptionSnapshot.alternatives[index] = value;
+  artisticOptionEditorDrafts[index] = value;
+  selectedCustomArtisticIdea = "";
+  selectedArtisticOptionIndex = index;
+  artisticOptionSelectionPending = false;
+}
+
+function renderArtOptionCards(optionState) {
   const container = $("artOptionCards");
   if (!container) return;
   container.innerHTML = "";
-  const options = Array.isArray(pending && pending.alternatives) ? pending.alternatives : [];
-  const previewCodes = Array.isArray(pending && pending.alternative_preview_codes)
-    ? pending.alternative_preview_codes
+  const options = Array.isArray(optionState && optionState.alternatives) ? optionState.alternatives : [];
+  const previewCodes = Array.isArray(optionState && optionState.alternative_preview_codes)
+    ? optionState.alternative_preview_codes
     : [];
   if (!options.length) {
     const empty = document.createElement("p");
@@ -3089,8 +4476,13 @@ function renderArtOptionCards(pending) {
 
   options.forEach((option, index) => {
     const meta = inferArtOptionMeta(option, index);
+    const isSelected = !selectedCustomArtisticIdea.trim() && index === selectedArtisticOptionIndex;
+    const editorValue = getArtisticOptionDraftText(optionState, index) || option;
     const card = document.createElement("article");
     card.className = "art-option-card";
+    if (isSelected) {
+      card.classList.add("selected");
+    }
 
     const preview = document.createElement("div");
     const previewCode = previewCodes[index] || "";
@@ -3112,26 +4504,111 @@ function renderArtOptionCards(pending) {
 
     const body = document.createElement("div");
     body.className = "art-option-body";
-    body.innerHTML = `
-      <div class="art-option-meta">
-        <span class="art-option-label">Option ${index + 1}</span>
-      </div>
-      <div class="art-option-tags">${meta.tags.map((tag) => `<span class="art-option-tag">${escapeHtml(tag)}</span>`).join("")}</div>
-      <p class="art-option-summary">${escapeHtml(meta.summary)}</p>
-    `;
+    const metaRow = document.createElement("div");
+    metaRow.className = "art-option-meta";
+
+    const label = document.createElement("span");
+    label.className = "art-option-label";
+    label.textContent = `Option ${index + 1}`;
+
+    const status = document.createElement("span");
+    status.className = "art-option-badge";
+    status.hidden = true;
+
+    metaRow.appendChild(label);
+    metaRow.appendChild(status);
+
+    const tags = document.createElement("div");
+    tags.className = "art-option-tags";
+    tags.innerHTML = meta.tags.map((tag) => `<span class="art-option-tag">${escapeHtml(tag)}</span>`).join("");
+
+    const summary = document.createElement("p");
+    summary.className = "art-option-summary";
+    summary.textContent = "Edit this direction if you want to refine the wording before coding.";
+
+    const editor = document.createElement("textarea");
+    editor.className = "art-option-editor";
+    editor.rows = 5;
+    editor.value = editorValue || meta.summary;
 
     const chooseBtn = document.createElement("button");
     chooseBtn.type = "button";
     chooseBtn.className = "art-option-choose";
-    chooseBtn.textContent = `Choose Option ${index + 1}`;
-    chooseBtn.disabled = isSending || isRecording;
     chooseBtn.addEventListener("click", () => {
+      artisticOptionSnapshot = cloneArtisticOptionSnapshot(optionState);
+      artisticOptionEditorDrafts = artisticOptionSnapshot ? artisticOptionSnapshot.alternatives.slice() : [];
+      selectedCustomArtisticIdea = "";
+      selectedArtisticOptionIndex = index;
+      artisticOptionSelectionPending = true;
+      if (appState) {
+        renderArtisticStudio(appState);
+      }
       sendTemplateMessage(`${ART_DECISION_OPTION_PREFIX}${index + 1}`);
     });
 
-    body.appendChild(chooseBtn);
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.className = "art-option-save";
+    saveBtn.addEventListener("click", () => {
+      saveEditedArtisticOption(optionState, index, editor.value);
+      if (appState) {
+        renderArtisticStudio(appState);
+      }
+    });
+
+    const actions = document.createElement("div");
+    actions.className = "art-option-actions";
+    actions.appendChild(chooseBtn);
+    actions.appendChild(saveBtn);
+
+    const updateCardEditingState = () => {
+      const isDirty = isArtisticDescriptionDirty(editor.value, getSavedArtisticOptionText(optionState, index));
+      artisticOptionEditorDrafts[index] = editor.value;
+      card.classList.toggle("unsaved", isDirty);
+      if (isDirty) {
+        status.hidden = false;
+        status.className = "art-option-badge unsaved";
+        status.textContent = "Unsaved changes";
+      } else if (isSelected) {
+        status.hidden = false;
+        status.className = "art-option-badge";
+        status.textContent = "Selected";
+      } else {
+        status.hidden = true;
+        status.textContent = "";
+        status.className = "art-option-badge";
+      }
+
+      if (isSelected) {
+        chooseBtn.classList.add("is-selected");
+        chooseBtn.classList.remove("is-muted");
+        chooseBtn.textContent = artisticOptionSelectionPending ? `Selecting Option ${index + 1}...` : "Selected";
+      } else if (isDirty) {
+        chooseBtn.classList.add("is-muted");
+        chooseBtn.classList.remove("is-selected");
+        chooseBtn.textContent = "Save changes first";
+      } else {
+        chooseBtn.classList.remove("is-selected", "is-muted");
+        chooseBtn.textContent = `Choose Option ${index + 1}`;
+      }
+
+      chooseBtn.disabled = isSending || isRecording || artisticOptionSelectionPending || isDirty;
+      saveBtn.hidden = !isDirty;
+      saveBtn.textContent = "Save Description";
+      saveBtn.disabled = isSending || isRecording || artisticOptionSelectionPending || !isDirty;
+      updateContinueFromArtisticState(appState, optionState);
+    };
+
+    editor.addEventListener("input", updateCardEditingState);
+
+    body.appendChild(metaRow);
+    body.appendChild(tags);
+    body.appendChild(summary);
+    body.appendChild(editor);
+    body.appendChild(actions);
     card.appendChild(body);
     container.appendChild(card);
+    updateCardEditingState();
   });
 }
 
@@ -3143,10 +4620,84 @@ function openArtisticModal() {
 }
 
 function closeArtisticModal() {
+  if (!confirmDiscardUnsavedArtisticChanges()) {
+    return;
+  }
   artisticModalDismissed = true;
   if (appState) {
     renderArtisticStudio(appState);
   }
+}
+
+function saveCustomArtisticIdea() {
+  const input = $("customArtIdea");
+  const value = (input && input.value ? input.value : "").trim();
+  if (!value) return;
+  selectedCustomArtisticIdea = value;
+  selectedArtisticOptionIndex = null;
+  artisticOptionSelectionPending = false;
+  if (appState) {
+    renderArtisticStudio(appState);
+  }
+}
+
+function updateCustomArtIdeaEditingState() {
+  const group = $("customArtIdeaGroup");
+  const button = $("saveCustomArtIdeaBtn");
+  const status = $("customArtIdeaStatus");
+  if (!group || !button || !status) return;
+  const hasSelectedCustomIdea = !!(selectedCustomArtisticIdea || "").trim();
+  const customIdeaDirty = hasUnsavedCustomArtIdeaChanges();
+  group.classList.toggle("selected", hasSelectedCustomIdea);
+  group.classList.toggle("unsaved", customIdeaDirty);
+  button.hidden = !customIdeaDirty;
+  button.textContent = "Save My Idea";
+  button.disabled = isSending || isRecording || !customIdeaDirty;
+  if (customIdeaDirty) {
+    status.hidden = false;
+    status.className = "art-option-badge unsaved";
+    status.textContent = "Unsaved changes";
+  } else if (hasSelectedCustomIdea) {
+    status.hidden = false;
+    status.className = "art-option-badge";
+    status.textContent = "Selected";
+  } else {
+    status.hidden = true;
+    status.className = "art-option-badge";
+    status.textContent = "";
+  }
+}
+
+function updateContinueFromArtisticState(state = appState, optionState = getVisibleArtisticOptionState(state)) {
+  const continueBtn = $("continueFromArtisticBtn");
+  const footerCopy = $("artisticModalFooterCopy");
+  if (!continueBtn || !footerCopy) return;
+  const canContinue = !!(state && canAdvanceFromCurrentPhase(state));
+  const hasSelectedDirection = !!getSelectedArtisticDirectionText(state);
+  const hasUnsavedChanges = hasUnsavedArtisticDescriptionChanges(optionState);
+  continueBtn.disabled = !canContinue || isSending || isRecording || hasUnsavedChanges;
+  continueBtn.classList.toggle(
+    "continue-cta-glow",
+    hasSelectedDirection && canContinue && !hasUnsavedChanges && !isSending && !isRecording
+  );
+  footerCopy.textContent = hasUnsavedChanges
+    ? "Save your description edits first so Coding uses the updated version."
+    : canContinue
+      ? "This visual direction is ready to move into coding. You can continue now or keep refining the artistic choices here."
+      : "Stay in this modal to shape the artistic direction, or close it if you prefer to type instructions directly into chat.";
+}
+
+function syncArtisticLoadingOverlayPosition() {
+  const studio = $("artisticStudio");
+  const loading = $("artisticModalLoading");
+  if (!studio || !loading) return;
+  if (loading.hidden || studio.hidden) {
+    loading.style.top = "";
+    loading.style.height = "";
+    return;
+  }
+  loading.style.top = `${studio.scrollTop}px`;
+  loading.style.height = `${studio.clientHeight}px`;
 }
 
 function renderArtisticStudio(state) {
@@ -3157,19 +4708,32 @@ function renderArtisticStudio(state) {
   const optionPanel = $("artOptionPanel");
   const draft = $("artDraftProfile");
   const refreshBtn = $("refreshArtOptionsBtn");
+  const customIdeaGroup = $("customArtIdeaGroup");
+  const customIdeaInput = $("customArtIdea");
+  const customIdeaBtn = $("saveCustomArtIdeaBtn");
+  const customIdeaStatus = $("customArtIdeaStatus");
   const guidance = $("artisticStudioGuidance");
   const continueBtn = $("continueFromArtisticBtn");
   const footerCopy = $("artisticModalFooterCopy");
   const loading = $("artisticModalLoading");
   const loadingText = $("artisticModalLoadingText");
-  if (!studio || !copy || !optionPanel || !draft || !refreshBtn || !guidance || !continueBtn || !footerCopy || !loading || !loadingText) return;
+  if (!studio || !copy || !optionPanel || !draft || !refreshBtn || !guidance || !continueBtn || !footerCopy || !loading || !loadingText || !customIdeaGroup || !customIdeaInput || !customIdeaBtn || !customIdeaStatus) return;
 
   const isArtisticPhase = !!(state && state.phase === "artistic_discovery");
   const pending = state && state.pending_artistic_decision ? state.pending_artistic_decision : null;
+  const visibleOptionState = getVisibleArtisticOptionState(state);
   const selectionSummary = getArtPreferenceSelectionsSummary();
   const selectionCount = selectionSummary.selections.length + (selectionSummary.note ? 1 : 0);
   const showModal = isArtisticPhase && !artisticModalDismissed;
   const canContinue = !!(state && canAdvanceFromCurrentPhase(state));
+  const currentArtisticProfile = state && state.current_version ? state.current_version.artistic_profile || "" : "";
+  const hasSelectedCustomIdea = !!(selectedCustomArtisticIdea || "").trim();
+  const selectedDirectionText = getSelectedArtisticDirectionText(state);
+  const hasSelectedDirection = !!selectedDirectionText;
+  const hasVisibleOptions = !!(
+    visibleOptionState &&
+    ((visibleOptionState.proposed_artistic_profile || "").trim() || (visibleOptionState.alternatives || []).length)
+  );
 
   document.body.classList.toggle("artistic-modal-active", showModal);
   if (backdrop) {
@@ -3179,6 +4743,7 @@ function renderArtisticStudio(state) {
   if (openBtn) {
     openBtn.hidden = !isArtisticPhase || showModal;
   }
+  refreshBtn.hidden = !hasVisibleOptions;
   studio.hidden = !showModal;
   studio.style.display = showModal ? "flex" : "none";
   studio.setAttribute("aria-hidden", showModal ? "false" : "true");
@@ -3187,32 +4752,50 @@ function renderArtisticStudio(state) {
     draft.textContent = "";
     guidance.hidden = true;
     loading.hidden = true;
+    syncArtisticLoadingOverlayPosition();
     return;
   }
 
-  copy.textContent = pending
-    ? "Compare the draft direction and preview cards below. You can choose one, ask for more options, or update the note and regenerate."
+  updateCustomArtIdeaEditingState();
+
+  copy.textContent = hasSelectedDirection
+    ? "Your selected direction stays active below. You can keep editing it, compare against the generated options, or continue straight to Coding."
+    : hasVisibleOptions
+    ? (
+      "Compare the draft direction and preview cards below. You can choose one, ask for more options, or update the note and regenerate."
+    )
     : "Pick a few visual preferences, add your own note, and I’ll turn them into three artwork directions with previews before we start coding.";
 
-  optionPanel.hidden = !(pending && (pending.proposed_artistic_profile || (pending.alternatives || []).length));
-  draft.textContent = pending && pending.proposed_artistic_profile
-    ? pending.proposed_artistic_profile
+  optionPanel.hidden = !hasVisibleOptions;
+  draft.textContent = hasSelectedDirection
+    ? selectedDirectionText
+    : hasVisibleOptions
+    ? (
+      visibleOptionState.proposed_artistic_profile || currentArtisticProfile || "Your current artistic direction draft will appear here after you generate options."
+    )
     : "Your current artistic direction draft will appear here after you generate options.";
-  refreshBtn.disabled = isSending || isRecording;
-  continueBtn.disabled = !canContinue || isSending || isRecording;
-  footerCopy.textContent = canContinue
-    ? "This visual direction is ready to move into coding. You can continue now or keep refining the artistic choices here."
-    : "Stay in this modal to shape the artistic direction, or close it if you prefer to type instructions directly into chat.";
+  refreshBtn.disabled = !hasVisibleOptions || isSending || isRecording;
+  updateContinueFromArtisticState(state, visibleOptionState);
 
   if (isSending) {
     loading.hidden = false;
-    loadingText.textContent = pending
-      ? "Refreshing artwork directions and previews..."
-      : "Generating artwork directions and previews...";
+    loadingText.textContent = artisticOptionSelectionPending
+      ? "Saving the selected artwork direction..."
+      : pending
+        ? "Refreshing artwork directions and previews..."
+        : "Generating artwork directions and previews...";
     guidance.hidden = true;
   } else {
     loading.hidden = true;
-    if (pending && (pending.alternatives || []).length) {
+    if (hasSelectedCustomIdea) {
+      guidance.hidden = false;
+      guidance.className = "artistic-guidance ready";
+      guidance.innerHTML = "<strong>Your custom idea is selected.</strong> Continue to Coding whenever this description feels right, or keep editing it here.";
+    } else if (selectedArtisticOptionIndex !== null && hasVisibleOptions) {
+      guidance.hidden = false;
+      guidance.className = "artistic-guidance ready";
+      guidance.innerHTML = `<strong>Option ${selectedArtisticOptionIndex + 1} is selected.</strong> It stays highlighted below so you can continue to coding now, or generate a fresh set if you want to compare again.`;
+    } else if (hasVisibleOptions && (visibleOptionState.alternatives || []).length) {
       guidance.hidden = false;
       guidance.className = "artistic-guidance ready";
       guidance.innerHTML = "<strong>Review the artwork options below.</strong> Choose one, ask for more options, or continue straight to coding from this modal.";
@@ -3226,7 +4809,12 @@ function renderArtisticStudio(state) {
       guidance.innerHTML = "<strong>Start by choosing a few visual tags.</strong> Then scroll down to generate artwork options or continue directly to coding once the direction feels clear.";
     }
   }
-  renderArtOptionCards(pending);
+  syncArtisticLoadingOverlayPosition();
+  renderArtOptionCards(visibleOptionState);
+  if (shouldRevealGeneratedArtOptions && hasVisibleOptions && !isSending) {
+    shouldRevealGeneratedArtOptions = false;
+    revealGeneratedArtOptions();
+  }
 }
 
 function updateComposerPanels(state) {
@@ -3303,20 +4891,24 @@ function confidenceAllowsAdvance(confidence) {
   return key === "medium" || key === "high";
 }
 
-function buildDirectArtisticProfileFromSelections() {
+function buildArtisticStudioSupplementFromSelections() {
   const { selections, note } = getArtPreferenceSelectionsSummary();
   if (!selections.length && !note) {
     return "";
   }
   const parts = [];
-  if (selections.length) {
-    parts.push(`Use this visual direction: ${selections.join("; ")}.`);
-  }
-  if (note) {
-    parts.push(`User note: ${note}.`);
-  }
-  parts.push("Implement this direction directly instead of generating comparison options.");
+  if (selections.length) parts.push(`Studio preferences: ${selections.join("; ")}.`);
+  if (note) parts.push(`Studio note: ${note}.`);
   return parts.join(" ");
+}
+
+function buildDirectArtisticProfileFromSelections() {
+  const { selections, note } = getArtPreferenceSelectionsSummary();
+  const supplement = buildArtisticStudioSupplementFromSelections();
+  if (!supplement) {
+    return "";
+  }
+  return `${supplement} Implement this direction directly instead of generating comparison options.`;
 }
 
 function inferArtisticConfidenceFromSelections() {
@@ -3328,6 +4920,56 @@ function inferArtisticConfidenceFromSelections() {
     return "medium";
   }
   return "";
+}
+
+function mergeArtisticConfidence(primaryConfidence, secondaryConfidence) {
+  const rank = {
+    "": 0,
+    low: 1,
+    medium: 2,
+    high: 3,
+  };
+  const primary = (primaryConfidence || "").toLowerCase();
+  const secondary = (secondaryConfidence || "").toLowerCase();
+  return (rank[secondary] || 0) > (rank[primary] || 0) ? secondaryConfidence : primaryConfidence;
+}
+
+function mergeArtisticDirectionWithStudioSelections(baseProfile) {
+  const base = (baseProfile || "").trim();
+  const supplement = buildArtisticStudioSupplementFromSelections();
+  if (!supplement) {
+    return base;
+  }
+  if (!base) {
+    return buildDirectArtisticProfileFromSelections();
+  }
+  const normalizedBase = normalizeDiffText(base).toLowerCase();
+  const normalizedSupplement = normalizeDiffText(supplement).toLowerCase();
+  if (normalizedSupplement && normalizedBase.includes(normalizedSupplement)) {
+    return base;
+  }
+  return `${base}\n\n${supplement}`;
+}
+
+function getSelectedArtisticDirectionPayload(state = appState) {
+  if (!state || state.phase !== "artistic_discovery") {
+    return null;
+  }
+  const selectedDirection = getSelectedArtisticDirectionText(state);
+  if (!selectedDirection) {
+    return null;
+  }
+  const pendingConfidence = state.pending_artistic_decision
+    ? (state.pending_artistic_decision.proposed_artistic_confidence || "")
+    : "";
+  const currentConfidence = state.current_version ? (state.current_version.artistic_confidence || "") : "";
+  let artisticConfidence = mergeArtisticConfidence(pendingConfidence, currentConfidence);
+  artisticConfidence = mergeArtisticConfidence(artisticConfidence, inferArtisticConfidenceFromSelections());
+  artisticConfidence = mergeArtisticConfidence(artisticConfidence, "medium");
+  return {
+    artistic_profile: mergeArtisticDirectionWithStudioSelections(selectedDirection),
+    artistic_confidence: artisticConfidence,
+  };
 }
 
 function getPendingArtisticTransitionPayload(state = appState) {
@@ -3352,25 +4994,44 @@ function getDirectArtisticTransitionPayload(targetPhase) {
   if (!appState || appState.phase !== "artistic_discovery" || targetPhase !== "code_generation") {
     return null;
   }
-  const artisticProfile = buildDirectArtisticProfileFromSelections();
-  const artisticConfidence = inferArtisticConfidenceFromSelections();
-  const selectionPayload = artisticProfile && confidenceAllowsAdvance(artisticConfidence)
+  const selectedDirectionPayload = getSelectedArtisticDirectionPayload(appState);
+  if (selectedDirectionPayload) {
+    return selectedDirectionPayload;
+  }
+  const selectionConfidence = inferArtisticConfidenceFromSelections();
+  const directSelectionProfile = buildDirectArtisticProfileFromSelections();
+  const selectionPayload = directSelectionProfile && confidenceAllowsAdvance(selectionConfidence)
     ? {
-        artistic_profile: artisticProfile,
-        artistic_confidence: artisticConfidence,
+        artistic_profile: directSelectionProfile,
+        artistic_confidence: selectionConfidence,
       }
     : null;
-  if (artisticPanelStateHasUnsavedChanges(appState) && selectionPayload) {
-    return selectionPayload;
-  }
   const pendingPayload = getPendingArtisticTransitionPayload(appState);
   if (pendingPayload) {
+    const mergedPendingProfile = mergeArtisticDirectionWithStudioSelections(pendingPayload.artistic_profile);
+    const mergedPendingConfidence = mergeArtisticConfidence(pendingPayload.artistic_confidence, selectionConfidence);
+    if (mergedPendingProfile && mergedPendingProfile !== pendingPayload.artistic_profile) {
+      return {
+        artistic_profile: mergedPendingProfile,
+        artistic_confidence: mergedPendingConfidence,
+      };
+    }
     return pendingPayload;
   }
   const version = appState.current_version || {};
   const hasSavedDirection = confidenceAllowsAdvance(version.artistic_confidence) && !!(version.artistic_profile || "").trim();
   if (hasSavedDirection) {
+    const mergedSavedProfile = mergeArtisticDirectionWithStudioSelections(version.artistic_profile || "");
+    if (mergedSavedProfile && mergedSavedProfile !== (version.artistic_profile || "").trim()) {
+      return {
+        artistic_profile: mergedSavedProfile,
+        artistic_confidence: mergeArtisticConfidence(version.artistic_confidence || "", selectionConfidence),
+      };
+    }
     return null;
+  }
+  if (artisticPanelStateHasUnsavedChanges(appState) && selectionPayload) {
+    return selectionPayload;
   }
   return selectionPayload;
 }
@@ -3534,13 +5195,37 @@ async function downloadPreviewGif() {
   }
 }
 
+function initializeProfileEditor(id) {
+  const textArea = $(id);
+  if (!textArea || !window.CodeMirror) return null;
+  const editor = window.CodeMirror.fromTextArea(textArea, {
+    lineNumbers: false,
+    lineWrapping: true,
+    autofocus: false,
+    viewportMargin: Infinity,
+  });
+  editor.setSize("100%", "auto");
+  editor.on("change", () => {
+    renderActiveDiffViews();
+  });
+  document.querySelector(`label[for="${id}"]`)?.addEventListener("click", (event) => {
+    event.preventDefault();
+    editor.focus();
+  });
+  return editor;
+}
+
+function initializeProfileEditors() {
+  emotionProfileEditorView = initializeProfileEditor("emotionProfile");
+  artisticProfileEditorView = initializeProfileEditor("artisticProfile");
+}
+
 function initializeCodeEditor() {
   const textArea = $("codeEditor");
   if (!textArea || !window.CodeMirror) return;
   codeEditorView = window.CodeMirror.fromTextArea(textArea, {
     mode: "javascript",
     lineNumbers: true,
-    theme: "material-darker",
     indentUnit: 2,
     tabSize: 2,
     lineWrapping: true,
@@ -3549,6 +5234,7 @@ function initializeCodeEditor() {
   codeEditorView.setSize("100%", "100%");
   codeEditorView.on("change", () => {
     updateSendButtonState();
+    renderActiveDiffViews();
   });
 }
 
@@ -3573,6 +5259,12 @@ function setCodeValue(code) {
 }
 
 function refreshCodeEditorLayout() {
+  if (emotionProfileEditorView) {
+    emotionProfileEditorView.refresh();
+  }
+  if (artisticProfileEditorView) {
+    artisticProfileEditorView.refresh();
+  }
   if (codeEditorView) {
     codeEditorView.refresh();
   }
@@ -3666,7 +5358,25 @@ function markHistoryTutorialSeen() {
   localStorage.setItem(STORAGE_KEY_HISTORY_TUTORIAL, "true");
 }
 
+function hasSeenArtisticEditTutorial() {
+  return localStorage.getItem(STORAGE_KEY_ARTISTIC_EDIT_TUTORIAL) === "true";
+}
+
+function markArtisticEditTutorialSeen() {
+  localStorage.setItem(STORAGE_KEY_ARTISTIC_EDIT_TUTORIAL, "true");
+}
+
 function getTourConfig(kind = activeTourKind) {
+  if (kind === "artistic-edit") {
+    return {
+      kind: "artistic-edit",
+      introTitle: "",
+      introCopy: null,
+      introLabel: "Artistic Editing",
+      steps: ARTISTIC_EDIT_TOUR_STEPS,
+      focusId: "continueFromArtisticBtn",
+    };
+  }
   if (kind === "history") {
     return {
       kind: "history",
@@ -3688,10 +5398,16 @@ function getTourConfig(kind = activeTourKind) {
 }
 
 function hasSeenTour(kind = activeTourKind) {
-  return kind === "history" ? hasSeenHistoryTutorial() : hasSeenInstructions();
+  if (kind === "history") return hasSeenHistoryTutorial();
+  if (kind === "artistic-edit") return hasSeenArtisticEditTutorial();
+  return hasSeenInstructions();
 }
 
 function markTourSeen(kind = activeTourKind) {
+  if (kind === "artistic-edit") {
+    markArtisticEditTutorialSeen();
+    return;
+  }
   if (kind === "history") {
     markHistoryTutorialSeen();
     return;
@@ -4403,7 +6119,7 @@ function buildPreviewBridgeScript() {
           quality: 10,
           width: width,
           height: height,
-          background: "#0d0f15",
+          background: "#f4ede2",
           workerScript: workerUrl,
         });
 
@@ -4533,7 +6249,7 @@ function buildPreviewDocument(code) {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"><\/script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"><\/script>
   <style>
-    html,body{height:100%;width:100%;margin:0;padding:0;background:#0d0f15;overflow:hidden;}
+    html,body{height:100%;width:100%;margin:0;padding:0;background:#f4ede2;overflow:hidden;}
     body{
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
       display:grid;
@@ -4553,7 +6269,7 @@ function buildPreviewDocument(code) {
       display:flex;
       align-items:center;
       justify-content:center;
-      color:#9ca7c4;
+      color:#867c70;
       font-size:14px;
       text-align:center;
       padding:20px;
@@ -4594,14 +6310,18 @@ function updateChatPlaceholder(state) {
 function loadVersionToPanes(version, options = {}) {
   if (!version) return;
   const { usePendingArtistic = false, state = appState } = options;
-  $("emotionProfile").value = version.emotion_profile || "";
-  $("artisticProfile").value = usePendingArtistic
-    ? buildDetailedArtisticProfileText(state, version)
-    : (version.artistic_profile || "");
+  activeDiffContext = buildPaneDiffContext(version, { usePendingArtistic, state });
+  setEmotionProfileValue(version.emotion_profile || "");
+  setArtisticProfileValue(
+    usePendingArtistic
+      ? buildDetailedArtisticProfileText(state, version)
+      : (version.artistic_profile || "")
+  );
   renderConfidence(version.emotion_confidence || "");
   renderArtisticConfidence(usePendingArtistic ? getDisplayedArtisticConfidence(state, version) : (version.artistic_confidence || ""));
   renderGaps(version.emotion_gaps || []);
   setCodeValue(version.code || "");
+  renderActiveDiffViews();
   runPreview(version.code || "");
 }
 
@@ -4611,13 +6331,20 @@ function getVersionById(versionId) {
 }
 
 function renderState(state) {
-  if (state && state.phase === "artistic_discovery" && lastRenderedPhase !== "artistic_discovery") {
+  const nextPhase = state && state.phase ? state.phase : "";
+  if (
+    hasHydratedInitialState &&
+    nextPhase === "artistic_discovery" &&
+    lastRenderedPhase !== "artistic_discovery"
+  ) {
     artisticModalDismissed = false;
   }
-  lastRenderedPhase = state && state.phase ? state.phase : "";
+  hasHydratedInitialState = true;
+  lastRenderedPhase = nextPhase;
   appState = state;
   sessionId = state.session_id;
   syncArtisticPanelFromState(state);
+  syncArtisticOptionSnapshot(state);
   $("phaseBadge").textContent = formatPhase(state.phase);
   $("versionPill").textContent = formatVersionPill(state.current_version);
   updateComposerPanels(state);
@@ -4674,7 +6401,7 @@ function renderHistoryGraph(data) {
   const versions = data.nodes || [];
   if (!versions.length) {
     svg.setAttribute("height", 120);
-    svg.innerHTML = '<text x="16" y="44" fill="#97a0b6" font-size="13">No versions yet.</text>';
+    svg.innerHTML = '<text x="16" y="44" fill="#8b8176" font-size="13">No versions yet.</text>';
     return;
   }
 
@@ -4746,8 +6473,8 @@ function renderHistoryGraph(data) {
     dot.setAttribute("cx", point.x);
     dot.setAttribute("cy", point.y);
     dot.setAttribute("r", selected ? "8.5" : isHead ? "7" : "5.5");
-    dot.setAttribute("fill", selected ? "#ffffff" : "#76a2ff");
-    dot.setAttribute("stroke", selected ? "#5f8df7" : "none");
+    dot.setAttribute("fill", selected ? "#fffaf4" : "#d97757");
+    dot.setAttribute("stroke", selected ? "#c8694a" : "none");
     dot.setAttribute("stroke-width", selected ? "3" : "0");
     group.appendChild(dot);
 
@@ -4832,12 +6559,23 @@ async function setPhase(targetPhase, extraPayload = null) {
 
 function clearArtisticStudioInputs() {
   initializeArtPreferenceSelections();
+  artisticOptionSnapshot = null;
+  artisticOptionEditorDrafts = [];
+  selectedArtisticOptionIndex = null;
+  selectedCustomArtisticIdea = "";
+  artisticOptionSelectionPending = false;
+  shouldRevealGeneratedArtOptions = false;
   const note = $("artPreferenceNote");
   if (note) {
     note.value = "";
   }
+  const customIdea = $("customArtIdea");
+  if (customIdea) {
+    customIdea.value = "";
+  }
   renderArtPreferenceGroups();
   if (appState) {
+    renderArtisticStudio(appState);
     refreshArtisticDraftUi(appState);
   }
 }
@@ -4847,10 +6585,12 @@ async function generateArtOptionsFromStudio() {
     await setPhase("artistic_discovery");
     if (!appState || appState.phase !== "artistic_discovery") return;
   }
+  shouldRevealGeneratedArtOptions = true;
   await sendChat(buildArtPreferenceMessage());
 }
 
 async function refreshArtOptionsFromStudio() {
+  shouldRevealGeneratedArtOptions = true;
   if (appState && appState.pending_artistic_decision && (appState.pending_artistic_decision.alternatives || []).length) {
     await sendChat(ART_DECISION_MORE);
     return;
@@ -4905,6 +6645,8 @@ async function sendChat(forcedText = null, options = {}) {
     if (!response.ok) {
       pendingOutgoingMessage = null;
       pendingAssistantTyping = false;
+      artisticOptionSelectionPending = false;
+      shouldRevealGeneratedArtOptions = false;
       if (usingComposerDraft) {
         restoreComposerDraft(text, draftMedia);
       }
@@ -4928,6 +6670,8 @@ async function sendChat(forcedText = null, options = {}) {
   } catch (error) {
     pendingOutgoingMessage = null;
     pendingAssistantTyping = false;
+    artisticOptionSelectionPending = false;
+    shouldRevealGeneratedArtOptions = false;
     if (usingComposerDraft) {
       restoreComposerDraft(text, draftMedia);
     }
@@ -4938,6 +6682,9 @@ async function sendChat(forcedText = null, options = {}) {
     hideChatLoading();
     isSending = false;
     updateSendButtonState();
+    if (appState && appState.phase === "artistic_discovery") {
+      renderArtisticStudio(appState);
+    }
   }
 }
 
@@ -4945,8 +6692,8 @@ async function saveVersion() {
   if (!sessionId) return;
   const payload = {
     session_id: sessionId,
-    emotion_profile: $("emotionProfile").value,
-    artistic_profile: $("artisticProfile").value,
+    emotion_profile: getEmotionProfileValue(),
+    artistic_profile: getArtisticProfileValue(),
     code: getCodeValue(),
   };
 
@@ -4965,6 +6712,72 @@ async function saveVersion() {
   if (isHistoryOpen) {
     await fetchHistory();
   }
+}
+
+function captureManualDrafts() {
+  return {
+    emotion_profile: getEmotionProfileValue(),
+    artistic_profile: getArtisticProfileValue(),
+    code: getCodeValue(),
+  };
+}
+
+function restoreManualDrafts(drafts, options = {}) {
+  if (!drafts) return;
+  const { keepProfiles = false, keepCode = false } = options;
+  if (keepProfiles) {
+    setEmotionProfileValue(drafts.emotion_profile || "");
+    setArtisticProfileValue(drafts.artistic_profile || "");
+  }
+  if (keepCode) {
+    setCodeValue(drafts.code || "");
+    runPreview(drafts.code || "");
+  }
+  renderActiveDiffViews();
+  updateSendButtonState();
+}
+
+async function savePartialVersion(kind) {
+  if (!sessionId) return;
+  const drafts = captureManualDrafts();
+  const payload = { session_id: sessionId };
+  const keepDrafts = { keepProfiles: false, keepCode: false };
+
+  if (kind === "profiles") {
+    payload.emotion_profile = drafts.emotion_profile;
+    payload.artistic_profile = drafts.artistic_profile;
+    keepDrafts.keepCode = true;
+  } else if (kind === "code") {
+    payload.code = drafts.code;
+    keepDrafts.keepProfiles = true;
+  } else {
+    return;
+  }
+
+  const response = await fetch(`${API}/save-version`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    appendConsoleLog("error", data.error || "Could not save version.");
+    alert(data.error || "Could not save version.");
+    return;
+  }
+  renderState(data.state);
+  restoreManualDrafts(drafts, keepDrafts);
+  if (isHistoryOpen) {
+    await fetchHistory();
+  }
+}
+
+async function saveProfilesVersion() {
+  await savePartialVersion("profiles");
+}
+
+async function saveCodeVersion() {
+  await savePartialVersion("code");
 }
 
 async function restoreSelectedVersion() {
@@ -5087,7 +6900,22 @@ function bindById(id, eventName, handler) {
   el.addEventListener(eventName, handler);
 }
 
+function elevateArtisticStudioModal() {
+  const studio = $("artisticStudio");
+  const backdrop = $("artisticStudioBackdrop");
+  const appRoot = document.querySelector(".app");
+  if (!studio || !appRoot) return;
+  if (studio.parentElement === appRoot) return;
+  if (backdrop && backdrop.parentElement === appRoot) {
+    backdrop.insertAdjacentElement("afterend", studio);
+    return;
+  }
+  appRoot.appendChild(studio);
+}
+
 function initializeApp() {
+  elevateArtisticStudioModal();
+  initializeProfileEditors();
   initializeCodeEditor();
   initializeArtPreferenceSelections();
   renderArtPreferenceGroups();
@@ -5123,6 +6951,7 @@ function initializeApp() {
 
   window.addEventListener("resize", () => {
     refreshCodeEditorLayout();
+    syncArtisticLoadingOverlayPosition();
     if (isTourOpen() && tourStepIndex >= 0) {
       positionActiveTourStep();
     }
@@ -5137,6 +6966,17 @@ function initializeApp() {
 
   bindById("artPreferenceNote", "input", () => {
     refreshArtisticDraftUi();
+  });
+  bindById("customArtIdea", "input", () => {
+    updateCustomArtIdeaEditingState();
+    updateContinueFromArtisticState();
+  });
+  bindById("artisticStudio", "scroll", syncArtisticLoadingOverlayPosition);
+
+  window.addEventListener("beforeunload", (event) => {
+    if (!hasUnsavedArtisticDescriptionChanges()) return;
+    event.preventDefault();
+    event.returnValue = "";
   });
 
   bindById("chatInput", "keydown", (event) => {
@@ -5163,9 +7003,14 @@ function initializeApp() {
   bindById("clearArtPrefsBtn", "click", clearArtisticStudioInputs);
   bindById("closeArtisticModalBtn", "click", closeArtisticModal);
   bindById("openArtisticModalBtn", "click", openArtisticModal);
+  bindById("saveCustomArtIdeaBtn", "click", saveCustomArtisticIdea);
   bindById("generateArtOptionsBtn", "click", generateArtOptionsFromStudio);
   bindById("refreshArtOptionsBtn", "click", refreshArtOptionsFromStudio);
   bindById("continueFromArtisticBtn", "click", async () => {
+    if (hasUnsavedArtisticDescriptionChanges()) {
+      alert("You have unsaved artistic description changes. Save them first so Coding uses the updated version.");
+      return;
+    }
     await setPhase("code_generation", getDirectArtisticTransitionPayload("code_generation"));
   });
   bindById("downloadBtn", "click", (event) => {
@@ -5217,7 +7062,8 @@ function initializeApp() {
   });
   bindById("codeTabBtn", "click", () => setCodeTab("code"));
   bindById("consoleTabBtn", "click", () => setCodeTab("console"));
-  bindById("saveVersionBtn", "click", saveVersion);
+  bindById("saveProfilesBtn", "click", saveProfilesVersion);
+  bindById("saveCodeBtn", "click", saveCodeVersion);
   bindById("historyBtn", "click", () => openHistory());
   bindById("historyHelpBtn", "click", openHistoryTutorial);
   bindById("closeHistoryBtn", "click", closeHistory);
