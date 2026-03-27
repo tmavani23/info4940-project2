@@ -1841,8 +1841,8 @@ const TOUR_STEPS = [
 
 function getEffectiveTourSteps() {
   const withoutCollab = TOUR_STEPS.slice(0, -1);
-  if (!localStorage.getItem(STORAGE_KEY_COLLAB_STYLE)) {
-    return TOUR_STEPS; // first time — show the survey
+  if (!collabSurveyShownThisSession) {
+    return TOUR_STEPS; // new session / reload — show the survey
   }
   return [
     ...withoutCollab,
@@ -1933,6 +1933,7 @@ let tourHideTimer = null;
 let pendingOutgoingMessage = null;
 let pendingAssistantTyping = false;
 let activeTourKind = "app";
+let collabSurveyShownThisSession = false;
 let isDownloadMenuOpen = false;
 let previewExportRequests = new Map();
 
@@ -2702,7 +2703,10 @@ function renderTourStep() {
   stepLabel.textContent = `Step ${tourStepIndex + 1} of ${steps.length}`;
   title.textContent = step.title;
   setTourBody(step.body, step.html || "");
-  if (step.collabStep) requestAnimationFrame(() => setCollabStyle(getCollabStyle()));
+  if (step.collabStep) {
+    collabSurveyShownThisSession = true;
+    requestAnimationFrame(() => setCollabStyle(getCollabStyle()));
+  }
   nextBtn.textContent = tourStepIndex === steps.length - 1 ? "Finish" : "Next";
   backBtn.textContent = "Back";
   backBtn.disabled = !config.introCopy && tourStepIndex === 0;
@@ -3681,6 +3685,7 @@ function closeHistory() {
 }
 
 async function startNewSession() {
+  collabSurveyShownThisSession = false;
   const response = await fetch(`${API}/new-session`, { method: "POST" });
   const data = await response.json();
   if (!response.ok) {
