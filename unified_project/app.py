@@ -345,23 +345,42 @@ Rules:
 
 
 def build_system_prompt(phase: str, state_summary: str, collab_style: str = "iterate") -> str:
-    phase_prompt = DISCOVERY_PROMPT if phase == "emotional_discovery" else IMPLEMENTATION_PROMPT.replace(
-        "{ARTISTIC_QUALITY_REFERENCE}", ARTISTIC_QUALITY_REFERENCE
-    )
+    if phase == "emotional_discovery":
+        if collab_style == "iterate":
+            phase_prompt = DISCOVERY_PROMPT.replace(
+                "Remind them they can move to artistic discovery stage when ready.",
+                "Remind them they can click 'Implement in Code' when the feeling is captured — no artistic stage needed.",
+            )
+        else:
+            phase_prompt = DISCOVERY_PROMPT
+    else:
+        phase_prompt = IMPLEMENTATION_PROMPT.replace(
+            "{ARTISTIC_QUALITY_REFERENCE}", ARTISTIC_QUALITY_REFERENCE
+        )
     if collab_style == "confirm":
         collab_note = (
-            "COLLABORATION STYLE: This student wants to work through all three stages — emotion, artistic "
-            "direction, then code — in order. Spend time fully exploring and refining the emotional profile, "
-            "then develop a complete artistic direction, before generating any code. "
-            "Do not generate or update code until the student explicitly asks to move into implementation. "
-            "If the student asks to skip ahead or switch modes at any point, respect that immediately."
+            "COLLABORATION STYLE: This student chose 'Confirm, then implement' — they want to work through "
+            "all three stages in strict order: Emotion Discovery, then Artistic Discovery, then Coding. "
+            "Guide them fully through emotional discovery first, then through artistic direction, before "
+            "generating any code. Do not generate or update code until the student has completed the "
+            "artistic stage and explicitly moves into coding. If the student asks to skip ahead at any "
+            "point, respect that immediately."
+        )
+    elif phase == "emotional_discovery":
+        collab_note = (
+            "COLLABORATION STYLE: This student chose 'Implement right away' — they will skip the Artistic "
+            "Discovery stage and go directly from emotion to code. Right now you are still in Emotion "
+            "Discovery: focus only on understanding the feeling. Do NOT generate any code yet. "
+            "When they are ready they will click 'Implement in Code' to transition directly to coding. "
+            "In your message, remind them to click 'Implement in Code' when they feel the emotion is "
+            "captured well enough — no need to go through artistic stage first."
         )
     else:
         collab_note = (
-            "COLLABORATION STYLE: This student wants to go from emotion straight to code, skipping the "
-            "artistic stage for now. As soon as there is enough emotional context to make a meaningful sketch, "
-            "generate code and show results — do not wait for a fully developed artistic direction. "
-            "The student can always revisit and tweak the artistic direction later."
+            "COLLABORATION STYLE: This student chose 'Implement right away' — they skipped Artistic "
+            "Discovery and came directly from Emotion to Coding. There is no artistic profile yet. "
+            "Generate code that expresses the emotion directly through visual and motion choices. "
+            "The student can navigate to the Artistic stage at any time to refine the visual direction."
         )
     return f"{BASE_PROMPT}\n\n{collab_note}\n\nCurrent state:\n{state_summary}\n\n{phase_prompt}"
 
@@ -823,21 +842,27 @@ def _build_code_start_confirmation_prompt(session: "SessionState", user_reply: s
     last_assistant = _safe_summary_text(_get_last_assistant_text(session), limit=240)
     reply = _clean_text(user_reply) or "Yes"
     current = session.current_version
+    has_artistic = bool(_clean_text(current.artistic_profile))
     prompt_lines = [
         f'The user confirmed they want to start coding now. Their reply was: "{reply}".',
-        "Use the current artistic profile as the source of truth for the implementation.",
+        (
+            "Use the current artistic profile as the source of truth for the implementation."
+            if has_artistic
+            else "No artistic direction has been set yet — derive visual choices directly from the emotion profile."
+        ),
         f"Current emotion profile: {current.emotion_profile or '(empty)'}",
-        f"Current artistic profile: {current.artistic_profile or '(empty)'}",
+        f"Current artistic profile: {current.artistic_profile or '(none — implement directly from emotion)'}",
         f"Current sketch exists: {'yes' if bool(current.code) else 'no'}",
         "Apply code changes now instead of brainstorming. Return runnable p5.js and set should_create_version to true.",
     ]
     if current.code:
         prompt_lines.append(
-            "Revise the existing sketch so it matches the latest artistic direction, and replace earlier motion, color, composition, or texture choices when they conflict with the updated profile."
+            "Revise the existing sketch so it matches the latest direction, and replace earlier motion, color, composition, or texture choices when they conflict with the updated profile."
         )
     else:
         prompt_lines.append(
-            "Create the first runnable p5.js sketch based on the current emotional understanding and artistic direction."
+            "Create the first runnable p5.js sketch based on the current emotional understanding"
+            + (" and artistic direction." if has_artistic else " — translate the emotion directly into visual and motion choices.")
         )
     if last_assistant:
         prompt_lines.append(
@@ -2233,6 +2258,7 @@ def api_set_phase():
         return jsonify({"error": "Missing session_id or phase"}), 400
 
     session = get_or_create_session(sid)
+    collab_style = _clean_text(data.get("collab_style")) or "iterate"
     if "artistic_panel_state" in data:
         _save_artistic_panel_state(session, data.get("artistic_panel_state"))
     if target_phase not in PHASE_ORDER:
@@ -2257,7 +2283,13 @@ def api_set_phase():
                 source="user",
             )
 
-    if target_phase not in session.unlocked_phases and not _can_unlock_phase(session, target_phase):
+    # For "implement right away": allow jumping directly from emotion to code, bypassing artistic
+    skipping_artistic = (
+        collab_style == "iterate"
+        and session.phase == PHASE_EMOTION
+        and target_phase == PHASE_CODE
+    )
+    if not skipping_artistic and target_phase not in session.unlocked_phases and not _can_unlock_phase(session, target_phase):
         return jsonify({"error": _phase_locked_message(target_phase)}), 400
 
     previous_phase = session.phase
@@ -2278,8 +2310,11 @@ def api_set_phase():
 
     should_auto_implement = (
         target_phase == PHASE_CODE
-        and previous_phase == PHASE_ARTISTIC
-        and bool(_clean_text(session.current_version.artistic_profile))
+        and previous_phase in (PHASE_ARTISTIC, PHASE_EMOTION)
+        and (
+            bool(_clean_text(session.current_version.artistic_profile))
+            or (previous_phase == PHASE_EMOTION and collab_style == "iterate")
+        )
     )
 
     return jsonify(
@@ -2373,14 +2408,47 @@ def api_chat():
     elif session.phase == PHASE_EMOTION and session.current_version.emotion_profile:
         if actions["confirm_start_coding"] or actions["code_request"]:
             if PHASE_CODE not in session.unlocked_phases:
-                if PHASE_ARTISTIC not in session.unlocked_phases and not _can_unlock_phase(session, PHASE_ARTISTIC):
-                    assistant_text = _phase_locked_message(PHASE_ARTISTIC)
-                    _append_chat(session, "assistant", "text", assistant_text)
+                if collab_style == "iterate":
+                    # "Implement right away": skip artistic stage, unlock code directly
+                    _unlock_phase(session, PHASE_CODE)
+                else:
+                    # "Confirm, then implement": enforce the full three-stage flow
+                    if PHASE_ARTISTIC not in session.unlocked_phases and not _can_unlock_phase(session, PHASE_ARTISTIC):
+                        assistant_text = _phase_locked_message(PHASE_ARTISTIC)
+                        _append_chat(session, "assistant", "text", assistant_text)
+                        current = session.current_version
+                        return _chat_response(
+                            {
+                                "message": assistant_text,
+                                "commit_message": "Stayed in emotion discovery until the feeling is clearer",
+                                "emotion_profile": current.emotion_profile,
+                                "emotion_confidence": current.emotion_confidence,
+                                "emotion_gaps": current.emotion_gaps,
+                                "artistic_profile": current.artistic_profile,
+                                "artistic_confidence": current.artistic_confidence,
+                                "code": current.code,
+                                "should_create_version": False,
+                                "offers_artistic_alternatives": False,
+                                "artistic_options": [],
+                            },
+                            raw_response_text="",
+                            created_version=None,
+                        )
+                    _unlock_phase(session, PHASE_ARTISTIC)
+                    first_visit = _mark_phase_visited(session, PHASE_ARTISTIC)
+                    session.phase = PHASE_ARTISTIC
+                    transition_message = _phase_transition_message(
+                        PHASE_ARTISTIC,
+                        first_visit=first_visit,
+                        current_version=session.current_version,
+                    )
+                    _append_chat(session, "assistant", "system", transition_message)
+                    _append_llm_event(session, AIMessage(content=transition_message), session.current_version_id)
                     current = session.current_version
                     return _chat_response(
                         {
-                            "message": assistant_text,
-                            "commit_message": "Stayed in emotion discovery until the feeling is clearer",
+                            "message": transition_message,
+                            "commit_message": "Moved from emotion discovery to artistic discovery",
                             "emotion_profile": current.emotion_profile,
                             "emotion_confidence": current.emotion_confidence,
                             "emotion_gaps": current.emotion_gaps,
@@ -2394,34 +2462,6 @@ def api_chat():
                         raw_response_text="",
                         created_version=None,
                     )
-                _unlock_phase(session, PHASE_ARTISTIC)
-                first_visit = _mark_phase_visited(session, PHASE_ARTISTIC)
-                session.phase = PHASE_ARTISTIC
-                transition_message = _phase_transition_message(
-                    PHASE_ARTISTIC,
-                    first_visit=first_visit,
-                    current_version=session.current_version,
-                )
-                _append_chat(session, "assistant", "system", transition_message)
-                _append_llm_event(session, AIMessage(content=transition_message), session.current_version_id)
-                current = session.current_version
-                return _chat_response(
-                    {
-                        "message": transition_message,
-                        "commit_message": "Moved from emotion discovery to artistic discovery",
-                        "emotion_profile": current.emotion_profile,
-                        "emotion_confidence": current.emotion_confidence,
-                        "emotion_gaps": current.emotion_gaps,
-                        "artistic_profile": current.artistic_profile,
-                        "artistic_confidence": current.artistic_confidence,
-                        "code": current.code,
-                        "should_create_version": False,
-                        "offers_artistic_alternatives": False,
-                        "artistic_options": [],
-                    },
-                    raw_response_text="",
-                    created_version=None,
-                )
             session.phase = PHASE_CODE
             _mark_phase_visited(session, PHASE_CODE)
             user_text_for_model = _build_code_start_confirmation_prompt(session, message)
@@ -2747,16 +2787,7 @@ def api_chat():
             created_version=None,
         )
 
-    user_text_for_model = effective_message
-
-    if session.phase == "code_generation" and actions["emotion_refinement"] and not actions["sketch_rejection"]:
-        session.phase = "emotional_discovery"
-    elif session.phase == "emotional_discovery" and session.current_version.emotion_profile:
-        if actions["confirm_start_coding"]:
-            session.phase = "code_generation"
-            user_text_for_model = _build_code_start_confirmation_prompt(session, effective_message)
-        elif actions["code_request"]:
-            session.phase = "code_generation"
+    user_text_for_model = user_text_for_model or effective_message
 
     if not user_text_for_model:
         user_text_for_model = "Please infer emotional cues from my input and update the profiles."
