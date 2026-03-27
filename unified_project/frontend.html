@@ -2218,38 +2218,55 @@ body.artistic-modal-active .input-bar {
   flex-direction: column;
   gap: 4px;
   padding: 12px 14px;
-  background: #141a25;
-  border: 1px solid #2a3650;
+  background: var(--surface);
+  border: 2px solid var(--border);
   border-radius: 10px;
-  color: #c8d6f0;
+  color: var(--text);
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  position: relative;
 }
 
 .tour-collab-btn:hover {
-  border-color: #4a6299;
-  background: #1a2235;
+  border-color: var(--accent);
+  background: var(--surface-3);
 }
 
 .tour-collab-btn.active {
-  border-color: #76a2ff;
-  background: #1a2540;
+  border-color: var(--accent);
+  background: rgba(217, 119, 87, 0.1);
+  box-shadow: 0 0 0 2px rgba(217, 119, 87, 0.2);
 }
 
 .tour-collab-btn strong {
   font-size: 13px;
-  color: #e8eef8;
+  color: var(--text);
 }
 
 .tour-collab-btn span {
   font-size: 11px;
-  color: #7a90b8;
+  color: var(--muted);
   line-height: 1.4;
 }
 
 .tour-collab-btn.active strong {
-  color: #76a2ff;
+  color: var(--accent-2);
+}
+
+.tour-collab-btn.active span {
+  color: var(--muted);
+}
+
+.tour-collab-btn.active::after {
+  content: "✓";
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
 }
 
 .tour-examples {
@@ -3005,10 +3022,10 @@ body.artistic-modal-active .artistic-studio {
   position: relative;
   z-index: 1;
   width: min(420px, calc(100vw - 32px));
-  background: rgba(22, 24, 30, 0.97);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 20px;
-  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.42);
+  box-shadow: 0 24px 56px var(--shadow-strong);
   padding: 24px;
 }
 .working-style-head {
@@ -3065,9 +3082,23 @@ body.artistic-modal-active .artistic-studio {
           <button id="downloadGifBtn" class="download-option" type="button">Download Preview GIF (.gif)</button>
         </div>
       </div>
+      <button id="workingStyleBtn" class="ghost" type="button">Working Style</button>
       <button id="helpBtn" class="ghost" type="button">Tutorial</button>
     </div>
   </header>
+
+  <div id="workingStyleModal" class="working-style-modal" hidden>
+    <div class="working-style-scrim" onclick="closeWorkingStyleModal()"></div>
+    <div class="working-style-card">
+      <div class="working-style-head">
+        <h3>Working Style</h3>
+        <button class="working-style-close" type="button" onclick="closeWorkingStyleModal()">×</button>
+      </div>
+      <p class="working-style-desc">Choose how you'd like the AI to collaborate with you. You can change this at any time.</p>
+      <div id="workingStyleModalBody"></div>
+      <button class="primary working-style-done" type="button" onclick="closeWorkingStyleModal()">Done</button>
+    </div>
+  </div>
 
   <div id="tourOverlay" class="tour-overlay welcome-mode" role="dialog" aria-labelledby="tourTitle" aria-modal="true" hidden>
     <div class="tour-scrim"></div>
@@ -3339,6 +3370,7 @@ const API = "/api";
 const STORAGE_KEY_INSTRUCTIONS = "emotion-sketch-seen-instructions";
 const STORAGE_KEY_HISTORY_TUTORIAL = "emotion-sketch-seen-history-tutorial";
 const STORAGE_KEY_ARTISTIC_EDIT_TUTORIAL = "emotion-sketch-seen-artistic-edit-tutorial";
+const STORAGE_KEY_COLLAB_STYLE = "emotion-sketch-collab-style";
 const BRANCH_COLORS = ["#d97757", "#c69a4e", "#1f8b80", "#c56e73", "#9a7a68", "#6b948f", "#d4aa63"];
 const ART_DECISION_ACCEPT = "Art Direction Decision: Accept";
 const ART_DECISION_MODIFY = "Art Direction Decision: Modify";
@@ -3416,12 +3448,12 @@ const TOUR_COLLAB_HTML = `
   <div class="tour-collab-choice">
     <div class="tour-collab-options">
       <button class="tour-collab-btn" id="collabIterateBtn" onclick="setCollabStyle('iterate')">
-        <strong>Iterate as we go</strong>
-        <span>The AI makes changes and shows results right away</span>
+        <strong>Implement right away</strong>
+        <span>Share your emotion and go straight to code — you can always go back to the Artistic stage to tweak the visuals anytime</span>
       </button>
       <button class="tour-collab-btn" id="collabConfirmBtn" onclick="setCollabStyle('confirm')">
         <strong>Confirm, then implement</strong>
-        <span>The AI proposes a plan and waits for your approval before making changes</span>
+        <span>Work through all three stages in order — Emotion, then Artistic, then Coding — before any code is generated</span>
       </button>
     </div>
   </div>
@@ -3601,9 +3633,9 @@ const TOUR_STEPS = [
   },
   {
     target: null,
-    title: "How Would You Like to Collaborate?",
+    title: "How Would You Like to Work?",
     body: [
-      "Choose how you'd like the AI to work with you throughout this session. You can change this any time by reopening the tutorial.",
+      "Choose your working style. You can change this at any time using the Working Style button in the header.",
     ],
     html: TOUR_COLLAB_HTML,
     collabStep: true,
@@ -3687,6 +3719,7 @@ let tourHideTimer = null;
 let pendingOutgoingMessage = null;
 let pendingAssistantTyping = false;
 let activeTourKind = "app";
+let collabSurveyShownThisSession = false;
 let isDownloadMenuOpen = false;
 let previewExportRequests = new Map();
 let artPreferenceSelections = {};
@@ -4699,6 +4732,12 @@ function renderTemplateRow(phase, pendingArtDecision) {
   }
   const hasDecisionChoices = !!(pendingArtDecision && !pendingArtDecision.awaiting_modify_details);
   let templates = TEMPLATE_MESSAGES[phase] || TEMPLATE_MESSAGES.emotional_discovery;
+  if (phase === "emotional_discovery") {
+    const advanceTemplate = getCollabStyle() === "iterate"
+      ? "I have a good sense of the feeling now. Let's implement it in code."
+      : "I have a good sense of the feeling now. Let's move into the artistic stage.";
+    templates = [advanceTemplate, ...templates.slice(1)];
+  }
   if (hasDecisionChoices) {
     const alternatives = Array.isArray(pendingArtDecision.alternatives)
       ? pendingArtDecision.alternatives.filter(Boolean)
@@ -5496,8 +5535,12 @@ function updateImplementCta(state = appState) {
   btn.hidden = !visible;
   btn.disabled = !visible || isSending || isRecording || !canAdvanceFromCurrentPhase(state);
   if (!visible || !state) return;
-  const meta = getPhaseMeta(state.phase);
-  btn.textContent = meta.cta || "Continue";
+  if (state.phase === "emotional_discovery" && getCollabStyle() === "iterate") {
+    btn.textContent = "Implement in Code";
+  } else {
+    const meta = getPhaseMeta(state.phase);
+    btn.textContent = meta.cta || "Continue";
+  }
 }
 
 function hasDownloadableCode() {
@@ -5769,6 +5812,8 @@ function setCollabStyle(style) {
   const confirmBtn = document.getElementById("collabConfirmBtn");
   if (iterateBtn) iterateBtn.classList.toggle("active", style === "iterate");
   if (confirmBtn) confirmBtn.classList.toggle("active", style === "confirm");
+  updateImplementCta();
+  if (appState) renderTemplateRow(appState.phase, appState.pending_artistic_decision);
 }
 
 function openWorkingStyleModal() {
@@ -5794,6 +5839,25 @@ function hasSeenArtisticEditTutorial() {
 
 function markArtisticEditTutorialSeen() {
   localStorage.setItem(STORAGE_KEY_ARTISTIC_EDIT_TUTORIAL, "true");
+}
+
+function getEffectiveTourSteps() {
+  const withoutCollab = TOUR_STEPS.slice(0, -1);
+  if (!collabSurveyShownThisSession) {
+    return TOUR_STEPS; // new session / reload — show the survey
+  }
+  return [
+    ...withoutCollab,
+    {
+      target: "#workingStyleBtn",
+      placement: "bottom",
+      padding: 12,
+      title: "Working Style",
+      body: [
+        "You can change how you'd like the AI to collaborate with you at any time using the Working Style button.",
+      ],
+    },
+  ];
 }
 
 function getTourConfig(kind = activeTourKind) {
@@ -5823,7 +5887,7 @@ function getTourConfig(kind = activeTourKind) {
     introCopy: TOUR_WELCOME_COPY,
     introHtml: TOUR_WELCOME_HTML,
     introLabel: "Welcome",
-    steps: TOUR_STEPS,
+    steps: getEffectiveTourSteps(),
     focusId: "helpBtn",
   };
 }
@@ -6056,7 +6120,10 @@ function renderTourStep() {
   stepLabel.textContent = `Step ${tourStepIndex + 1} of ${steps.length}`;
   title.textContent = step.title;
   setTourBody(step.body, step.html || "");
-  if (step.collabStep) requestAnimationFrame(() => setCollabStyle(getCollabStyle()));
+  if (step.collabStep) {
+    collabSurveyShownThisSession = true;
+    requestAnimationFrame(() => setCollabStyle(getCollabStyle()));
+  }
   nextBtn.textContent = tourStepIndex === steps.length - 1 ? "Finish" : "Next";
   backBtn.textContent = "Back";
   backBtn.disabled = !config.introCopy && tourStepIndex === 0;
@@ -6095,9 +6162,10 @@ function openTutorial(kind = "app") {
 }
 
 function skipOrCollabStep() {
-  const collabStepIndex = TOUR_STEPS.length - 1;
-  if (activeTourKind === "app" && tourStepIndex < collabStepIndex) {
-    tourStepIndex = collabStepIndex;
+  const steps = getTourConfig().steps;
+  const collabIdx = steps.findIndex(s => s.collabStep);
+  if (activeTourKind === "app" && collabIdx >= 0 && tourStepIndex < collabIdx) {
+    tourStepIndex = collabIdx;
     renderTourStep();
   } else {
     closeTutorial({ markSeen: true });
@@ -6993,6 +7061,7 @@ async function setPhase(targetPhase, extraPayload = null) {
     body: JSON.stringify({
       session_id: sessionId,
       phase: targetPhase,
+      collab_style: getCollabStyle(),
       artistic_panel_state: getArtisticPanelStatePayload(),
       ...(extraPayload || {}),
     }),
@@ -7067,7 +7136,7 @@ async function sendChat(forcedText = null, options = {}) {
   const draftMedia = clonePendingMediaForDraft(activeMedia);
   const optimisticMessage = buildOptimisticMessage(text, draftMedia);
 
-  const payload = { session_id: sessionId, message: text };
+  const payload = { session_id: sessionId, message: text, collab_style: getCollabStyle() };
   payload.artistic_panel_state = getArtisticPanelStatePayload();
   if (options && options.intentHint) {
     payload.intent_hint = options.intentHint;
@@ -7318,6 +7387,7 @@ function closeHistory() {
 }
 
 async function startNewSession() {
+  collabSurveyShownThisSession = false;
   const response = await fetch(`${API}/new-session`, { method: "POST" });
   const data = await response.json();
   if (!response.ok) {
@@ -7474,7 +7544,11 @@ function initializeApp() {
   bindById("implementCtaBtn", "click", async () => {
     if (!appState) return;
     if (appState.phase === "emotional_discovery") {
-      await setPhase("artistic_discovery");
+      if (getCollabStyle() === "iterate") {
+        await setPhase("code_generation");
+      } else {
+        await setPhase("artistic_discovery");
+      }
       return;
     }
     if (appState.phase === "artistic_discovery") {
@@ -7553,6 +7627,7 @@ function initializeApp() {
   bindById("newSessionBtn", "click", startNewSession);
   bindById("undoBtn", "click", undoToPreviousVersion);
   bindById("resetBtn", "click", resetSession);
+  bindById("workingStyleBtn", "click", openWorkingStyleModal);
   bindById("helpBtn", "click", () => openTutorial("app"));
   bindById("tourNextBtn", "click", nextTourStep);
   bindById("tourBackBtn", "click", previousTourStep);
