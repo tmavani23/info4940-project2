@@ -325,11 +325,22 @@ Rules:
 """.strip()
 
 
-def build_system_prompt(phase: str, state_summary: str) -> str:
+def build_system_prompt(phase: str, state_summary: str, collab_style: str = "iterate") -> str:
     phase_prompt = DISCOVERY_PROMPT if phase == "emotional_discovery" else IMPLEMENTATION_PROMPT.replace(
         "{ARTISTIC_QUALITY_REFERENCE}", ARTISTIC_QUALITY_REFERENCE
     )
-    return f"{BASE_PROMPT}\n\nCurrent state:\n{state_summary}\n\n{phase_prompt}"
+    if collab_style == "confirm":
+        collab_note = (
+            "COLLABORATION STYLE: This student prefers to confirm before implementing. "
+            "Always propose your plan or changes first and wait for their explicit approval before "
+            "making any edits to the sketch, emotion profile, or artistic profile."
+        )
+    else:
+        collab_note = (
+            "COLLABORATION STYLE: This student prefers to iterate as you go. "
+            "Make changes and show results immediately without asking for approval first."
+        )
+    return f"{BASE_PROMPT}\n\n{collab_note}\n\nCurrent state:\n{state_summary}\n\n{phase_prompt}"
 
 
 def _short_id() -> str:
@@ -1230,6 +1241,7 @@ def _invoke_llm(
     audio: Optional[str],
     audio_mime: Optional[str],
     intent_hint: str = "",
+    collab_style: str = "iterate",
 ) -> tuple[dict, str, Any, Any]:
     human_msg = build_multimodal_message(
         text=user_text,
@@ -1246,7 +1258,7 @@ def _invoke_llm(
 
     llm = phase_1_llm if session.phase == "emotional_discovery" else phase_2_llm
     state_summary = _summarize_state_for_prompt(session.current_version)
-    system_msg = SystemMessage(content=build_system_prompt(session.phase, state_summary))
+    system_msg = SystemMessage(content=build_system_prompt(session.phase, state_summary, collab_style))
 
     context = _build_llm_context(session, limit=18)
 
@@ -1550,6 +1562,7 @@ def api_chat():
     audio = _clean_text(data.get("audio"))
     image_mime = _clean_text(data.get("image_mime")) or "image/jpeg"
     audio_mime = _clean_text(data.get("audio_mime")) or "audio/webm"
+    collab_style = _clean_text(data.get("collab_style")) or "iterate"
 
     if not message and not image and not audio:
         return jsonify({"error": "Message, image, or audio is required."}), 400
@@ -1743,6 +1756,7 @@ def api_chat():
             audio=None,
             audio_mime=None,
             intent_hint="",
+            collab_style=collab_style,
         )
         sanitized = _sanitize_llm_payload(parsed_raw, current)
         new_emotion = sanitized["emotion_profile"] or pending.proposed_emotion_profile or current.emotion_profile
@@ -1844,6 +1858,7 @@ def api_chat():
         audio=audio,
         audio_mime=audio_mime,
         intent_hint="sketch_rejection" if actions["sketch_rejection"] else "",
+        collab_style=collab_style,
     )
     sanitized = _sanitize_llm_payload(parsed_raw, session.current_version)
 
