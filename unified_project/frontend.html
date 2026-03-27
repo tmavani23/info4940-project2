@@ -4438,12 +4438,18 @@ function buildImplementCurrentArtisticDirectionMessage(state = appState) {
   const activeState = state || appState;
   const currentVersion = (activeState && activeState.current_version) || {};
   const panelState = normalizeArtisticPanelState(activeState && activeState.artistic_panel_state);
+  const currentArtisticProfile = (currentVersion.artistic_profile || "").trim();
   const selections = ARTISTIC_PREFERENCE_GROUPS
     .map((group) => {
       const value = panelState.selections[group.key];
       return value ? `${group.label}: ${value}` : "";
     })
     .filter(Boolean);
+  const normalizedProfile = normalizeDiffText(currentArtisticProfile).toLowerCase();
+  const normalizedSelections = normalizeDiffText(selections.join("; ")).toLowerCase();
+  const normalizedNote = normalizeDiffText(panelState.note || "").toLowerCase();
+  const profileAlreadyCapturesSelections = !!(normalizedSelections && normalizedProfile.includes(normalizedSelections));
+  const profileAlreadyCapturesNote = !!(normalizedNote && normalizedProfile.includes(normalizedNote));
   const lines = [];
   if ((currentVersion.code || "").trim()) {
     lines.push("Update the current p5.js sketch so it matches the latest artistic direction.");
@@ -4451,13 +4457,13 @@ function buildImplementCurrentArtisticDirectionMessage(state = appState) {
   } else {
     lines.push("Create the p5.js sketch now using the latest artistic direction.");
   }
-  if ((currentVersion.artistic_profile || "").trim()) {
-    lines.push(`Current artistic profile: ${currentVersion.artistic_profile.trim()}`);
+  if (currentArtisticProfile) {
+    lines.push(`Current artistic profile: ${currentArtisticProfile}`);
   }
-  if (selections.length) {
+  if (selections.length && !profileAlreadyCapturesSelections) {
     lines.push(`Current artistic preference tags: ${selections.join("; ")}`);
   }
-  if (panelState.note) {
+  if (panelState.note && !profileAlreadyCapturesNote) {
     lines.push(`Current artistic note: ${panelState.note}`);
   }
   return lines.join("\n");
@@ -4867,15 +4873,16 @@ function renderArtOptionCards(optionState) {
     chooseBtn.type = "button";
     chooseBtn.className = "art-option-choose";
     chooseBtn.addEventListener("click", () => {
-      artisticOptionSnapshot = cloneArtisticOptionSnapshot(optionState);
-      artisticOptionEditorDrafts = artisticOptionSnapshot ? artisticOptionSnapshot.alternatives.slice() : [];
+      artisticOptionSnapshot = cloneArtisticOptionSnapshot(optionState) || cloneArtisticOptionSnapshot(artisticOptionSnapshot);
+      if (artisticOptionSnapshot && !artisticOptionEditorDrafts.length) {
+        artisticOptionEditorDrafts = artisticOptionSnapshot.alternatives.slice();
+      }
       selectedCustomArtisticIdea = "";
       selectedArtisticOptionIndex = index;
-      artisticOptionSelectionPending = true;
+      artisticOptionSelectionPending = false;
       if (appState) {
         renderArtisticStudio(appState);
       }
-      sendTemplateMessage(`${ART_DECISION_OPTION_PREFIX}${index + 1}`);
     });
 
     const saveBtn = document.createElement("button");
