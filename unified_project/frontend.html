@@ -3760,6 +3760,12 @@ function hasUnsavedArtisticDescriptionChanges(optionState = getVisibleArtisticOp
   return options.some((option, index) => isArtisticDescriptionDirty(getArtisticOptionDraftText(optionState, index), option));
 }
 
+function hasGeneratedArtisticOptions(state = appState) {
+  const optionState = getVisibleArtisticOptionState(state);
+  const options = Array.isArray(optionState && optionState.alternatives) ? optionState.alternatives : [];
+  return options.some((option) => !!normalizeComparableText(option));
+}
+
 function setArtisticStudioPage(nextPage, options = {}) {
   const { render = true, resetScroll = true } = options;
   artisticStudioPage = nextPage === 2 ? 2 : 1;
@@ -3823,10 +3829,6 @@ function syncArtisticOptionSnapshot(state) {
   }
 
   if (!inArtisticPhase) {
-    artisticOptionSnapshot = null;
-    artisticOptionEditorDrafts = [];
-    selectedArtisticOptionIndex = null;
-    selectedCustomArtisticIdea = "";
     artisticOptionSelectionPending = false;
     return;
   }
@@ -4944,6 +4946,7 @@ function renderArtOptionCards(optionState) {
 
 function openArtisticModal() {
   artisticModalDismissed = false;
+  setArtisticStudioPage(hasGeneratedArtisticOptions(appState) ? 2 : 1, { render: false });
   if (appState) {
     renderArtisticStudio(appState);
   }
@@ -6730,15 +6733,13 @@ function getVersionById(versionId) {
 
 function renderState(state) {
   const nextPhase = state && state.phase ? state.phase : "";
+  const previousPhase = lastRenderedPhase;
   if (
     hasHydratedInitialState &&
     nextPhase === "artistic_discovery" &&
-    lastRenderedPhase !== "artistic_discovery"
+    previousPhase !== "artistic_discovery"
   ) {
     artisticModalDismissed = false;
-  }
-  if (nextPhase !== "artistic_discovery" || lastRenderedPhase !== "artistic_discovery") {
-    setArtisticStudioPage(1, { render: false, resetScroll: false });
   }
   hasHydratedInitialState = true;
   lastRenderedPhase = nextPhase;
@@ -6746,6 +6747,9 @@ function renderState(state) {
   sessionId = state.session_id;
   syncArtisticPanelFromState(state);
   syncArtisticOptionSnapshot(state);
+  if (nextPhase === "artistic_discovery" && previousPhase !== "artistic_discovery") {
+    setArtisticStudioPage(hasGeneratedArtisticOptions(state) ? 2 : 1, { render: false, resetScroll: false });
+  }
   $("phaseBadge").textContent = formatPhase(state.phase);
   $("versionPill").textContent = formatVersionPill(state.current_version);
   updateComposerPanels(state);
