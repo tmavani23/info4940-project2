@@ -1384,6 +1384,61 @@ button.ghost {
     width: min(420px, calc(100vw - 24px));
   }
 }
+
+.working-style-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.working-style-modal[hidden] { display: none; }
+.working-style-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+.working-style-card {
+  position: relative;
+  z-index: 1;
+  width: min(420px, calc(100vw - 32px));
+  background: rgba(22, 24, 30, 0.97);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.42);
+  padding: 24px;
+}
+.working-style-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.working-style-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.working-style-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+.working-style-desc {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 4px;
+  line-height: 1.5;
+}
+.working-style-done {
+  margin-top: 16px;
+  width: 100%;
+}
 </style>
 </head>
 <body>
@@ -1408,9 +1463,23 @@ button.ghost {
           <button id="downloadGifBtn" class="download-option" type="button">Download Preview GIF (.gif)</button>
         </div>
       </div>
+      <button id="workingStyleBtn" class="ghost" type="button">Working Style</button>
       <button id="helpBtn" class="ghost" type="button">Tutorial</button>
     </div>
   </header>
+
+  <div id="workingStyleModal" class="working-style-modal" hidden>
+    <div class="working-style-scrim" onclick="closeWorkingStyleModal()"></div>
+    <div class="working-style-card">
+      <div class="working-style-head">
+        <h3>Working Style</h3>
+        <button class="working-style-close" type="button" onclick="closeWorkingStyleModal()">×</button>
+      </div>
+      <p class="working-style-desc">Choose how you'd like the AI to collaborate with you. You can change this at any time.</p>
+      <div id="workingStyleModalBody"></div>
+      <button class="primary working-style-done" type="button" onclick="closeWorkingStyleModal()">Done</button>
+    </div>
+  </div>
 
   <div id="tourOverlay" class="tour-overlay welcome-mode" role="dialog" aria-labelledby="tourTitle" aria-modal="true" hidden>
     <div class="tour-scrim"></div>
@@ -1763,12 +1832,31 @@ const TOUR_STEPS = [
     target: null,
     title: "How Would You Like to Collaborate?",
     body: [
-      "Choose how you'd like the AI to work with you throughout this session. You can change this any time by reopening the tutorial.",
+      "Choose how you'd like the AI to work with you. You can change this at any time using the Working Style button in the header.",
     ],
     html: TOUR_COLLAB_HTML,
     collabStep: true,
   },
 ];
+
+function getEffectiveTourSteps() {
+  const withoutCollab = TOUR_STEPS.slice(0, -1);
+  if (!localStorage.getItem(STORAGE_KEY_COLLAB_STYLE)) {
+    return TOUR_STEPS; // first time — show the survey
+  }
+  return [
+    ...withoutCollab,
+    {
+      target: "#workingStyleBtn",
+      placement: "bottom",
+      padding: 12,
+      title: "Working Style",
+      body: [
+        "You can change how you'd like the AI to collaborate with you at any time using the Working Style button.",
+      ],
+    },
+  ];
+}
 const HISTORY_TOUR_STEPS = [
   {
     target: "#historyPane",
@@ -2353,6 +2441,23 @@ function setCollabStyle(style) {
   if (confirmBtn) confirmBtn.classList.toggle("active", style === "confirm");
 }
 
+function openWorkingStyleModal() {
+  const modal = $("workingStyleModal");
+  const body = $("workingStyleModalBody");
+  if (!modal || !body) return;
+  body.innerHTML = TOUR_COLLAB_HTML;
+  setCollabStyle(getCollabStyle());
+  modal.hidden = false;
+}
+
+function closeWorkingStyleModal() {
+  const modal = $("workingStyleModal");
+  if (!modal) return;
+  modal.hidden = true;
+  const body = $("workingStyleModalBody");
+  if (body) body.innerHTML = "";
+}
+
 function getTourConfig(kind = activeTourKind) {
   if (kind === "history") {
     return {
@@ -2370,7 +2475,7 @@ function getTourConfig(kind = activeTourKind) {
     introCopy: TOUR_WELCOME_COPY,
     introHtml: TOUR_WELCOME_HTML,
     introLabel: "Welcome",
-    steps: TOUR_STEPS,
+    steps: getEffectiveTourSteps(),
     focusId: "helpBtn",
   };
 }
@@ -2636,9 +2741,10 @@ function openTutorial(kind = "app") {
 }
 
 function skipOrCollabStep() {
-  const collabStepIndex = TOUR_STEPS.length - 1;
-  if (activeTourKind === "app" && tourStepIndex < collabStepIndex) {
-    tourStepIndex = collabStepIndex;
+  const steps = getTourConfig().steps;
+  const collabIdx = steps.findIndex(s => s.collabStep);
+  if (activeTourKind === "app" && collabIdx >= 0 && tourStepIndex < collabIdx) {
+    tourStepIndex = collabIdx;
     renderTourStep();
   } else {
     closeTutorial({ markSeen: true });
@@ -3748,6 +3854,7 @@ function initializeApp() {
   bindById("newSessionBtn", "click", startNewSession);
   bindById("undoBtn", "click", undoToPreviousVersion);
   bindById("resetBtn", "click", resetSession);
+  bindById("workingStyleBtn", "click", openWorkingStyleModal);
   bindById("helpBtn", "click", () => openTutorial("app"));
   bindById("tourNextBtn", "click", nextTourStep);
   bindById("tourBackBtn", "click", previousTourStep);
