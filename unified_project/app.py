@@ -13,6 +13,7 @@ Then open:
 """
 
 import ast
+import base64
 import json
 import os
 import re
@@ -113,6 +114,117 @@ Constraints:
 """.strip()
 
 
+# Score 3-4 reference: "first date excitement" Processing/Java source
+FIRST_DATE_CODE = """\
+float t;
+float theta;
+int maxFrameCount = 75;
+int a = 101;
+int space = 100;
+void setup(){size(540,540,P3D);}
+void draw(){
+  background(5);translate(width/2,height/2);
+  t=(float)frameCount/maxFrameCount;theta=TWO_PI*t;
+  directionalLight(245,245,245,300,-200,-200);ambientLight(240,240,240);
+  rotateY(radians(145));rotateX(radians(45));
+  for(int x=-space;x<=space;x+=20){for(int y=-space;y<=space;y+=20){for(int z=-space;z<=space;z+=200){
+    float offSet=((x*y*z))/a;
+    float sz=map(sin(-theta+offSet),-1,1,-0,20);
+    color c1=color(240,40,100);color c2=color(40,40,90);
+    if((x*y*z)%30==0){fill(c1);stroke(c2);}else{fill(c2);stroke(c1);}
+    shp(x,y,z,sz);shp(y,z,x,sz);shp(z,x,y,sz);}}}
+}
+void shp(float x,float y,float z,float d){pushMatrix();translate(x,y,z);box(d);popMatrix();}""".strip()
+
+ARTISTIC_QUALITY_REFERENCE = """
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ARTISTIC QUALITY STANDARD — target score 6-7 (scale 1-7)
+Note: ALL examples below are dynamic, animated, interactive p5.js sketches.
+The criterion is expressiveness and resonance.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SCORING RUBRIC (1-7): Criterion: Expressiveness and Resonance
+
+Overall Scores:
+  1-2: Emotion is named or symbolized only.
+       Generic shapes, stock colors, predictable motion.
+       Could be any emotion with a theme swap.
+
+  3-4: Emotion is present in visual choices but not in rendering logic.
+       You recognize the emotion intellectually.
+       The sketch is "about" the emotion, not "made of" it.
+
+  5-6: Rendering logic has emotional texture.
+       Some instability, tension, or weight baked into the math.
+       But still has decorative elements carrying part of the load.
+
+  7:   The rendering logic IS the emotion.
+       You feel it before you understand it.
+       The sketch cannot be re-themed — rewriting the emotion
+       requires rewriting the core code. 
+
+Breakdown:
+         EXPRESSIVENESS                    RESONANCE
+         (is the technique the emotion?)   (does the viewer feel it?)
+
+1-2      Literal symbol mapping.           Recognize only — never feel.
+         Tears for sadness, hearts for     Re-labelable with zero
+         love. Imagery does all the work.  mechanical changes.
+
+3-4      Thematic abstraction.             Mild feeling — mostly
+         Motion/color evoke the emotion    intellectual recognition.
+         without illustrating directly.    Re-labelable with minor
+         Core mechanic still generic.      parameter tweaks.
+
+5-6      Technique has emotional texture.  Feel before you understand.
+         Instability, tension, or weight   Core mechanic is hard to
+         baked into the rendering math.    re-label but not impossible.
+
+7        The technique IS the emotion.     Cannot watch it without
+(TARGET) Mechanic is unexpected — you      feeling it. Impossible to
+         could not predict this approach   re-label without rewriting
+         from the emotion word alone.      the core mechanic entirely.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SCORE 7 EXAMPLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"feeling disheveled" — score 7
+WHY: Captures the viewer's live webcam face and makes their OWN FACE appear chaotic. Dark face
+  regions become anchor points for random-walk "hair" strands. The viewer sees themselves as the
+  disheveled subject. The sketch borrows the viewer's identity to produce the feeling — it has no
+  content of its own.
+KEY TECHNIQUES: createCapture(VIDEO), pixel darkness → dot radius, random-walk from dark regions.
+CODE (p5.js):
+let capture;let isCaptured=false;
+var NORTH=0,NORTHEAST=1,EAST=2,SOUTHEAST=3,SOUTH=4,SOUTHWEST=5,WEST=6,NORTHWEST=7;
+var direction,posX,posY;
+function setup(){createCanvas(640,480);capture=createCapture(VIDEO,function(){isCaptured=true;});capture.size(640,480);background(255);}
+function draw(){clear();background(255);if(!isCaptured)return;capture.loadPixels();const stepSize=10;for(let y=0;y<height;y+=stepSize){for(let x=0;x<width;x+=stepSize){const i=y*width+x;const darkness=(255-capture.pixels[i*4])/255;const radius=stepSize*darkness;ellipse(x,y,radius,radius);if(darkness>0.8){posX=x;posY=y;drawHair();}}}}
+function drawHair(){var diameter=2,stepSize=2;for(var i=0;i<=20;i++){direction=int(random(0,8));if(direction==NORTH)posY-=stepSize;else if(direction==NORTHEAST){posX+=stepSize;posY-=stepSize;}else if(direction==EAST)posX+=stepSize;else if(direction==SOUTHEAST){posX+=stepSize;posY+=stepSize;}else if(direction==SOUTH)posY+=stepSize;else if(direction==SOUTHWEST){posX-=stepSize;posY+=stepSize;}else if(direction==WEST)posX-=stepSize;else if(direction==NORTHWEST){posX-=stepSize;posY-=stepSize;}if(posX>width)posX=0;if(posX<0)posX=width;if(posY<0)posY=height;if(posY>height)posY=0;ellipse(posX+stepSize/2,posY+stepSize/2,diameter,diameter);}}
+
+---
+
+"feeling anxious" — score 7
+WHY: Anxiety is cognitive overload — too many competing signals. The sketch renders complex Japanese
+  literary characters at sizes and colors driven by live audio FFT waveform amplitude. Every frame
+  the characters change size and color based on sound. Illegibility + randomness + audio-driven chaos
+  creates experienced overstimulation, not a symbol of it.
+KEY TECHNIQUES: p5.FFT waveform(), per-character random fill driven by waveform[i], foreign script.
+CODE (p5.js):
+let sound,fft;
+let letters='吾輩わがはいは猫である。名前はまだ無い。どこで生れたかとんと見当けんとうがつかぬ。'.split('');
+function preload(){sound=loadSound('Catch_the_future.mp3');}
+function setup(){createCanvas(windowWidth,windowHeight);textFont('sans-serif');textAlign(CENTER,CENTER);fft=new p5.FFT();sound.amp(0.2);sound.loop();}
+function draw(){clear();background(50);let waveform=fft.waveform();beginShape();noFill();stroke(255);for(let i=0;i<waveform.length;i++){vertex(map(i,0,waveform.length,0,width),map(waveform[i],-1,1,height,0));}endShape();for(let i=0;i<letters.length;i++){var j=Math.round(map(i,0,letters.length,0,waveform.length));fill(color(random(100,255),random(100,255),random(100,255)));textSize(Math.abs(waveform[j])*300+5);text(letters[i],map(j,0,waveform.length,0,width),map(waveform[j]*3,-1,1,height,0));}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SCORE 3-4 REFERENCES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Score 3-4 reference examples (code and screenshots) were provided as context at session start.
+""".strip()
+
+
 IMPLEMENTATION_PROMPT = """
 You are in implementation mode. Use the current emotional understanding to produce runnable p5.js.
 
@@ -131,6 +243,8 @@ Code requirements:
 - Put tweakable parameters near the top with comments.
 - Add clear beginner-friendly comments for each major section (state setup, animation logic, color/motion choices, and any interaction).
 - For non-obvious lines (timing math, mapping ranges, easing), include short explanatory comments.
+
+{ARTISTIC_QUALITY_REFERENCE}
 
 Return STRICT JSON only with this exact schema:
 {
@@ -230,9 +344,22 @@ Rules:
 """.strip()
 
 
-def build_system_prompt(phase: str, state_summary: str) -> str:
-    phase_prompt = DISCOVERY_PROMPT if phase == PHASE_EMOTION else IMPLEMENTATION_PROMPT
-    return f"{BASE_PROMPT}\n\nCurrent state:\n{state_summary}\n\n{phase_prompt}"
+def build_system_prompt(phase: str, state_summary: str, collab_style: str = "iterate") -> str:
+    phase_prompt = DISCOVERY_PROMPT if phase == "emotional_discovery" else IMPLEMENTATION_PROMPT.replace(
+        "{ARTISTIC_QUALITY_REFERENCE}", ARTISTIC_QUALITY_REFERENCE
+    )
+    if collab_style == "confirm":
+        collab_note = (
+            "COLLABORATION STYLE: This student prefers to confirm before implementing. "
+            "Always propose your plan or changes first and wait for their explicit approval before "
+            "making any edits to the sketch, emotion profile, or artistic profile."
+        )
+    else:
+        collab_note = (
+            "COLLABORATION STYLE: This student prefers to iterate as you go. "
+            "Make changes and show results immediately without asking for approval first."
+        )
+    return f"{BASE_PROMPT}\n\n{collab_note}\n\nCurrent state:\n{state_summary}\n\n{phase_prompt}"
 
 
 def _short_id() -> str:
@@ -942,6 +1069,23 @@ def _salvage_non_json_llm_reply(
     return fallback
 
 
+def _transcribe_audio(audio_b64: str, audio_mime: str = "audio/webm") -> str:
+    """Send audio to the LLM and return a plain-text transcription."""
+    if not LLM_ENABLED or intent_llm is None:
+        return ""
+    try:
+        audio_url = audio_b64 if audio_b64.startswith("data:") else f"data:{audio_mime};base64,{audio_b64}"
+        msg = HumanMessage(content=[
+            {"type": "image_url", "image_url": {"url": audio_url}},
+            {"type": "text", "text": "Please transcribe exactly what the user said in this audio clip. Return only the transcribed text, no commentary."},
+        ])
+        response = intent_llm.invoke([msg])
+        text = response.content if isinstance(response.content, str) else ""
+        return text.strip()
+    except Exception:
+        return ""
+
+
 def build_multimodal_message(
     text: str,
     image_b64: Optional[str] = None,
@@ -1125,6 +1269,53 @@ sessions: dict[str, SessionState] = {}
 latest_session_id: Optional[str] = None
 
 
+# ─── Artistic quality reference seed ──────────────────────────────────────────
+REFERENCE_IMAGES_DIR = BASE_DIR / "reference_images"
+
+
+def _load_ref_image(filename: str) -> Optional[str]:
+    path = REFERENCE_IMAGES_DIR / filename
+    if not path.exists():
+        return None
+    with open(path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode("utf-8")
+    return f"data:image/png;base64,{b64}"
+
+
+def _build_seed_reference_message() -> Optional[HumanMessage]:
+    head_in_clouds = _load_ref_image("score3_head_in_clouds.png")
+    sadness = _load_ref_image("score3_sadness.png")
+    parts: list[dict] = [
+        {"type": "text", "text": (
+            "ARTISTIC QUALITY REFERENCE — score 3-4 examples "
+            "(these are dynamic animated sketches; code and screenshots below are static "
+            "representations). Score 7 is the target."
+        )},
+        {"type": "text", "text": f'"first date excitement" — score 3-4\nCODE (Processing/Java):\n{FIRST_DATE_CODE}'},
+    ]
+    if head_in_clouds:
+        parts.append({"type": "image_url", "image_url": {"url": head_in_clouds}})
+        parts.append({"type": "text", "text": '"head in the clouds" — score 3-4'})
+    if sadness:
+        parts.append({"type": "image_url", "image_url": {"url": sadness}})
+        parts.append({"type": "text", "text": '"sadness" — score 3-4'})
+    return HumanMessage(content=parts)
+
+
+SEED_REFERENCE_MESSAGE: Optional[HumanMessage] = _build_seed_reference_message()
+
+
+def _inject_seed_reference(session: SessionState) -> None:
+    if SEED_REFERENCE_MESSAGE is None:
+        return
+    session.llm_events.insert(0, {
+        "id": "seed_reference",
+        "created_at": _now(),
+        "anchor_version_id": None,
+        "message": SEED_REFERENCE_MESSAGE,
+    })
+
+
 def get_or_create_session(session_id: Optional[str] = None) -> SessionState:
     global latest_session_id
     if session_id and session_id in sessions:
@@ -1132,6 +1323,7 @@ def get_or_create_session(session_id: Optional[str] = None) -> SessionState:
         return sessions[session_id]
     if session_id and session_id not in sessions:
         session = SessionState(session_id=session_id)
+        _inject_seed_reference(session)
         sessions[session_id] = session
         latest_session_id = session_id
         return session
@@ -1139,6 +1331,7 @@ def get_or_create_session(session_id: Optional[str] = None) -> SessionState:
         return sessions[latest_session_id]
     sid = str(uuid.uuid4())
     session = SessionState(session_id=sid)
+    _inject_seed_reference(session)
     sessions[sid] = session
     latest_session_id = sid
     return session
@@ -1707,6 +1900,7 @@ def _invoke_llm(
     audio: Optional[str],
     audio_mime: Optional[str],
     intent_hint: str = "",
+    collab_style: str = "iterate",
 ) -> tuple[dict, str, Any, Any]:
     human_msg = build_multimodal_message(
         text=user_text,
@@ -1723,7 +1917,7 @@ def _invoke_llm(
 
     llm = phase_1_llm if session.phase == PHASE_EMOTION else phase_2_llm
     state_summary = _summarize_state_for_prompt(session.current_version)
-    system_msg = SystemMessage(content=build_system_prompt(session.phase, state_summary))
+    system_msg = SystemMessage(content=build_system_prompt(session.phase, state_summary, collab_style))
 
     context = _build_llm_context(session, limit=18)
 
@@ -2001,6 +2195,11 @@ def debug_page():
     return send_from_directory(BASE_DIR, "debug.html")
 
 
+@app.route("/good_examples/<path:filename>", methods=["GET"])
+def good_examples(filename):
+    return send_from_directory(BASE_DIR / "good_examples", filename)
+
+
 @app.route("/api/state", methods=["GET"])
 def api_state():
     sid = request.args.get("session_id")
@@ -2111,6 +2310,7 @@ def api_chat():
     audio = _clean_text(data.get("audio"))
     image_mime = _clean_text(data.get("image_mime")) or "image/jpeg"
     audio_mime = _clean_text(data.get("audio_mime")) or "audio/webm"
+    collab_style = _clean_text(data.get("collab_style")) or "iterate"
 
     if not message and not image and not audio:
         return jsonify({"error": "Message, image, or audio is required."}), 400
@@ -2135,10 +2335,22 @@ def api_chat():
             }
         )
 
+    # Build effective message from all inputs: typed text + audio transcript + image hint.
+    parts = []
+    if message:
+        parts.append(message)
+    if audio:
+        transcript = _transcribe_audio(audio, audio_mime)
+        if transcript:
+            parts.append(transcript)
+    if image:
+        parts.append("I also shared an image.")
+    effective_message = " ".join(parts)
+
     pending = session.pending_artistic_decision
     actions = (
-        _detect_turn_actions(session, message, pending)
-        if message
+        _detect_turn_actions(session, effective_message, pending)
+        if effective_message
         else {
             "code_request": False,
             "emotion_refinement": False,
@@ -2537,15 +2749,21 @@ def api_chat():
             created_version=None,
         )
 
+    user_text_for_model = effective_message
+
+    if session.phase == "code_generation" and actions["emotion_refinement"] and not actions["sketch_rejection"]:
+        session.phase = "emotional_discovery"
+    elif session.phase == "emotional_discovery" and session.current_version.emotion_profile:
+        if actions["confirm_start_coding"]:
+            session.phase = "code_generation"
+            user_text_for_model = _build_code_start_confirmation_prompt(session, effective_message)
+        elif actions["code_request"]:
+            session.phase = "code_generation"
+
     if not user_text_for_model:
-        if image and audio:
-            user_text_for_model = "I shared an image and audio clip. Please infer emotional cues and update the profiles."
-        elif image:
-            user_text_for_model = "I shared an image. Please infer emotional cues and update the profiles."
-        else:
-            user_text_for_model = "I shared an audio clip. Please infer emotional cues and update the profiles."
+        user_text_for_model = "Please infer emotional cues from my input and update the profiles."
     elif session.phase == PHASE_CODE and actions["sketch_rejection"]:
-        user_text_for_model = _build_sketch_rejection_prompt(session, message)
+        user_text_for_model = _build_sketch_rejection_prompt(session, effective_message)
 
     parsed_raw, raw_response_text, human_msg, assistant_llm_msg = _invoke_llm(
         session=session,
@@ -2555,6 +2773,7 @@ def api_chat():
         audio=audio,
         audio_mime=audio_mime,
         intent_hint="sketch_rejection" if actions["sketch_rejection"] else "",
+        collab_style=collab_style,
     )
     sanitized = _sanitize_llm_payload(parsed_raw, session.current_version)
 
