@@ -1560,7 +1560,7 @@ const TOUR_STEPS = [
     title: "Refine The Feeling Before You Code",
     body: [
       "The AI collaborator first helps you discover and refine the emotion you want to express.",
-      "The more you chat, the better it can understand your emotions and create sketches that match what you have in mind.",
+      "The more you chat, the more you build a shared understanding with the AI — so the sketches it generates match what you actually have in mind.",
       "You can tell it to move on and create code for you at any time.",
     ],
   },
@@ -1570,7 +1570,8 @@ const TOUR_STEPS = [
     padding: 14,
     title: "Suggested Replies",
     body: [
-      "We also suggest reply options above the input box to help speed up the process and keep the conversation moving.",
+      "These prompts show you what kinds of information the AI finds useful, helping you build a shared mental model with it from the start.",
+      "They keep the conversation moving in a productive direction so you always know what to say next.",
     ],
   },
   {
@@ -1579,8 +1580,8 @@ const TOUR_STEPS = [
     padding: 18,
     title: "Profile Pane",
     body: [
-      "This pane is a running summary of what the AI understands about your emotion and visual direction.",
-      "It updates automatically as you chat, so you can double-check that you and the AI are staying on the same page.",
+      "This pane increases transparency by showing exactly what the AI understands about your emotion and visual direction at all times.",
+      "It updates automatically as you chat, so you can catch any misreading before it ends up in the code.",
     ],
   },
   {
@@ -1589,7 +1590,7 @@ const TOUR_STEPS = [
     padding: 14,
     title: "Emotion Profile",
     body: [
-      "Here, the AI summarizes the emotion it believes you are trying to express.",
+      "Here, the AI makes its interpretation transparent — you can see exactly how it understands the emotion you are trying to express.",
     ],
   },
   {
@@ -1598,9 +1599,8 @@ const TOUR_STEPS = [
     padding: 14,
     title: "Confidence And Gaps",
     body: [
-      "This shows how confident the AI is about understanding your emotion. If confidence is low, it usually helps to describe the feeling more.",
-      "You can still ask it to generate code even with low confidence, but the result is more likely to miss what you mean.",
-      "The gaps list the parts the AI does not fully understand yet, so you know what to clarify next.",
+      "This gives you a transparent view into the AI's certainty. If confidence is low, describing the feeling in more detail usually helps.",
+      "The gaps list exactly what the AI does not fully understand yet, so you can course-correct before any code is generated.",
     ],
   },
   {
@@ -1609,7 +1609,7 @@ const TOUR_STEPS = [
     padding: 14,
     title: "Artistic Profile",
     body: [
-      "This is where the AI summarizes your artistic preferences, imagery, and visual metaphors.",
+      "This makes the AI's reading of your artistic preferences, imagery, and visual metaphors visible — so you can verify it matches your vision.",
     ],
   },
   {
@@ -1618,7 +1618,8 @@ const TOUR_STEPS = [
     padding: 18,
     title: "Use The Profile To Stay Aligned",
     body: [
-      "You can review and edit this panel directly at any time. It gives you a quick way to make sure the shared context still matches what you want.",
+      "You can edit this panel directly at any time to keep the shared mental model accurate.",
+      "Correcting it here steers all future responses without needing to re-explain things in chat.",
     ],
   },
   {
@@ -1646,8 +1647,8 @@ const TOUR_STEPS = [
     padding: 12,
     title: "Version History",
     body: [
-      "Click here to open Version History, where you can browse and restore earlier code, artistic-profile, or emotion-profile versions.",
-      "That makes it easy to explore different directions and still return to a previous version later.",
+      "Version History supports your error recovery flow — if a sketch goes in the wrong direction, you can browse earlier versions, preview them, and restore the one closest to your intent.",
+      "Every version is saved automatically, so no creative direction is ever permanently lost.",
     ],
   },
 ];
@@ -1658,8 +1659,8 @@ const HISTORY_TOUR_STEPS = [
     padding: 16,
     title: "Version History Overview",
     body: [
-      "Whenever the system changes its understanding of your emotion, artistic style, or code, it automatically saves a version of that emotion, artistic profile, and sketch.",
-      "This is where you can browse that saved version history.",
+      "Whenever the system changes its understanding of your emotion, artistic style, or code, it automatically saves a snapshot.",
+      "This is your error recovery flow — browse the full history to identify where things diverged from your intent, then preview or restore from there.",
     ],
   },
   {
