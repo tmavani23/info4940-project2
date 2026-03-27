@@ -955,9 +955,30 @@ body.artistic-modal-active .input-bar {
   gap: 12px;
 }
 
+.artistic-studio-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .artistic-studio-head h3 {
   font-size: 15px;
   margin-top: 4px;
+}
+
+.artistic-step-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(143, 180, 255, 0.14);
+  border: 1px solid rgba(143, 180, 255, 0.24);
+  color: #d6e4ff;
 }
 
 .artistic-kicker {
@@ -972,6 +993,16 @@ body.artistic-modal-active .input-bar {
   font-size: 11px;
   line-height: 1.5;
   color: #b9c8e7;
+}
+
+.artistic-studio-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.artistic-studio-page[hidden] {
+  display: none !important;
 }
 
 .art-pref-grid {
@@ -1088,6 +1119,25 @@ body.artistic-modal-active .input-bar {
   justify-content: flex-end;
 }
 
+.art-choice-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #b9c8e7;
+}
+
+.art-choice-divider::before,
+.art-choice-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(83, 97, 129, 0.75);
+}
+
 .art-option-panel {
   display: flex;
   flex-direction: column;
@@ -1101,6 +1151,13 @@ body.artistic-modal-active .input-bar {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}
+
+.art-option-section-copy {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #b9c8e7;
+  max-width: 620px;
 }
 
 .art-draft-profile {
@@ -2337,6 +2394,14 @@ button.primary:hover:not(:disabled),
   border-color: #d47c5c;
 }
 
+#saveProfilesBtn:disabled {
+  opacity: 1;
+  background: #b7a18f;
+  border-color: #b7a18f;
+  color: rgba(255, 248, 243, 0.92);
+  box-shadow: none;
+}
+
 .pane-expand-btn,
 .code-tab,
 .history-help,
@@ -2677,6 +2742,19 @@ button.primary:hover:not(:disabled),
   color: #7f756a;
 }
 
+.art-choice-divider {
+  color: #9b8979;
+}
+
+.art-choice-divider::before,
+.art-choice-divider::after {
+  background: rgba(216, 205, 189, 0.92);
+}
+
+.art-option-section-copy {
+  color: #7f756a;
+}
+
 .stage-node:hover:not(:disabled),
 .art-pref-chip:hover:not(:disabled) {
   background: #f4ece1;
@@ -2720,6 +2798,12 @@ button.primary:hover:not(:disabled),
 .stage-connector,
 .artistic-modal-footer-copy {
   color: #8a7f74;
+}
+
+.artistic-step-pill {
+  background: rgba(217, 119, 87, 0.08);
+  border-color: rgba(217, 119, 87, 0.18);
+  color: #9a6348;
 }
 
 .artistic-studio {
@@ -2938,7 +3022,10 @@ body.artistic-modal-active .artistic-studio {
           <div class="artistic-studio-head">
             <div>
               <div class="artistic-kicker">Artistic Discovery</div>
-              <h3 id="artisticStudioTitle">Shape the artwork before we code it</h3>
+              <div class="artistic-studio-title-row">
+                <h3 id="artisticStudioTitle">Shape the artwork before we code it</h3>
+                <span id="artisticStudioStep" class="artistic-step-pill">Step 1 of 2</span>
+              </div>
             </div>
             <div class="artistic-studio-actions">
               <button id="clearArtPrefsBtn" class="ghost" type="button">Clear</button>
@@ -2950,50 +3037,54 @@ body.artistic-modal-active .artistic-studio {
             Pick a few visual preferences, add your own note, and I’ll turn them into three artwork directions with previews.
           </p>
 
-          <div id="artPreferenceGroups" class="art-pref-grid"></div>
+          <div id="artisticStudioPage1" class="artistic-studio-page">
+            <div id="artPreferenceGroups" class="art-pref-grid"></div>
 
-          <div class="art-note-wrap">
-            <label for="artPreferenceNote">Artistic note</label>
-            <textarea id="artPreferenceNote" class="art-note" rows="3" placeholder="Ex: muted blue haze, sparse composition, trembling light, slow drifting motion..."></textarea>
+            <div class="art-note-wrap">
+              <label for="artPreferenceNote">Artistic note</label>
+              <textarea id="artPreferenceNote" class="art-note" rows="3" placeholder="Ex: muted blue haze, sparse composition, trembling light, slow drifting motion..."></textarea>
+            </div>
           </div>
 
-          <div class="artistic-actions">
-            <button id="generateArtOptionsBtn" class="primary" type="button">Generate 3 Artwork Options</button>
-            <button id="refreshArtOptionsBtn" class="ghost" type="button" hidden>More Options</button>
-          </div>
-
-          <div id="customArtIdeaGroup" class="art-custom-idea">
-            <div class="art-option-head">
-              <div>
-                <div class="artistic-kicker">Your Own Idea</div>
-                <p class="art-custom-idea-copy">Type your own artistic direction here, save it, and then continue to Coding with that version.</p>
+          <div id="artisticStudioPage2" class="artistic-studio-page" hidden>
+            <div id="customArtIdeaGroup" class="art-custom-idea">
+              <div class="art-option-head">
+                <div>
+                  <div class="artistic-kicker">Your Own Idea</div>
+                  <p class="art-custom-idea-copy">Type your own artistic direction here, save it, and then continue to Coding with that version.</p>
+                </div>
+                <span id="customArtIdeaStatus" class="art-option-badge" hidden></span>
               </div>
-              <span id="customArtIdeaStatus" class="art-option-badge" hidden></span>
-            </div>
-            <textarea id="customArtIdea" class="art-option-editor" rows="4" placeholder="Ex: a sparse amber field with slow drifting dust, long pauses, and one bright pulse near the horizon..."></textarea>
-            <div class="art-custom-idea-actions">
-              <button id="saveCustomArtIdeaBtn" type="button" hidden>Save My Idea</button>
-            </div>
-          </div>
-
-          <div id="artOptionPanel" class="art-option-panel" hidden>
-            <div class="art-option-head">
-              <div>
-                <div class="artistic-kicker">Draft Direction</div>
-                <p id="artDraftProfile" class="art-draft-profile"></p>
+              <textarea id="customArtIdea" class="art-option-editor" rows="4" placeholder="Ex: a sparse amber field with slow drifting dust, long pauses, and one bright pulse near the horizon..."></textarea>
+              <div class="art-custom-idea-actions">
+                <button id="saveCustomArtIdeaBtn" type="button" hidden>Save My Idea</button>
               </div>
             </div>
-            <div id="artOptionCards" class="art-option-cards"></div>
-          </div>
 
-          <div id="artisticStudioGuidance" class="artistic-guidance" aria-live="polite" hidden></div>
+            <div class="art-choice-divider" aria-hidden="true">Or</div>
+
+            <div id="artOptionPanel" class="art-option-panel" hidden>
+              <div class="art-option-head">
+                <div>
+                  <div class="artistic-kicker">AI Generated Ideas</div>
+                  <p class="art-option-section-copy">Choose one below, or edit any description directly and save it before continuing to Coding.</p>
+                </div>
+              </div>
+              <div id="artOptionCards" class="art-option-cards"></div>
+            </div>
+
+            <div id="artisticStudioGuidance" class="artistic-guidance" aria-live="polite" hidden></div>
+          </div>
 
           <div class="artistic-modal-footer">
             <p id="artisticModalFooterCopy" class="artistic-modal-footer-copy">
               You can stay here to shape the visual direction, or close this modal and type instructions directly in chat.
             </p>
             <div class="artistic-modal-footer-actions">
-              <button id="continueFromArtisticBtn" class="primary" type="button">Continue to Coding</button>
+              <button id="artisticStudioBackBtn" class="ghost" type="button" hidden>Back</button>
+              <button id="artisticStudioNextBtn" class="primary" type="button">Next</button>
+              <button id="refreshArtOptionsBtn" class="ghost" type="button" hidden>More Options</button>
+              <button id="continueFromArtisticBtn" class="primary" type="button" hidden>Continue to Coding</button>
             </div>
           </div>
 
@@ -3272,12 +3363,39 @@ const HISTORY_BRANCH_TOUR_HTML = `
 `;
 const ARTISTIC_EDIT_TOUR_STEPS = [
   {
-    target: "#artOptionCards .art-option-editor",
+    target: "#customArtIdeaGroup",
+    placement: "left",
+    padding: 16,
+    title: "Your Own Idea",
+    body: [
+      "Do you already have a good sense on what you want in the sketch? Describe it here.",
+    ],
+  },
+  {
+    target: "#artOptionPanel",
+    placement: "top",
+    padding: 16,
+    title: "AI Generated Ideas",
+    body: [
+      "Alternatively, the AI collaborator came up 3 options for artistic directions.",
+    ],
+  },
+  {
+    target: "#artOptionCards .art-option-card:first-child .art-option-editor",
     placement: "top",
     padding: 14,
-    title: "Edit Option Descriptions",
+    title: "Edit An Option",
     body: [
-      "You can edit any generated option directly in this box."
+      "You can directly modify the options if you think it is slightly different from what you want.",
+    ],
+  },
+  {
+    target: "#refreshArtOptionsBtn",
+    placement: "top",
+    padding: 14,
+    title: "More Options",
+    body: [
+      "If you want the AI collaborator to come up with more ideas/options, click here.",
     ],
   },
 ];
@@ -3497,12 +3615,17 @@ let selectedArtisticOptionIndex = null;
 let selectedCustomArtisticIdea = "";
 let artisticOptionSelectionPending = false;
 let shouldRevealGeneratedArtOptions = false;
+let artisticStudioPage = 1;
 let hasHydratedInitialState = false;
 let lastRenderedPhase = "";
 let activeDiffContext = {
   emotion: { baseline: "" },
   artistic: { baseline: "" },
   code: { baseline: "" },
+};
+let profileSaveBaseline = {
+  emotion: "",
+  artistic: "",
 };
 let activeDiffDecorations = {
   emotion: createDiffDecorationState(),
@@ -3582,6 +3705,24 @@ function hasUnsavedArtisticDescriptionChanges(optionState = getVisibleArtisticOp
   return options.some((option, index) => isArtisticDescriptionDirty(getArtisticOptionDraftText(optionState, index), option));
 }
 
+function hasGeneratedArtisticOptions(state = appState) {
+  const optionState = getVisibleArtisticOptionState(state);
+  const options = Array.isArray(optionState && optionState.alternatives) ? optionState.alternatives : [];
+  return options.some((option) => !!normalizeComparableText(option));
+}
+
+function setArtisticStudioPage(nextPage, options = {}) {
+  const { render = true, resetScroll = true } = options;
+  artisticStudioPage = nextPage === 2 ? 2 : 1;
+  const studio = $("artisticStudio");
+  if (studio && resetScroll) {
+    studio.scrollTop = 0;
+  }
+  if (render && appState) {
+    renderArtisticStudio(appState);
+  }
+}
+
 function revealGeneratedArtOptions() {
   const studio = $("artisticStudio");
   const optionPanel = $("artOptionPanel");
@@ -3633,10 +3774,6 @@ function syncArtisticOptionSnapshot(state) {
   }
 
   if (!inArtisticPhase) {
-    artisticOptionSnapshot = null;
-    artisticOptionEditorDrafts = [];
-    selectedArtisticOptionIndex = null;
-    selectedCustomArtisticIdea = "";
     artisticOptionSelectionPending = false;
     return;
   }
@@ -3829,6 +3966,30 @@ function getArtisticProfileValue() {
 
 function setArtisticProfileValue(nextValue) {
   setTextEditorValue(artisticProfileEditorView, "artisticProfile", nextValue);
+}
+
+function setProfileSaveBaseline(nextValues = {}) {
+  if (Object.prototype.hasOwnProperty.call(nextValues, "emotion")) {
+    profileSaveBaseline.emotion = nextValues.emotion || "";
+  }
+  if (Object.prototype.hasOwnProperty.call(nextValues, "artistic")) {
+    profileSaveBaseline.artistic = nextValues.artistic || "";
+  }
+}
+
+function hasUnsavedProfileEdits() {
+  return (
+    normalizeComparableText(getEmotionProfileValue()) !== normalizeComparableText(profileSaveBaseline.emotion)
+    || normalizeComparableText(getArtisticProfileValue()) !== normalizeComparableText(profileSaveBaseline.artistic)
+  );
+}
+
+function updateProfileSaveButtonState() {
+  const button = $("saveProfilesBtn");
+  if (!button) return;
+  const hasEdits = hasUnsavedProfileEdits();
+  button.disabled = !hasEdits;
+  button.title = hasEdits ? "Save profile edits" : "Make an edit to enable saving";
 }
 
 function clearEditorDiffDecorations(key) {
@@ -4308,9 +4469,12 @@ function refreshArtisticDraftUi(state = appState) {
   renderStageFlow(state);
   renderArtisticStudio(state);
   if (!isHistoryOpen || !historyPreviewVersionId) {
-    setArtisticProfileValue(buildDetailedArtisticProfileText(state, state.current_version));
+    const artisticProfile = buildDetailedArtisticProfileText(state, state.current_version);
+    setProfileSaveBaseline({ artistic: artisticProfile });
+    setArtisticProfileValue(artisticProfile);
     renderActiveDiffViews();
   }
+  updateProfileSaveButtonState();
 }
 
 function getStageHint(state) {
@@ -4586,7 +4750,7 @@ function renderArtOptionCards(optionState) {
   if (!options.length) {
     const empty = document.createElement("p");
     empty.className = "artistic-copy";
-    empty.textContent = "No artwork options yet. Generate a set from your selected preferences above.";
+    empty.textContent = "You can write your own idea above, or go back and click Next to generate AI options from your selected preferences.";
     container.appendChild(empty);
     return;
   }
@@ -4639,10 +4803,6 @@ function renderArtOptionCards(optionState) {
     tags.className = "art-option-tags";
     tags.innerHTML = meta.tags.map((tag) => `<span class="art-option-tag">${escapeHtml(tag)}</span>`).join("");
 
-    const summary = document.createElement("p");
-    summary.className = "art-option-summary";
-    summary.textContent = "Edit this direction if you want to refine the wording before coding.";
-
     const editor = document.createElement("textarea");
     editor.className = "art-option-editor";
     editor.rows = 5;
@@ -4656,11 +4816,10 @@ function renderArtOptionCards(optionState) {
       artisticOptionEditorDrafts = artisticOptionSnapshot ? artisticOptionSnapshot.alternatives.slice() : [];
       selectedCustomArtisticIdea = "";
       selectedArtisticOptionIndex = index;
-      artisticOptionSelectionPending = true;
+      artisticOptionSelectionPending = false;
       if (appState) {
         renderArtisticStudio(appState);
       }
-      sendTemplateMessage(`${ART_DECISION_OPTION_PREFIX}${index + 1}`);
     });
 
     const saveBtn = document.createElement("button");
@@ -4720,7 +4879,6 @@ function renderArtOptionCards(optionState) {
 
     body.appendChild(metaRow);
     body.appendChild(tags);
-    body.appendChild(summary);
     body.appendChild(editor);
     body.appendChild(actions);
     card.appendChild(body);
@@ -4731,6 +4889,7 @@ function renderArtOptionCards(optionState) {
 
 function openArtisticModal() {
   artisticModalDismissed = false;
+  setArtisticStudioPage(hasGeneratedArtisticOptions(appState) ? 2 : 1, { render: false });
   if (appState) {
     renderArtisticStudio(appState);
   }
@@ -4797,11 +4956,10 @@ function updateContinueFromArtisticState(state = appState, optionState = getVisi
     "continue-cta-glow",
     hasSelectedDirection && canContinue && !hasUnsavedChanges && !isSending && !isRecording
   );
+  footerCopy.hidden = !hasUnsavedChanges;
   footerCopy.textContent = hasUnsavedChanges
     ? "Save your description edits first so Coding uses the updated version."
-    : canContinue
-      ? "This visual direction is ready to move into coding. You can continue now or keep refining the artistic choices here."
-      : "Stay in this modal to shape the artistic direction, or close it if you prefer to type instructions directly into chat.";
+    : "";
 }
 
 function syncArtisticLoadingOverlayPosition() {
@@ -4821,20 +4979,24 @@ function renderArtisticStudio(state) {
   const studio = $("artisticStudio");
   const backdrop = $("artisticStudioBackdrop");
   const openBtn = $("openArtisticModalBtn");
+  const step = $("artisticStudioStep");
   const copy = $("artisticStudioCopy");
+  const pageOne = $("artisticStudioPage1");
+  const pageTwo = $("artisticStudioPage2");
   const optionPanel = $("artOptionPanel");
-  const draft = $("artDraftProfile");
   const refreshBtn = $("refreshArtOptionsBtn");
   const customIdeaGroup = $("customArtIdeaGroup");
   const customIdeaInput = $("customArtIdea");
   const customIdeaBtn = $("saveCustomArtIdeaBtn");
   const customIdeaStatus = $("customArtIdeaStatus");
   const guidance = $("artisticStudioGuidance");
+  const backBtn = $("artisticStudioBackBtn");
+  const nextBtn = $("artisticStudioNextBtn");
   const continueBtn = $("continueFromArtisticBtn");
   const footerCopy = $("artisticModalFooterCopy");
   const loading = $("artisticModalLoading");
   const loadingText = $("artisticModalLoadingText");
-  if (!studio || !copy || !optionPanel || !draft || !refreshBtn || !guidance || !continueBtn || !footerCopy || !loading || !loadingText || !customIdeaGroup || !customIdeaInput || !customIdeaBtn || !customIdeaStatus) return;
+  if (!studio || !step || !copy || !pageOne || !pageTwo || !optionPanel || !refreshBtn || !guidance || !backBtn || !nextBtn || !continueBtn || !footerCopy || !loading || !loadingText || !customIdeaGroup || !customIdeaInput || !customIdeaBtn || !customIdeaStatus) return;
 
   const isArtisticPhase = !!(state && state.phase === "artistic_discovery");
   const pending = state && state.pending_artistic_decision ? state.pending_artistic_decision : null;
@@ -4842,8 +5004,6 @@ function renderArtisticStudio(state) {
   const selectionSummary = getArtPreferenceSelectionsSummary();
   const selectionCount = selectionSummary.selections.length + (selectionSummary.note ? 1 : 0);
   const showModal = isArtisticPhase && !artisticModalDismissed;
-  const canContinue = !!(state && canAdvanceFromCurrentPhase(state));
-  const currentArtisticProfile = state && state.current_version ? state.current_version.artistic_profile || "" : "";
   const hasSelectedCustomIdea = !!(selectedCustomArtisticIdea || "").trim();
   const selectedDirectionText = getSelectedArtisticDirectionText(state);
   const hasSelectedDirection = !!selectedDirectionText;
@@ -4851,6 +5011,10 @@ function renderArtisticStudio(state) {
     visibleOptionState &&
     ((visibleOptionState.proposed_artistic_profile || "").trim() || (visibleOptionState.alternatives || []).length)
   );
+  if (shouldRevealGeneratedArtOptions && hasVisibleOptions) {
+    artisticStudioPage = 2;
+  }
+  const isOptionsPage = artisticStudioPage === 2;
 
   document.body.classList.toggle("artistic-modal-active", showModal);
   if (backdrop) {
@@ -4860,13 +5024,14 @@ function renderArtisticStudio(state) {
   if (openBtn) {
     openBtn.hidden = !isArtisticPhase || showModal;
   }
-  refreshBtn.hidden = !hasVisibleOptions;
+  refreshBtn.hidden = !isOptionsPage || !hasVisibleOptions;
   studio.hidden = !showModal;
   studio.style.display = showModal ? "flex" : "none";
   studio.setAttribute("aria-hidden", showModal ? "false" : "true");
   if (!showModal) {
+    pageOne.hidden = false;
+    pageTwo.hidden = true;
     optionPanel.hidden = true;
-    draft.textContent = "";
     guidance.hidden = true;
     loading.hidden = true;
     syncArtisticLoadingOverlayPosition();
@@ -4874,25 +5039,29 @@ function renderArtisticStudio(state) {
   }
 
   updateCustomArtIdeaEditingState();
+  step.textContent = isOptionsPage ? "Step 2 of 2" : "Step 1 of 2";
+  pageOne.hidden = isOptionsPage;
+  pageTwo.hidden = !isOptionsPage;
+  backBtn.hidden = !isOptionsPage;
+  backBtn.disabled = isSending || isRecording;
+  nextBtn.hidden = isOptionsPage;
+  nextBtn.disabled = isSending || isRecording;
+  continueBtn.hidden = !isOptionsPage;
 
-  copy.textContent = hasSelectedDirection
-    ? "Your selected direction stays active below. You can keep editing it, compare against the generated options, or continue straight to Coding."
-    : hasVisibleOptions
-    ? (
-      "Compare the draft direction and preview cards below. You can choose one, ask for more options, or update the note and regenerate."
-    )
-    : "Pick a few visual preferences, add your own note, and I’ll turn them into three artwork directions with previews before we start coding.";
+  copy.textContent = isOptionsPage
+    ? "Choose your route on this page: write your own artistic idea above, or choose and edit one of the AI-generated ideas below."
+    : "Choose the visual ingredients and add your artistic note here. When this page feels right, click Next to generate three artwork options.";
 
-  optionPanel.hidden = !hasVisibleOptions;
-  draft.textContent = hasSelectedDirection
-    ? selectedDirectionText
-    : hasVisibleOptions
-    ? (
-      visibleOptionState.proposed_artistic_profile || currentArtisticProfile || "Your current artistic direction draft will appear here after you generate options."
-    )
-    : "Your current artistic direction draft will appear here after you generate options.";
+  optionPanel.hidden = !isOptionsPage || !hasVisibleOptions;
   refreshBtn.disabled = !hasVisibleOptions || isSending || isRecording;
-  updateContinueFromArtisticState(state, visibleOptionState);
+  if (isOptionsPage) {
+    updateContinueFromArtisticState(state, visibleOptionState);
+  } else {
+    continueBtn.disabled = true;
+    continueBtn.classList.remove("continue-cta-glow");
+    footerCopy.hidden = true;
+    footerCopy.textContent = "";
+  }
 
   if (isSending) {
     loading.hidden = false;
@@ -4901,10 +5070,12 @@ function renderArtisticStudio(state) {
       : pending
         ? "Refreshing artwork directions and previews..."
         : "Generating artwork directions and previews...";
-    guidance.hidden = true;
+    guidance.hidden = !isOptionsPage;
   } else {
     loading.hidden = true;
-    if (hasSelectedCustomIdea) {
+    if (!isOptionsPage) {
+      guidance.hidden = true;
+    } else if (hasSelectedCustomIdea) {
       guidance.hidden = false;
       guidance.className = "artistic-guidance ready";
       guidance.innerHTML = "<strong>Your custom idea is selected.</strong> Continue to Coding whenever this description feels right, or keep editing it here.";
@@ -4913,9 +5084,9 @@ function renderArtisticStudio(state) {
       guidance.className = "artistic-guidance ready";
       guidance.innerHTML = `<strong>Option ${selectedArtisticOptionIndex + 1} is selected.</strong> It stays highlighted below so you can continue to coding now, or generate a fresh set if you want to compare again.`;
     } else if (hasVisibleOptions && (visibleOptionState.alternatives || []).length) {
-      guidance.hidden = false;
-      guidance.className = "artistic-guidance ready";
-      guidance.innerHTML = "<strong>Review the artwork options below.</strong> Choose one, ask for more options, or continue straight to coding from this modal.";
+      guidance.hidden = true;
+      guidance.className = "artistic-guidance";
+      guidance.innerHTML = "";
     } else if (selectionCount > 0) {
       guidance.hidden = false;
       guidance.className = "artistic-guidance";
@@ -4927,8 +5098,10 @@ function renderArtisticStudio(state) {
     }
   }
   syncArtisticLoadingOverlayPosition();
-  renderArtOptionCards(visibleOptionState);
-  if (shouldRevealGeneratedArtOptions && hasVisibleOptions && !isSending) {
+  if (isOptionsPage) {
+    renderArtOptionCards(visibleOptionState);
+  }
+  if (shouldRevealGeneratedArtOptions && isOptionsPage && hasVisibleOptions && !isSending) {
     shouldRevealGeneratedArtOptions = false;
     revealGeneratedArtOptions();
   }
@@ -5324,6 +5497,7 @@ function initializeProfileEditor(id) {
   editor.setSize("100%", "auto");
   editor.on("change", () => {
     renderActiveDiffViews();
+    updateProfileSaveButtonState();
   });
   document.querySelector(`label[for="${id}"]`)?.addEventListener("click", (event) => {
     event.preventDefault();
@@ -5335,6 +5509,7 @@ function initializeProfileEditor(id) {
 function initializeProfileEditors() {
   emotionProfileEditorView = initializeProfileEditor("emotionProfile");
   artisticProfileEditorView = initializeProfileEditor("artisticProfile");
+  updateProfileSaveButtonState();
 }
 
 function initializeCodeEditor() {
@@ -6460,18 +6635,20 @@ function updateChatPlaceholder(state) {
 function loadVersionToPanes(version, options = {}) {
   if (!version) return;
   const { usePendingArtistic = false, state = appState } = options;
+  const emotionProfile = version.emotion_profile || "";
+  const artisticProfile = usePendingArtistic
+    ? buildDetailedArtisticProfileText(state, version)
+    : (version.artistic_profile || "");
   activeDiffContext = buildPaneDiffContext(version, { usePendingArtistic, state });
-  setEmotionProfileValue(version.emotion_profile || "");
-  setArtisticProfileValue(
-    usePendingArtistic
-      ? buildDetailedArtisticProfileText(state, version)
-      : (version.artistic_profile || "")
-  );
+  setProfileSaveBaseline({ emotion: emotionProfile, artistic: artisticProfile });
+  setEmotionProfileValue(emotionProfile);
+  setArtisticProfileValue(artisticProfile);
   renderConfidence(version.emotion_confidence || "");
   renderArtisticConfidence(usePendingArtistic ? getDisplayedArtisticConfidence(state, version) : (version.artistic_confidence || ""));
   renderGaps(version.emotion_gaps || []);
   setCodeValue(version.code || "");
   renderActiveDiffViews();
+  updateProfileSaveButtonState();
   runPreview(version.code || "");
 }
 
@@ -6482,10 +6659,11 @@ function getVersionById(versionId) {
 
 function renderState(state) {
   const nextPhase = state && state.phase ? state.phase : "";
+  const previousPhase = lastRenderedPhase;
   if (
     hasHydratedInitialState &&
     nextPhase === "artistic_discovery" &&
-    lastRenderedPhase !== "artistic_discovery"
+    previousPhase !== "artistic_discovery"
   ) {
     artisticModalDismissed = false;
   }
@@ -6495,6 +6673,9 @@ function renderState(state) {
   sessionId = state.session_id;
   syncArtisticPanelFromState(state);
   syncArtisticOptionSnapshot(state);
+  if (nextPhase === "artistic_discovery" && previousPhase !== "artistic_discovery") {
+    setArtisticStudioPage(hasGeneratedArtisticOptions(state) ? 2 : 1, { render: false, resetScroll: false });
+  }
   $("phaseBadge").textContent = formatPhase(state.phase);
   $("versionPill").textContent = formatVersionPill(state.current_version);
   updateComposerPanels(state);
@@ -6715,6 +6896,7 @@ function clearArtisticStudioInputs() {
   selectedCustomArtisticIdea = "";
   artisticOptionSelectionPending = false;
   shouldRevealGeneratedArtOptions = false;
+  setArtisticStudioPage(1, { render: false });
   const note = $("artPreferenceNote");
   if (note) {
     note.value = "";
@@ -6735,11 +6917,13 @@ async function generateArtOptionsFromStudio() {
     await setPhase("artistic_discovery");
     if (!appState || appState.phase !== "artistic_discovery") return;
   }
+  setArtisticStudioPage(2);
   shouldRevealGeneratedArtOptions = true;
   await sendChat(buildArtPreferenceMessage());
 }
 
 async function refreshArtOptionsFromStudio() {
+  setArtisticStudioPage(2);
   shouldRevealGeneratedArtOptions = true;
   if (appState && appState.pending_artistic_decision && (appState.pending_artistic_decision.alternatives || []).length) {
     await sendChat(ART_DECISION_MORE);
@@ -6885,6 +7069,7 @@ function restoreManualDrafts(drafts, options = {}) {
   }
   renderActiveDiffViews();
   updateSendButtonState();
+  updateProfileSaveButtonState();
 }
 
 async function savePartialVersion(kind) {
@@ -7173,8 +7358,9 @@ function initializeApp() {
   bindById("clearArtPrefsBtn", "click", clearArtisticStudioInputs);
   bindById("closeArtisticModalBtn", "click", closeArtisticModal);
   bindById("openArtisticModalBtn", "click", openArtisticModal);
+  bindById("artisticStudioBackBtn", "click", () => setArtisticStudioPage(1));
+  bindById("artisticStudioNextBtn", "click", generateArtOptionsFromStudio);
   bindById("saveCustomArtIdeaBtn", "click", saveCustomArtisticIdea);
-  bindById("generateArtOptionsBtn", "click", generateArtOptionsFromStudio);
   bindById("refreshArtOptionsBtn", "click", refreshArtOptionsFromStudio);
   bindById("continueFromArtisticBtn", "click", async () => {
     if (hasUnsavedArtisticDescriptionChanges()) {
