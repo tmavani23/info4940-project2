@@ -870,10 +870,17 @@ body.artistic-modal-active .input-bar {
 }
 
 .artistic-modal-footer-copy {
+  margin: 0;
+  padding: 8px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(202, 83, 87, 0.45);
+  background: rgba(123, 31, 36, 0.14);
   font-size: 12px;
-  line-height: 1.5;
-  color: #b8c8ea;
-  max-width: 560px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #f0c6c8;
+  max-width: 360px;
+  flex: 0 1 auto;
 }
 
 .artistic-modal-footer-actions {
@@ -886,6 +893,15 @@ body.artistic-modal-active .input-bar {
 
 #continueFromArtisticBtn.continue-cta-glow {
   animation: continueCtaPulse 1.9s ease-in-out infinite;
+}
+
+#continueFromArtisticBtn:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #d8c6bb, #cdb9ad);
+  border-color: #cdb9ad;
+  color: #8e776a;
+  box-shadow: none;
 }
 
 .artistic-modal-loading {
@@ -2828,6 +2844,12 @@ body.artistic-modal-active .artistic-studio {
   background: linear-gradient(180deg, rgba(252, 248, 242, 0), rgba(245, 237, 226, 0.96) 28%);
 }
 
+.artistic-modal-footer-copy {
+  border-color: rgba(184, 73, 63, 0.34);
+  background: rgba(184, 73, 63, 0.14);
+  color: #9f3e34;
+}
+
 .artistic-modal-loading {
   background: rgba(244, 236, 226, 0.62);
   backdrop-filter: blur(1px);
@@ -2953,6 +2975,11 @@ body.artistic-modal-active .artistic-studio {
   .artistic-modal-footer-actions {
     width: 100%;
     justify-content: stretch;
+  }
+
+  .artistic-modal-footer-copy {
+    width: 100%;
+    max-width: none;
   }
 
   .artistic-modal-footer-actions button {
@@ -3132,13 +3159,13 @@ body.artistic-modal-active .artistic-studio {
           </div>
 
           <div class="artistic-modal-footer">
-            <p id="artisticModalFooterCopy" class="artistic-modal-footer-copy">
-              You can stay here to shape the visual direction, or close this modal and type instructions directly in chat.
-            </p>
             <div class="artistic-modal-footer-actions">
               <button id="artisticStudioBackBtn" class="ghost" type="button" hidden>Back</button>
               <button id="artisticStudioNextBtn" class="primary" type="button">Next</button>
               <button id="refreshArtOptionsBtn" class="ghost" type="button" hidden>More Options</button>
+              <p id="artisticModalFooterCopy" class="artistic-modal-footer-copy" hidden aria-live="polite">
+                There is unsaved edits above.
+              </p>
               <button id="continueFromArtisticBtn" class="primary" type="button" hidden>Continue to Coding</button>
             </div>
           </div>
@@ -3758,6 +3785,24 @@ function hasUnsavedArtisticDescriptionChanges(optionState = getVisibleArtisticOp
   }
   const options = Array.isArray(optionState && optionState.alternatives) ? optionState.alternatives : [];
   return options.some((option, index) => isArtisticDescriptionDirty(getArtisticOptionDraftText(optionState, index), option));
+}
+
+function hasBlockingArtisticDescriptionChanges(optionState = getVisibleArtisticOptionState(appState)) {
+  if ((selectedCustomArtisticIdea || "").trim()) {
+    return hasUnsavedCustomArtIdeaChanges();
+  }
+  const options = Array.isArray(optionState && optionState.alternatives) ? optionState.alternatives : [];
+  if (
+    selectedArtisticOptionIndex == null
+    || !options.length
+    || typeof options[selectedArtisticOptionIndex] !== "string"
+  ) {
+    return false;
+  }
+  return isArtisticDescriptionDirty(
+    getArtisticOptionDraftText(optionState, selectedArtisticOptionIndex),
+    getSavedArtisticOptionText(optionState, selectedArtisticOptionIndex)
+  );
 }
 
 function hasGeneratedArtisticOptions(state = appState) {
@@ -5014,15 +5059,15 @@ function updateContinueFromArtisticState(state = appState, optionState = getVisi
   if (!continueBtn || !footerCopy) return;
   const canContinue = !!(state && canAdvanceFromCurrentPhase(state));
   const hasSelectedDirection = !!getSelectedArtisticDirectionText(state);
-  const hasUnsavedChanges = hasUnsavedArtisticDescriptionChanges(optionState);
-  continueBtn.disabled = !canContinue || isSending || isRecording || hasUnsavedChanges;
+  const hasBlockingChanges = hasBlockingArtisticDescriptionChanges(optionState);
+  continueBtn.disabled = !canContinue || isSending || isRecording || hasBlockingChanges;
   continueBtn.classList.toggle(
     "continue-cta-glow",
-    hasSelectedDirection && canContinue && !hasUnsavedChanges && !isSending && !isRecording
+    hasSelectedDirection && canContinue && !hasBlockingChanges && !isSending && !isRecording
   );
-  footerCopy.hidden = !hasUnsavedChanges;
-  footerCopy.textContent = hasUnsavedChanges
-    ? "Save your description edits first so Coding uses the updated version."
+  footerCopy.hidden = !hasBlockingChanges;
+  footerCopy.textContent = hasBlockingChanges
+    ? "There is unsaved edits above."
     : "";
 }
 
@@ -7444,7 +7489,7 @@ function initializeApp() {
   bindById("saveCustomArtIdeaBtn", "click", saveCustomArtisticIdea);
   bindById("refreshArtOptionsBtn", "click", refreshArtOptionsFromStudio);
   bindById("continueFromArtisticBtn", "click", async () => {
-    if (hasUnsavedArtisticDescriptionChanges()) {
+    if (hasBlockingArtisticDescriptionChanges()) {
       alert("You have unsaved artistic description changes. Save them first so Coding uses the updated version.");
       return;
     }
