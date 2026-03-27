@@ -966,14 +966,8 @@ def _safe_summary_text(text: str, limit: int = 82) -> str:
 def _restore_transition_message(version_summary: str) -> str:
     detail = _safe_summary_text(version_summary or "", 96).strip()
     if detail:
-        return (
-            f"I restored this earlier version: \"{detail}\". "
-            "I may still misread parts of your intent, so please correct me anytime and we can adjust together."
-        )
-    return (
-        "I restored this earlier version. "
-        "I may still misread parts of your intent, so please correct me anytime and we can adjust together."
-    )
+        return f"I restored this earlier version: \"{detail}\"."
+    return "I restored this earlier version."
 
 
 def _infer_phase_from_version(version: "VersionNode") -> str:

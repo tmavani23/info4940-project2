@@ -2887,8 +2887,8 @@ body.artistic-modal-active .artistic-studio {
     </div>
     <div class="header-controls">
       <span id="phaseBadge" class="phase-badge">Phase: Emotional Discovery</span>
+      <button id="undoBtn" class="ghost" type="button" title="Undo — return to previous version">Undo</button>
       <button id="newSessionBtn" class="ghost">New Session</button>
-      <button id="resetBtn" class="ghost">Reset</button>
       <button id="historyBtn" class="history-trigger" type="button">View Version History</button>
       <div class="download-wrap">
         <button id="downloadBtn" class="ghost" type="button">Download / Save</button>
@@ -3218,8 +3218,6 @@ const TEMPLATE_MESSAGES = {
   ],
   code_generation: [
     "I want to refine/explore my emotions more.",
-    "Make the motion slower and more floating.",
-    "Use a softer color palette with more negative space.",
     "Can we try a different visual metaphor?",
   ],
 };
@@ -6953,6 +6951,26 @@ async function restoreSelectedVersion() {
   closeHistory();
 }
 
+async function undoToPreviousVersion() {
+  if (!sessionId) return;
+  const response = await fetch(`${API}/history?session_id=${encodeURIComponent(sessionId)}`);
+  const data = await response.json();
+  if (!response.ok || !data.nodes || !data.nodes.length) {
+    alert("No version history found.");
+    return;
+  }
+  const sorted = [...data.nodes].sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
+  const currentId = appState && appState.current_version && appState.current_version.id;
+  const currentIndex = currentId ? sorted.findIndex((v) => v.id === currentId) : sorted.length;
+  const prevIndex = currentIndex > 0 ? currentIndex - 1 : -1;
+  if (prevIndex < 0) {
+    alert("You are already at the earliest version.");
+    return;
+  }
+  selectedHistoryVersionId = sorted[prevIndex].id;
+  await restoreSelectedVersion();
+}
+
 async function openHistoryTutorial() {
   if (!isHistoryOpen) {
     await openHistory({ showTutorial: false });
@@ -7221,6 +7239,7 @@ function initializeApp() {
   bindById("closeHistoryBtn", "click", closeHistory);
   bindById("restoreBtn", "click", restoreSelectedVersion);
   bindById("newSessionBtn", "click", startNewSession);
+  bindById("undoBtn", "click", undoToPreviousVersion);
   bindById("resetBtn", "click", resetSession);
   bindById("helpBtn", "click", () => openTutorial("app"));
   bindById("tourNextBtn", "click", nextTourStep);
