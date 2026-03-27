@@ -2959,6 +2959,61 @@ body.artistic-modal-active .artistic-studio {
     width: 100%;
   }
 }
+
+.working-style-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.working-style-modal[hidden] { display: none; }
+.working-style-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+.working-style-card {
+  position: relative;
+  z-index: 1;
+  width: min(420px, calc(100vw - 32px));
+  background: rgba(22, 24, 30, 0.97);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.42);
+  padding: 24px;
+}
+.working-style-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.working-style-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.working-style-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+.working-style-desc {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 4px;
+  line-height: 1.5;
+}
+.working-style-done {
+  margin-top: 16px;
+  width: 100%;
+}
 </style>
 </head>
 <body>
@@ -3705,12 +3760,6 @@ function hasUnsavedArtisticDescriptionChanges(optionState = getVisibleArtisticOp
   return options.some((option, index) => isArtisticDescriptionDirty(getArtisticOptionDraftText(optionState, index), option));
 }
 
-function hasGeneratedArtisticOptions(state = appState) {
-  const optionState = getVisibleArtisticOptionState(state);
-  const options = Array.isArray(optionState && optionState.alternatives) ? optionState.alternatives : [];
-  return options.some((option) => !!normalizeComparableText(option));
-}
-
 function setArtisticStudioPage(nextPage, options = {}) {
   const { render = true, resetScroll = true } = options;
   artisticStudioPage = nextPage === 2 ? 2 : 1;
@@ -3774,6 +3823,10 @@ function syncArtisticOptionSnapshot(state) {
   }
 
   if (!inArtisticPhase) {
+    artisticOptionSnapshot = null;
+    artisticOptionEditorDrafts = [];
+    selectedArtisticOptionIndex = null;
+    selectedCustomArtisticIdea = "";
     artisticOptionSelectionPending = false;
     return;
   }
@@ -4816,10 +4869,11 @@ function renderArtOptionCards(optionState) {
       artisticOptionEditorDrafts = artisticOptionSnapshot ? artisticOptionSnapshot.alternatives.slice() : [];
       selectedCustomArtisticIdea = "";
       selectedArtisticOptionIndex = index;
-      artisticOptionSelectionPending = false;
+      artisticOptionSelectionPending = true;
       if (appState) {
         renderArtisticStudio(appState);
       }
+      sendTemplateMessage(`${ART_DECISION_OPTION_PREFIX}${index + 1}`);
     });
 
     const saveBtn = document.createElement("button");
@@ -4879,6 +4933,7 @@ function renderArtOptionCards(optionState) {
 
     body.appendChild(metaRow);
     body.appendChild(tags);
+
     body.appendChild(editor);
     body.appendChild(actions);
     card.appendChild(body);
@@ -4889,7 +4944,6 @@ function renderArtOptionCards(optionState) {
 
 function openArtisticModal() {
   artisticModalDismissed = false;
-  setArtisticStudioPage(hasGeneratedArtisticOptions(appState) ? 2 : 1, { render: false });
   if (appState) {
     renderArtisticStudio(appState);
   }
@@ -5660,6 +5714,23 @@ function setCollabStyle(style) {
   const confirmBtn = document.getElementById("collabConfirmBtn");
   if (iterateBtn) iterateBtn.classList.toggle("active", style === "iterate");
   if (confirmBtn) confirmBtn.classList.toggle("active", style === "confirm");
+}
+
+function openWorkingStyleModal() {
+  const modal = $("workingStyleModal");
+  const body = $("workingStyleModalBody");
+  if (!modal || !body) return;
+  body.innerHTML = TOUR_COLLAB_HTML;
+  setCollabStyle(getCollabStyle());
+  modal.hidden = false;
+}
+
+function closeWorkingStyleModal() {
+  const modal = $("workingStyleModal");
+  if (!modal) return;
+  modal.hidden = true;
+  const body = $("workingStyleModalBody");
+  if (body) body.innerHTML = "";
 }
 
 function hasSeenArtisticEditTutorial() {
@@ -6659,13 +6730,15 @@ function getVersionById(versionId) {
 
 function renderState(state) {
   const nextPhase = state && state.phase ? state.phase : "";
-  const previousPhase = lastRenderedPhase;
   if (
     hasHydratedInitialState &&
     nextPhase === "artistic_discovery" &&
-    previousPhase !== "artistic_discovery"
+    lastRenderedPhase !== "artistic_discovery"
   ) {
     artisticModalDismissed = false;
+  }
+  if (nextPhase !== "artistic_discovery" || lastRenderedPhase !== "artistic_discovery") {
+    setArtisticStudioPage(1, { render: false, resetScroll: false });
   }
   hasHydratedInitialState = true;
   lastRenderedPhase = nextPhase;
@@ -6673,9 +6746,6 @@ function renderState(state) {
   sessionId = state.session_id;
   syncArtisticPanelFromState(state);
   syncArtisticOptionSnapshot(state);
-  if (nextPhase === "artistic_discovery" && previousPhase !== "artistic_discovery") {
-    setArtisticStudioPage(hasGeneratedArtisticOptions(state) ? 2 : 1, { render: false, resetScroll: false });
-  }
   $("phaseBadge").textContent = formatPhase(state.phase);
   $("versionPill").textContent = formatVersionPill(state.current_version);
   updateComposerPanels(state);
