@@ -3390,11 +3390,11 @@ const TOUR_COLLAB_HTML = `
     <div class="tour-collab-options">
       <button class="tour-collab-btn" id="collabIterateBtn" onclick="setCollabStyle('iterate')">
         <strong>Iterate as we go</strong>
-        <span>The AI makes changes and shows results right away</span>
+        <span>Share your emotion and go straight to code. You can always revisit the artistic direction later</span>
       </button>
       <button class="tour-collab-btn" id="collabConfirmBtn" onclick="setCollabStyle('confirm')">
         <strong>Confirm, then implement</strong>
-        <span>The AI proposes a plan and waits for your approval before making changes</span>
+        <span>Work through all three stages - emotion, artistic direction, then code — before implementing</span>
       </button>
     </div>
   </div>
@@ -3574,9 +3574,9 @@ const TOUR_STEPS = [
   },
   {
     target: null,
-    title: "How Would You Like to Collaborate?",
+    title: "How Would You Like to Work?",
     body: [
-      "Choose how you'd like the AI to work with you throughout this session. You can change this any time by reopening the tutorial.",
+      "Choose your working style. You can change this at any time using the Working Style button in the header.",
     ],
     html: TOUR_COLLAB_HTML,
     collabStep: true,

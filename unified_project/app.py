@@ -350,14 +350,18 @@ def build_system_prompt(phase: str, state_summary: str, collab_style: str = "ite
     )
     if collab_style == "confirm":
         collab_note = (
-            "COLLABORATION STYLE: This student prefers to confirm before implementing. "
-            "Always propose your plan or changes first and wait for their explicit approval before "
-            "making any edits to the sketch, emotion profile, or artistic profile."
+            "COLLABORATION STYLE: This student wants to work through all three stages — emotion, artistic "
+            "direction, then code — in order. Spend time fully exploring and refining the emotional profile, "
+            "then develop a complete artistic direction, before generating any code. "
+            "Do not generate or update code until the student explicitly asks to move into implementation. "
+            "If the student asks to skip ahead or switch modes at any point, respect that immediately."
         )
     else:
         collab_note = (
-            "COLLABORATION STYLE: This student prefers to iterate as you go. "
-            "Make changes and show results immediately without asking for approval first."
+            "COLLABORATION STYLE: This student wants to go from emotion straight to code, skipping the "
+            "artistic stage for now. As soon as there is enough emotional context to make a meaningful sketch, "
+            "generate code and show results — do not wait for a fully developed artistic direction. "
+            "The student can always revisit and tweak the artistic direction later."
         )
     return f"{BASE_PROMPT}\n\n{collab_note}\n\nCurrent state:\n{state_summary}\n\n{phase_prompt}"
 
