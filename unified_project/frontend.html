@@ -1322,7 +1322,7 @@ button.ghost {
           <button id="downloadGifBtn" class="download-option" type="button">Download Preview GIF (.gif)</button>
         </div>
       </div>
-      <button id="helpBtn" class="ghost" title="Replay tutorial">?</button>
+      <button id="helpBtn" class="ghost" type="button">Tutorial</button>
     </div>
   </header>
 
@@ -2475,6 +2475,14 @@ function renderTourStep() {
   });
 }
 
+function getAppTourStartStep() {
+  if (!appState) return -1;
+  if (appState.phase === "code_generation") return 8;
+  const hasMessages = Array.isArray(appState.messages) && appState.messages.length > 0;
+  if (hasMessages) return 2;
+  return -1;
+}
+
 function openTutorial(kind = "app") {
   activeTourKind = kind;
   if (kind === "app") {
@@ -2484,7 +2492,7 @@ function openTutorial(kind = "app") {
   closeDownloadMenu();
   clearTourTimers();
   const config = getTourConfig(kind);
-  tourStepIndex = config.introCopy ? -1 : 0;
+  tourStepIndex = kind === "app" ? getAppTourStartStep() : (config.introCopy ? -1 : 0);
   const overlay = $("tourOverlay");
   if (!overlay) return;
   overlay.hidden = false;
