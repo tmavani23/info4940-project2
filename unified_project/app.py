@@ -17,6 +17,7 @@ import base64
 import json
 import os
 import re
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -1311,6 +1312,7 @@ class SessionLogger:
             "turns": [],
             "survey": None,
         }
+        self._lock = threading.Lock()
         self._write()
 
     def log_turn(
@@ -1319,6 +1321,7 @@ class SessionLogger:
         user_message: str,
         phase: str,
         ai_response: str,
+        ai_context: str = "",
         has_image: bool = False,
         has_audio: bool = False,
     ) -> None:
@@ -1332,8 +1335,29 @@ class SessionLogger:
             "ai_response": ai_response,
             "evaluation": None,
         }
-        self._data["turns"].append(turn)
-        self._write()
+        with self._lock:
+            self._data["turns"].append(turn)
+            turn_index = len(self._data["turns"]) - 1
+            self._write()
+        threading.Thread(
+            target=self._evaluate_and_update,
+            args=(turn_index, user_message, phase, ai_context),
+            daemon=True,
+        ).start()
+
+    def _evaluate_and_update(
+        self, turn_index: int, user_message: str, phase: str, ai_context: str
+    ) -> None:
+        evaluation = _evaluate_user_response(
+            user_message=user_message,
+            phase=phase,
+            ai_context=ai_context,
+        )
+        if evaluation is None:
+            return
+        with self._lock:
+            self._data["turns"][turn_index]["evaluation"] = evaluation
+            self._write()
 
     def _write(self) -> None:
         try:
@@ -1965,11 +1989,65 @@ LLM_ENABLED = bool(GOOGLE_API_KEY)
 phase_1_llm: Optional[ChatGoogleGenerativeAI] = None
 phase_2_llm: Optional[ChatGoogleGenerativeAI] = None
 intent_llm: Optional[ChatGoogleGenerativeAI] = None
+eval_llm: Optional[ChatGoogleGenerativeAI] = None
 
 if LLM_ENABLED:
     phase_1_llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0.8)
     phase_2_llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0.45)
     intent_llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0)
+    eval_llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0)
+
+
+def _evaluate_user_response(
+    *,
+    user_message: str,
+    phase: str,
+    ai_context: str,
+) -> Optional[dict]:
+    """Score a user message 0-5 against the engagement rubric. Returns None on failure."""
+    if not LLM_ENABLED or eval_llm is None or not user_message.strip():
+        return None
+    prompt = f"""You are scoring a student's message in a creative coding chatbot.
+
+Phase: {phase}
+AI's previous message the student is responding to:
+\"\"\"
+{ai_context or "(start of conversation)"}
+\"\"\"
+
+Student's message:
+\"\"\"
+{user_message}
+\"\"\"
+
+Score 0–5 using this rubric:
+5 – Exceptionally detailed, thoughtful, builds on AI feedback with vivid language and original ideas
+4 – Specific and detailed, builds on suggestions with well-articulated reasoning
+3 – Clear with reasonable detail, directly responds to AI, shows some reasoning
+2 – Basic response, somewhat vague, minimal elaboration
+1 – Generic/vague, very short, no meaningful reasoning
+0 – Single word / off-topic / refuses to engage
+
+Weighted criteria:
+- Specificity & Detail (25%): concrete vs. generic language
+- Thoughtfulness & Reasoning (25%): strategic thinking, cause-effect
+- Responsiveness to AI (20%): directly addresses what AI asked
+- Clarity & Descriptiveness (15%): vivid, precise language
+- Engagement & Collaboration (15%): builds on ideas, asks follow-ups
+
+Return ONLY valid JSON — no markdown, no extra text:
+{{"score": <integer 0-5>, "explanation": "<1-2 sentence explanation>"}}"""
+    try:
+        response = eval_llm.invoke([HumanMessage(content=prompt)])
+        text = response.content if isinstance(response.content, str) else ""
+        obj = _extract_json_object(text) or {}
+        score = obj.get("score")
+        explanation = obj.get("explanation", "")
+        if isinstance(score, (int, float)) and 0 <= int(score) <= 5 and explanation:
+            return {"score": int(score), "explanation": str(explanation)}
+        return None
+    except Exception:
+        return None
 
 
 def _invoke_llm(
@@ -2415,10 +2493,16 @@ def api_chat():
     def _chat_response(reply_payload: dict, raw_response_text: str, created_version: Optional[VersionNode]):
         logger = session_loggers.get(session.session_id)
         if logger:
+            prev_ai_message = ""
+            for entry in reversed(session.messages[:-1]):
+                if entry.role == "assistant" and entry.type == "text":
+                    prev_ai_message = entry.content
+                    break
             logger.log_turn(
                 user_message=message or "",
                 phase=session.phase,
                 ai_response=reply_payload.get("message", ""),
+                ai_context=prev_ai_message,
                 has_image=bool(image),
                 has_audio=bool(audio),
             )
