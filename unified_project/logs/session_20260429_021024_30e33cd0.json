@@ -1,0 +1,27 @@
+{
+  "session_id": "30e33cd0-624e-4ad8-9b03-fe3ee9074108",
+  "started_at": "2026-04-29T02:10:24.426561+00:00",
+  "turns": [
+    {
+      "turn_id": 1,
+      "timestamp": "2026-04-29T02:11:12.115481+00:00",
+      "phase": "emotional_discovery",
+      "user_message": "today i was really excited because the weather was nice and i had grapes in my fridge so i went to class and ate my grapes.",
+      "has_image": false,
+      "has_audio": false,
+      "ai_response": "That sounds like a lovely, simple moment of joy! \n\nWe're building an understanding of your emotion, and you can always see the current summary in the 'Emotion Profile' pane. \n\nTo help me understand this feeling even more deeply: **What does this specific 'excitement' feel like in your body or mind?** Is it a calm joy, a bubbly energy, a bright burst, or something else?\n\nRemember, my understanding might be imperfect, and you can correct me at any time. When you feel the emotion is captured well enough, you can click 'Implement in Code' to move directly into coding!",
+      "evaluation": null
+    },
+    {
+      "turn_id": 2,
+      "timestamp": "2026-04-29T02:23:20.519216+00:00",
+      "phase": "emotional_discovery",
+      "user_message": "it was a calm joy that sparked when i remembered i had grapes in teh fridge",
+      "has_image": false,
+      "has_audio": false,
+      "ai_response": "Ah, a calm joy that sparked! That really helps me understand the feeling. It sounds like a gentle, pleasant surprise that brightens the day.\n\nYou can always review our current understanding in the 'Emotion Profile' pane. Remember, my interpretation might still be imperfect, and you can correct me at any time.\n\n**If you feel this emotion is captured well enough, you can click 'Implement in Code' to start bringing it to life in a sketch!**",
+      "evaluation": null
+    }
+  ],
+  "survey": null
+}

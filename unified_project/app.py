@@ -20,6 +20,7 @@ import re
 import time
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -32,6 +33,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 
 BASE_DIR = Path(__file__).resolve().parent
+LOGS_DIR = BASE_DIR / "logs"
 load_dotenv(BASE_DIR / ".env")
 
 MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
@@ -1292,6 +1294,59 @@ sessions: dict[str, SessionState] = {}
 latest_session_id: Optional[str] = None
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SESSION LOGGER
+# ─────────────────────────────────────────────────────────────────────────────
+
+class SessionLogger:
+    def __init__(self, session_id: str) -> None:
+        LOGS_DIR.mkdir(exist_ok=True)
+        self.session_id = session_id
+        started_at = datetime.now(timezone.utc)
+        timestamp = started_at.strftime("%Y%m%d_%H%M%S")
+        self.path = LOGS_DIR / f"session_{timestamp}_{session_id[:8]}.json"
+        self._data: dict[str, Any] = {
+            "session_id": session_id,
+            "started_at": started_at.isoformat(),
+            "turns": [],
+            "survey": None,
+        }
+        self._write()
+
+    def log_turn(
+        self,
+        *,
+        user_message: str,
+        phase: str,
+        ai_response: str,
+        has_image: bool = False,
+        has_audio: bool = False,
+    ) -> None:
+        turn = {
+            "turn_id": len(self._data["turns"]) + 1,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "phase": phase,
+            "user_message": user_message,
+            "has_image": has_image,
+            "has_audio": has_audio,
+            "ai_response": ai_response,
+            "evaluation": None,
+        }
+        self._data["turns"].append(turn)
+        self._write()
+
+    def _write(self) -> None:
+        try:
+            tmp = self.path.with_suffix(".tmp")
+            tmp.write_text(json.dumps(self._data, indent=2), encoding="utf-8")
+            tmp.replace(self.path)
+        except Exception:
+            pass
+
+
+session_loggers: dict[str, SessionLogger] = {}
+
+
 # ─── Artistic quality reference seed ──────────────────────────────────────────
 REFERENCE_IMAGES_DIR = BASE_DIR / "reference_images"
 
@@ -1348,6 +1403,7 @@ def get_or_create_session(session_id: Optional[str] = None) -> SessionState:
         session = SessionState(session_id=session_id)
         _inject_seed_reference(session)
         sessions[session_id] = session
+        session_loggers[session_id] = SessionLogger(session_id)
         latest_session_id = session_id
         return session
     if latest_session_id and latest_session_id in sessions:
@@ -1356,6 +1412,7 @@ def get_or_create_session(session_id: Optional[str] = None) -> SessionState:
     session = SessionState(session_id=sid)
     _inject_seed_reference(session)
     sessions[sid] = session
+    session_loggers[sid] = SessionLogger(sid)
     latest_session_id = sid
     return session
 
@@ -2356,6 +2413,15 @@ def api_chat():
         _append_chat(session, "user", "audio", audio)
 
     def _chat_response(reply_payload: dict, raw_response_text: str, created_version: Optional[VersionNode]):
+        logger = session_loggers.get(session.session_id)
+        if logger:
+            logger.log_turn(
+                user_message=message or "",
+                phase=session.phase,
+                ai_response=reply_payload.get("message", ""),
+                has_image=bool(image),
+                has_audio=bool(audio),
+            )
         return jsonify(
             {
                 "session_id": session.session_id,
