@@ -1,0 +1,17 @@
+{
+  "session_id": "f56d275a-41c1-403e-86be-8e44bd46e2ef",
+  "started_at": "2026-04-29T02:23:31.219214+00:00",
+  "turns": [
+    {
+      "turn_id": 1,
+      "timestamp": "2026-04-29T02:23:39.738538+00:00",
+      "phase": "emotional_discovery",
+      "user_message": "beeo",
+      "has_image": false,
+      "has_audio": false,
+      "ai_response": "It looks like we're just getting started with exploring your emotions!\n\nTo help me understand, could you **share a personal moment or experience** where you felt this emotion most strongly? This helps me ground the feeling in something real.\n\nRemember, my understanding might be imperfect, so please correct me at any time. When you feel the emotion is well enough captured, you can click **'Implement in Code'** to move directly to coding.",
+      "evaluation": null
+    }
+  ],
+  "survey": null
+}

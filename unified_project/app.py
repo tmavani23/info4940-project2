@@ -17,9 +17,11 @@ import base64
 import json
 import os
 import re
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -32,6 +34,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 
 BASE_DIR = Path(__file__).resolve().parent
+LOGS_DIR = BASE_DIR / "logs"
 load_dotenv(BASE_DIR / ".env")
 
 MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
@@ -1292,6 +1295,82 @@ sessions: dict[str, SessionState] = {}
 latest_session_id: Optional[str] = None
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SESSION LOGGER
+# ─────────────────────────────────────────────────────────────────────────────
+
+class SessionLogger:
+    def __init__(self, session_id: str) -> None:
+        LOGS_DIR.mkdir(exist_ok=True)
+        self.session_id = session_id
+        started_at = datetime.now(timezone.utc)
+        timestamp = started_at.strftime("%Y%m%d_%H%M%S")
+        self.path = LOGS_DIR / f"session_{timestamp}_{session_id[:8]}.json"
+        self._data: dict[str, Any] = {
+            "session_id": session_id,
+            "started_at": started_at.isoformat(),
+            "turns": [],
+            "survey": None,
+        }
+        self._lock = threading.Lock()
+        self._write()
+
+    def log_turn(
+        self,
+        *,
+        user_message: str,
+        phase: str,
+        ai_response: str,
+        ai_context: str = "",
+        has_image: bool = False,
+        has_audio: bool = False,
+    ) -> None:
+        turn = {
+            "turn_id": len(self._data["turns"]) + 1,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "phase": phase,
+            "user_message": user_message,
+            "has_image": has_image,
+            "has_audio": has_audio,
+            "ai_response": ai_response,
+            "evaluation": None,
+        }
+        with self._lock:
+            self._data["turns"].append(turn)
+            turn_index = len(self._data["turns"]) - 1
+            self._write()
+        threading.Thread(
+            target=self._evaluate_and_update,
+            args=(turn_index, user_message, phase, ai_context),
+            daemon=True,
+        ).start()
+
+    def _evaluate_and_update(
+        self, turn_index: int, user_message: str, phase: str, ai_context: str
+    ) -> None:
+        evaluation = _evaluate_user_response(
+            user_message=user_message,
+            phase=phase,
+            ai_context=ai_context,
+        )
+        if evaluation is None:
+            return
+        with self._lock:
+            self._data["turns"][turn_index]["evaluation"] = evaluation
+            self._write()
+
+    def _write(self) -> None:
+        try:
+            tmp = self.path.with_suffix(".tmp")
+            tmp.write_text(json.dumps(self._data, indent=2), encoding="utf-8")
+            tmp.replace(self.path)
+        except Exception:
+            pass
+
+
+session_loggers: dict[str, SessionLogger] = {}
+
+
 # ─── Artistic quality reference seed ──────────────────────────────────────────
 REFERENCE_IMAGES_DIR = BASE_DIR / "reference_images"
 
@@ -1348,6 +1427,7 @@ def get_or_create_session(session_id: Optional[str] = None) -> SessionState:
         session = SessionState(session_id=session_id)
         _inject_seed_reference(session)
         sessions[session_id] = session
+        session_loggers[session_id] = SessionLogger(session_id)
         latest_session_id = session_id
         return session
     if latest_session_id and latest_session_id in sessions:
@@ -1356,6 +1436,7 @@ def get_or_create_session(session_id: Optional[str] = None) -> SessionState:
     session = SessionState(session_id=sid)
     _inject_seed_reference(session)
     sessions[sid] = session
+    session_loggers[sid] = SessionLogger(sid)
     latest_session_id = sid
     return session
 
@@ -1908,11 +1989,65 @@ LLM_ENABLED = bool(GOOGLE_API_KEY)
 phase_1_llm: Optional[ChatGoogleGenerativeAI] = None
 phase_2_llm: Optional[ChatGoogleGenerativeAI] = None
 intent_llm: Optional[ChatGoogleGenerativeAI] = None
+eval_llm: Optional[ChatGoogleGenerativeAI] = None
 
 if LLM_ENABLED:
     phase_1_llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0.8)
     phase_2_llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0.45)
     intent_llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0)
+    eval_llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0)
+
+
+def _evaluate_user_response(
+    *,
+    user_message: str,
+    phase: str,
+    ai_context: str,
+) -> Optional[dict]:
+    """Score a user message 0-5 against the engagement rubric. Returns None on failure."""
+    if not LLM_ENABLED or eval_llm is None or not user_message.strip():
+        return None
+    prompt = f"""You are scoring a student's message in a creative coding chatbot.
+
+Phase: {phase}
+AI's previous message the student is responding to:
+\"\"\"
+{ai_context or "(start of conversation)"}
+\"\"\"
+
+Student's message:
+\"\"\"
+{user_message}
+\"\"\"
+
+Score 0–5 using this rubric:
+5 – Exceptionally detailed, thoughtful, builds on AI feedback with vivid language and original ideas
+4 – Specific and detailed, builds on suggestions with well-articulated reasoning
+3 – Clear with reasonable detail, directly responds to AI, shows some reasoning
+2 – Basic response, somewhat vague, minimal elaboration
+1 – Generic/vague, very short, no meaningful reasoning
+0 – Single word / off-topic / refuses to engage
+
+Weighted criteria:
+- Specificity & Detail (25%): concrete vs. generic language
+- Thoughtfulness & Reasoning (25%): strategic thinking, cause-effect
+- Responsiveness to AI (20%): directly addresses what AI asked
+- Clarity & Descriptiveness (15%): vivid, precise language
+- Engagement & Collaboration (15%): builds on ideas, asks follow-ups
+
+Return ONLY valid JSON — no markdown, no extra text:
+{{"score": <integer 0-5>, "explanation": "<1-2 sentence explanation>"}}"""
+    try:
+        response = eval_llm.invoke([HumanMessage(content=prompt)])
+        text = response.content if isinstance(response.content, str) else ""
+        obj = _extract_json_object(text) or {}
+        score = obj.get("score")
+        explanation = obj.get("explanation", "")
+        if isinstance(score, (int, float)) and 0 <= int(score) <= 5 and explanation:
+            return {"score": int(score), "explanation": str(explanation)}
+        return None
+    except Exception:
+        return None
 
 
 def _invoke_llm(
@@ -2356,6 +2491,21 @@ def api_chat():
         _append_chat(session, "user", "audio", audio)
 
     def _chat_response(reply_payload: dict, raw_response_text: str, created_version: Optional[VersionNode]):
+        logger = session_loggers.get(session.session_id)
+        if logger:
+            prev_ai_message = ""
+            for entry in reversed(session.messages[:-1]):
+                if entry.role == "assistant" and entry.type == "text":
+                    prev_ai_message = entry.content
+                    break
+            logger.log_turn(
+                user_message=message or "",
+                phase=session.phase,
+                ai_response=reply_payload.get("message", ""),
+                ai_context=prev_ai_message,
+                has_image=bool(image),
+                has_audio=bool(audio),
+            )
         return jsonify(
             {
                 "session_id": session.session_id,
