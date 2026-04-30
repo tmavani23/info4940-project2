@@ -30,7 +30,6 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -918,7 +917,7 @@ def _classify_turn_actions_with_llm(
         "confidence": "low",
     }
 
-    if not message or not LLM_ENABLED or intent_llm is None:
+    if not message or not _ensure_llms_initialized(wait_seconds=0.2) or intent_llm is None:
         return defaults
 
     last_assistant = _get_last_assistant_text(session) or "(none)"
@@ -1097,7 +1096,7 @@ def _salvage_non_json_llm_reply(
 
 def _transcribe_audio(audio_b64: str, audio_mime: str = "audio/webm") -> str:
     """Send audio to the LLM and return a plain-text transcription."""
-    if not LLM_ENABLED or intent_llm is None:
+    if not _ensure_llms_initialized(wait_seconds=0.2) or intent_llm is None:
         return ""
     try:
         audio_url = audio_b64 if audio_b64.startswith("data:") else f"data:{audio_mime};base64,{audio_b64}"
@@ -1986,16 +1985,53 @@ def create_version(
 
 
 LLM_ENABLED = bool(GOOGLE_API_KEY)
-phase_1_llm: Optional[ChatGoogleGenerativeAI] = None
-phase_2_llm: Optional[ChatGoogleGenerativeAI] = None
-intent_llm: Optional[ChatGoogleGenerativeAI] = None
-eval_llm: Optional[ChatGoogleGenerativeAI] = None
+phase_1_llm: Optional[Any] = None
+phase_2_llm: Optional[Any] = None
+intent_llm: Optional[Any] = None
+eval_llm: Optional[Any] = None
+_llm_init_lock = threading.Lock()
+_llm_init_thread: Optional[threading.Thread] = None
+_llm_init_error = ""
 
-if LLM_ENABLED:
-    phase_1_llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0.8)
-    phase_2_llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0.45)
-    intent_llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0)
-    eval_llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0)
+
+def _initialize_llm_clients() -> None:
+    global phase_1_llm, phase_2_llm, intent_llm, eval_llm, _llm_init_error
+    try:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        phase_1 = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0.8)
+        phase_2 = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0.45)
+        intent = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0)
+        evaluator = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0)
+        with _llm_init_lock:
+            phase_1_llm = phase_1
+            phase_2_llm = phase_2
+            intent_llm = intent
+            eval_llm = evaluator
+            _llm_init_error = ""
+    except Exception as exc:
+        with _llm_init_lock:
+            _llm_init_error = str(exc)
+
+
+def _ensure_llms_initialized(wait_seconds: float = 0.0) -> bool:
+    global _llm_init_thread
+    if not LLM_ENABLED:
+        return False
+
+    with _llm_init_lock:
+        if phase_1_llm is not None and phase_2_llm is not None and intent_llm is not None and eval_llm is not None:
+            return True
+        if _llm_init_thread is None or not _llm_init_thread.is_alive():
+            _llm_init_thread = threading.Thread(target=_initialize_llm_clients, daemon=True)
+            _llm_init_thread.start()
+        thread = _llm_init_thread
+
+    if wait_seconds > 0:
+        thread.join(wait_seconds)
+
+    with _llm_init_lock:
+        return phase_1_llm is not None and phase_2_llm is not None and intent_llm is not None and eval_llm is not None
 
 
 def _evaluate_user_response(
@@ -2005,7 +2041,7 @@ def _evaluate_user_response(
     ai_context: str,
 ) -> Optional[dict]:
     """Score a user message 0-5 against the engagement rubric. Returns None on failure."""
-    if not LLM_ENABLED or eval_llm is None or not user_message.strip():
+    if not _ensure_llms_initialized(wait_seconds=0.2) or eval_llm is None or not user_message.strip():
         return None
     prompt = f"""You are scoring a student's message in a creative coding chatbot.
 
@@ -2068,7 +2104,7 @@ def _invoke_llm(
         audio_mime=audio_mime,
     )
 
-    if not LLM_ENABLED or phase_1_llm is None or phase_2_llm is None:
+    if not _ensure_llms_initialized(wait_seconds=0.2) or phase_1_llm is None or phase_2_llm is None:
         parsed = _default_mock_reply(session.phase, session.current_version)
         fallback_json = json.dumps(parsed)
         return parsed, fallback_json, human_msg, AIMessage(content=fallback_json)
@@ -2144,7 +2180,7 @@ Rules:
 """.strip()
     human_msg = HumanMessage(content=prompt_text)
 
-    if not LLM_ENABLED or phase_2_llm is None:
+    if not _ensure_llms_initialized(wait_seconds=0.2) or phase_2_llm is None:
         fallback = _sanitize_artistic_options_payload(
             {},
             session.current_version,
@@ -2203,7 +2239,7 @@ def _repair_incomplete_p5_code(
     emotion_profile: str,
     artistic_profile: str,
 ) -> Optional[str]:
-    if not LLM_ENABLED or phase_2_llm is None:
+    if not _ensure_llms_initialized(wait_seconds=0.2) or phase_2_llm is None:
         return None
 
     repair_prompt = f"""
@@ -3241,6 +3277,7 @@ def api_debug():
 
 
 if __name__ == "__main__":
+    _ensure_llms_initialized(wait_seconds=0)
     print("\nUnified p5.js Emotional Chatbot API")
     print("=" * 48)
     print("GET  /                 -> Frontend")
@@ -3252,4 +3289,4 @@ if __name__ == "__main__":
     print("POST /api/new-session  -> New session")
     print("POST /api/reset        -> Reset session")
     print("=" * 48)
-    app.run(host="0.0.0.0", port=5001, debug=True)
+    app.run(host="127.0.0.1", port=5001, debug=False, use_reloader=False)
