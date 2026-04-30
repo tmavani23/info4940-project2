@@ -1,0 +1,48 @@
+{
+  "session_id": "23d9f49a-dbb4-4644-bbf7-4b847932b398",
+  "started_at": "2026-04-30T23:48:43.722391+00:00",
+  "turns": [
+    {
+      "turn_id": 1,
+      "timestamp": "2026-04-30T23:50:04.106434+00:00",
+      "phase": "emotional_discovery",
+      "user_message": "im happy becuase it is sunny outside",
+      "has_image": false,
+      "has_audio": false,
+      "ai_response": "That's a lovely feeling! The simple joy of a sunny day can be really uplifting.\n\nTake a look at the **Emotion Profile** pane to see my current understanding of your happiness. Please know that my interpretation might be imperfect, and you can correct me at any time!\n\nTo help me understand this feeling even better, could you tell me a little more about what that happiness feels like? Is it a calm, warm contentment, or more of an energetic, bright joy?\n\nWhen you feel the emotion is well-captured, remember to click **'Implement in Code'** to move directly to creating your sketch!",
+      "evaluation": {
+        "score": 3,
+        "explanation": "The student clearly expresses an emotion and provides a direct, reasonable cause, effectively responding to the implicit prompt of the emotional discovery phase. However, the response lacks deeper detail or elaboration."
+      }
+    },
+    {
+      "turn_id": 2,
+      "timestamp": "2026-04-30T23:51:23.832127+00:00",
+      "phase": "code_generation",
+      "user_message": "Create the p5.js sketch now using the latest artistic direction.",
+      "has_image": false,
+      "has_audio": false,
+      "ai_response": "Here's a first sketch to capture the **uplifting happiness of a sunny day**!\n\nI've created:\n\n*   A **bright, warm sun** at the top of the canvas.\n*   **Glowing particles** that gently rise from the sun, fading as they go, to represent that uplifting feeling.\n*   **Soft, warm colors** to evoke the sunny atmosphere.\n\nTake a look and let me know how it feels. We can tweak any part of it \u2013 the colors, the speed, the number of particles, or even try a completely different approach \u2013 to better match your emotion!",
+      "evaluation": {
+        "score": 1,
+        "explanation": "The student's message is very short and generic, completely bypassing the AI's request for more detail about the emotion and offering no reasoning for moving directly to code generation."
+      }
+    }
+  ],
+  "survey": {
+    "type": "demographic_fairness",
+    "submitted_at": "2026-04-30T23:49:29.614138+00:00",
+    "age_range": "18-24",
+    "gender": "female",
+    "ai_experience": 6,
+    "skipped": {
+      "age_range": false,
+      "gender": false,
+      "ai_experience": false
+    },
+    "privacy_notes": [
+      "Data not linked to personally identifiable information",
+      "Used only for internal tracking and quality assurance"
+    ]
+  }
+}

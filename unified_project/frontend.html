@@ -2269,6 +2269,61 @@ body.artistic-modal-active .input-bar {
   line-height: 1;
 }
 
+.tour-demographic-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.tour-demographic-field {
+  display: grid;
+  gap: 6px;
+}
+
+.tour-demographic-field label {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tour-demographic-field select,
+.tour-demographic-field input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid rgba(216, 205, 189, 0.95);
+  border-radius: 8px;
+  background: rgba(252, 248, 242, 0.94);
+  color: var(--text);
+  padding: 8px 10px;
+  font: inherit;
+}
+
+.tour-demographic-field select:focus,
+.tour-demographic-field input:focus {
+  outline: 2px solid rgba(217, 119, 87, 0.42);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+.tour-demographic-hint {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.tour-demographic-note {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 10px 12px 10px 28px;
+  color: #6f655b;
+  font-size: 12px;
+  line-height: 1.45;
+  background: rgba(217, 119, 87, 0.08);
+  border: 1px solid rgba(217, 119, 87, 0.18);
+  border-radius: 10px;
+}
+
 .tour-examples {
   margin-top: 12px;
 }
@@ -3083,6 +3138,7 @@ body.artistic-modal-active .artistic-studio {
         </div>
       </div>
       <button id="workingStyleBtn" class="ghost" type="button">Working Style</button>
+      <button id="demographicSurveyBtn" class="ghost" type="button">Demographic Survey</button>
       <button id="helpBtn" class="ghost" type="button">Tutorial</button>
     </div>
   </header>
@@ -3097,6 +3153,19 @@ body.artistic-modal-active .artistic-studio {
       <p class="working-style-desc">Choose how you'd like the AI to collaborate with you. You can change this at any time.</p>
       <div id="workingStyleModalBody"></div>
       <button class="primary working-style-done" type="button" onclick="closeWorkingStyleModal()">Done</button>
+    </div>
+  </div>
+
+  <div id="demographicSurveyModal" class="working-style-modal" hidden>
+    <div class="working-style-scrim" onclick="closeDemographicSurveyModal()"></div>
+    <div class="working-style-card">
+      <div class="working-style-head">
+        <h3>Demographic Survey</h3>
+        <button class="working-style-close" type="button" onclick="closeDemographicSurveyModal()">×</button>
+      </div>
+      <p class="working-style-desc">These optional answers help us evaluate whether the system is working fairly for different users.</p>
+      <div id="demographicSurveyModalBody"></div>
+      <button class="primary working-style-done" type="button" onclick="saveDemographicSurveyAndClose()">Save Answers</button>
     </div>
   </div>
 
@@ -3458,6 +3527,41 @@ const TOUR_COLLAB_HTML = `
     </div>
   </div>
 `;
+const TOUR_DEMOGRAPHIC_HTML = `
+  <form class="tour-demographic-form" id="demographicSurveyForm" onsubmit="return false;">
+    <div class="tour-demographic-field">
+      <label for="surveyAgeRange">Age range</label>
+      <select id="surveyAgeRange">
+        <option value="">Skip</option>
+        <option value="Under 18">Under 18</option>
+        <option value="18-24">18-24</option>
+        <option value="25-34">25-34</option>
+        <option value="35-44">35-44</option>
+        <option value="45-54">45-54</option>
+        <option value="55-64">55-64</option>
+        <option value="65+">65+</option>
+      </select>
+    </div>
+    <div class="tour-demographic-field">
+      <label for="surveyGender">Gender</label>
+      <select id="surveyGender">
+        <option value="">Skip</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="tour-demographic-field">
+      <label for="surveyAiExperience">Experience with AI (scale 0-10)</label>
+      <input id="surveyAiExperience" type="number" min="0" max="10" step="1" inputmode="numeric" placeholder="Skip" />
+      <div class="tour-demographic-hint">0 = I have never used AI; 10 = I am an expert.</div>
+    </div>
+    <ul class="tour-demographic-note">
+      <li>Data not linked to personally identifiable information</li>
+      <li>Used only for internal tracking and quality assurance</li>
+    </ul>
+  </form>
+`;
 const HISTORY_BRANCH_TOUR_HTML = `
   <div class="tour-branch-demo">
     <svg viewBox="0 0 320 122" aria-hidden="true">
@@ -3640,6 +3744,15 @@ const TOUR_STEPS = [
     html: TOUR_COLLAB_HTML,
     collabStep: true,
   },
+  {
+    target: null,
+    title: "Optional Demographic Survey",
+    body: [
+      "These optional answers help us evaluate whether the system is working fairly for different users. You can leave any question blank.",
+    ],
+    html: TOUR_DEMOGRAPHIC_HTML,
+    demographicStep: true,
+  },
 ];
 const HISTORY_TOUR_STEPS = [
   {
@@ -3720,6 +3833,8 @@ let pendingOutgoingMessage = null;
 let pendingAssistantTyping = false;
 let activeTourKind = "app";
 let collabSurveyShownThisSession = false;
+let demographicSurveyAnswers = null;
+let isDemographicSurveySaving = false;
 let isDownloadMenuOpen = false;
 let previewExportRequests = new Map();
 let artPreferenceSelections = {};
@@ -5833,6 +5948,101 @@ function closeWorkingStyleModal() {
   if (body) body.innerHTML = "";
 }
 
+function normalizeDemographicSurveyAnswers(survey = null) {
+  const raw = survey || {};
+  const aiExperienceRaw = raw.ai_experience;
+  let aiExperience = "";
+  if (aiExperienceRaw !== undefined && aiExperienceRaw !== null && aiExperienceRaw !== "") {
+    const parsed = Number.parseInt(aiExperienceRaw, 10);
+    if (Number.isFinite(parsed)) {
+      aiExperience = String(Math.min(10, Math.max(0, parsed)));
+    }
+  }
+  return {
+    age_range: raw.age_range || "",
+    gender: raw.gender || "",
+    ai_experience: aiExperience,
+  };
+}
+
+function getDemographicSurveyAnswers() {
+  return demographicSurveyAnswers || normalizeDemographicSurveyAnswers();
+}
+
+function populateDemographicSurveyForm(answers = getDemographicSurveyAnswers()) {
+  const normalized = normalizeDemographicSurveyAnswers(answers);
+  const ageRange = $("surveyAgeRange");
+  const gender = $("surveyGender");
+  const aiExperience = $("surveyAiExperience");
+  if (ageRange) ageRange.value = normalized.age_range;
+  if (gender) gender.value = normalized.gender;
+  if (aiExperience) aiExperience.value = normalized.ai_experience;
+}
+
+function collectDemographicSurveyAnswers() {
+  return normalizeDemographicSurveyAnswers({
+    age_range: $("surveyAgeRange")?.value || "",
+    gender: $("surveyGender")?.value || "",
+    ai_experience: $("surveyAiExperience")?.value || "",
+  });
+}
+
+async function saveDemographicSurvey() {
+  if (!sessionId || isDemographicSurveySaving) return false;
+  const payload = {
+    session_id: sessionId,
+    ...collectDemographicSurveyAnswers(),
+  };
+  isDemographicSurveySaving = true;
+  try {
+    const response = await fetch(`${API}/survey`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || "Could not save demographic survey.");
+    }
+    demographicSurveyAnswers = normalizeDemographicSurveyAnswers(data.survey || payload);
+    if (appState) {
+      appState.survey = data.survey || payload;
+    }
+    return true;
+  } catch (error) {
+    appendConsoleLog("warn", error.message || "Could not save demographic survey.");
+    alert(error.message || "Could not save demographic survey.");
+    return false;
+  } finally {
+    isDemographicSurveySaving = false;
+  }
+}
+
+function openDemographicSurveyModal() {
+  const modal = $("demographicSurveyModal");
+  const body = $("demographicSurveyModalBody");
+  if (!modal || !body) return;
+  closeDownloadMenu();
+  body.innerHTML = TOUR_DEMOGRAPHIC_HTML;
+  populateDemographicSurveyForm();
+  modal.hidden = false;
+}
+
+function closeDemographicSurveyModal() {
+  const modal = $("demographicSurveyModal");
+  if (!modal) return;
+  modal.hidden = true;
+  const body = $("demographicSurveyModalBody");
+  if (body) body.innerHTML = "";
+}
+
+async function saveDemographicSurveyAndClose() {
+  const saved = await saveDemographicSurvey();
+  if (saved) {
+    closeDemographicSurveyModal();
+  }
+}
+
 function hasSeenArtisticEditTutorial() {
   return localStorage.getItem(STORAGE_KEY_ARTISTIC_EDIT_TUTORIAL) === "true";
 }
@@ -5842,12 +6052,12 @@ function markArtisticEditTutorialSeen() {
 }
 
 function getEffectiveTourSteps() {
-  const withoutCollab = TOUR_STEPS.slice(0, -1);
+  const withoutSetupSurvey = TOUR_STEPS.filter((step) => !step.collabStep && !step.demographicStep);
   if (!collabSurveyShownThisSession) {
-    return TOUR_STEPS; // new session / reload — show the survey
+    return TOUR_STEPS; // new session / reload — show the setup and optional survey
   }
   return [
-    ...withoutCollab,
+    ...withoutSetupSurvey,
     {
       target: "#workingStyleBtn",
       placement: "bottom",
@@ -6121,8 +6331,10 @@ function renderTourStep() {
   title.textContent = step.title;
   setTourBody(step.body, step.html || "");
   if (step.collabStep) {
-    collabSurveyShownThisSession = true;
     requestAnimationFrame(() => setCollabStyle(getCollabStyle()));
+  }
+  if (step.demographicStep) {
+    requestAnimationFrame(() => populateDemographicSurveyForm());
   }
   nextBtn.textContent = tourStepIndex === steps.length - 1 ? "Finish" : "Next";
   backBtn.textContent = "Back";
@@ -6161,8 +6373,13 @@ function openTutorial(kind = "app") {
   });
 }
 
-function skipOrCollabStep() {
+async function skipOrCollabStep() {
   const steps = getTourConfig().steps;
+  const currentStep = steps[tourStepIndex];
+  if (currentStep && currentStep.demographicStep) {
+    const saved = await saveDemographicSurvey();
+    if (!saved) return;
+  }
   const collabIdx = steps.findIndex(s => s.collabStep);
   if (activeTourKind === "app" && collabIdx >= 0 && tourStepIndex < collabIdx) {
     tourStepIndex = collabIdx;
@@ -6181,6 +6398,9 @@ function closeTutorial(options = {}) {
   if (!overlay) return;
   if (markSeen) {
     markTourSeen(closingKind);
+    if (closingKind === "app") {
+      collabSurveyShownThisSession = true;
+    }
   }
   overlay.classList.remove("visible");
   overlay.setAttribute("aria-hidden", "true");
@@ -6197,7 +6417,7 @@ function closeTutorial(options = {}) {
   }
 }
 
-function nextTourStep() {
+async function nextTourStep() {
   const config = getTourConfig();
   const steps = config.steps;
   if (tourStepIndex < 0 && config.introCopy) {
@@ -6206,7 +6426,12 @@ function nextTourStep() {
     renderTourStep();
     return;
   }
+  const currentStep = steps[tourStepIndex];
   if (tourStepIndex >= steps.length - 1) {
+    if (currentStep && currentStep.demographicStep) {
+      const saved = await saveDemographicSurvey();
+      if (!saved) return;
+    }
     closeTutorial({ markSeen: true });
     return;
   }
@@ -6865,6 +7090,7 @@ function renderState(state) {
   lastRenderedPhase = nextPhase;
   appState = state;
   sessionId = state.session_id;
+  demographicSurveyAnswers = normalizeDemographicSurveyAnswers(state.survey);
   syncArtisticPanelFromState(state);
   syncArtisticOptionSnapshot(state);
   if (nextPhase === "artistic_discovery" && previousPhase !== "artistic_discovery") {
@@ -7388,6 +7614,8 @@ function closeHistory() {
 
 async function startNewSession() {
   collabSurveyShownThisSession = false;
+  demographicSurveyAnswers = null;
+  isDemographicSurveySaving = false;
   const response = await fetch(`${API}/new-session`, { method: "POST" });
   const data = await response.json();
   if (!response.ok) {
@@ -7401,6 +7629,9 @@ async function startNewSession() {
 }
 
 async function resetSession() {
+  collabSurveyShownThisSession = false;
+  demographicSurveyAnswers = null;
+  isDemographicSurveySaving = false;
   const response = await fetch(`${API}/reset`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -7628,6 +7859,7 @@ function initializeApp() {
   bindById("undoBtn", "click", undoToPreviousVersion);
   bindById("resetBtn", "click", resetSession);
   bindById("workingStyleBtn", "click", openWorkingStyleModal);
+  bindById("demographicSurveyBtn", "click", openDemographicSurveyModal);
   bindById("helpBtn", "click", () => openTutorial("app"));
   bindById("tourNextBtn", "click", nextTourStep);
   bindById("tourBackBtn", "click", previousTourStep);

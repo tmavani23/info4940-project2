@@ -1186,6 +1186,7 @@ class SessionState:
     artistic_panel_state: ArtisticPanelState = field(default_factory=ArtisticPanelState)
     unlocked_phases: list[str] = field(default_factory=lambda: [PHASE_EMOTION])
     visited_phases: list[str] = field(default_factory=lambda: [PHASE_EMOTION])
+    demographic_survey: Optional[dict[str, Any]] = None
 
     def __post_init__(self):
         if self.current_version_id:
@@ -1298,10 +1299,42 @@ latest_session_id: Optional[str] = None
 # SESSION LOGGER
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _find_existing_session_log(session_id: str) -> Optional[Path]:
+    if not session_id or not LOGS_DIR.exists():
+        return None
+    candidates = sorted(
+        LOGS_DIR.glob(f"session_*_{session_id[:8]}.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    for path in candidates:
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if data.get("session_id") == session_id:
+            return path
+    return None
+
+
 class SessionLogger:
-    def __init__(self, session_id: str) -> None:
+    def __init__(self, session_id: str, existing_path: Optional[Path] = None) -> None:
         LOGS_DIR.mkdir(exist_ok=True)
         self.session_id = session_id
+        self._lock = threading.Lock()
+        if existing_path and existing_path.exists():
+            self.path = existing_path
+            try:
+                self._data = json.loads(existing_path.read_text(encoding="utf-8"))
+            except Exception:
+                self._data = {}
+            self._data.setdefault("session_id", session_id)
+            self._data.setdefault("started_at", datetime.now(timezone.utc).isoformat())
+            self._data.setdefault("turns", [])
+            self._data.setdefault("survey", None)
+            self._write()
+            return
+
         started_at = datetime.now(timezone.utc)
         timestamp = started_at.strftime("%Y%m%d_%H%M%S")
         self.path = LOGS_DIR / f"session_{timestamp}_{session_id[:8]}.json"
@@ -1311,8 +1344,17 @@ class SessionLogger:
             "turns": [],
             "survey": None,
         }
-        self._lock = threading.Lock()
         self._write()
+
+    def get_survey(self) -> Optional[dict[str, Any]]:
+        with self._lock:
+            survey = self._data.get("survey")
+            return dict(survey) if isinstance(survey, dict) else None
+
+    def log_survey(self, survey: dict[str, Any]) -> None:
+        with self._lock:
+            self._data["survey"] = survey
+            self._write()
 
     def log_turn(
         self,
@@ -1370,6 +1412,15 @@ class SessionLogger:
 session_loggers: dict[str, SessionLogger] = {}
 
 
+def get_session_logger(session_id: str) -> SessionLogger:
+    logger = session_loggers.get(session_id)
+    if logger:
+        return logger
+    logger = SessionLogger(session_id, existing_path=_find_existing_session_log(session_id))
+    session_loggers[session_id] = logger
+    return logger
+
+
 # ─── Artistic quality reference seed ──────────────────────────────────────────
 REFERENCE_IMAGES_DIR = BASE_DIR / "reference_images"
 
@@ -1420,13 +1471,17 @@ def _inject_seed_reference(session: SessionState) -> None:
 def get_or_create_session(session_id: Optional[str] = None) -> SessionState:
     global latest_session_id
     if session_id and session_id in sessions:
+        logger = get_session_logger(session_id)
+        if sessions[session_id].demographic_survey is None:
+            sessions[session_id].demographic_survey = logger.get_survey()
         latest_session_id = session_id
         return sessions[session_id]
     if session_id and session_id not in sessions:
         session = SessionState(session_id=session_id)
         _inject_seed_reference(session)
+        logger = get_session_logger(session_id)
+        session.demographic_survey = logger.get_survey()
         sessions[session_id] = session
-        session_loggers[session_id] = SessionLogger(session_id)
         latest_session_id = session_id
         return session
     if latest_session_id and latest_session_id in sessions:
@@ -1435,7 +1490,7 @@ def get_or_create_session(session_id: Optional[str] = None) -> SessionState:
     session = SessionState(session_id=sid)
     _inject_seed_reference(session)
     sessions[sid] = session
-    session_loggers[sid] = SessionLogger(sid)
+    session_loggers[sid] = get_session_logger(sid)
     latest_session_id = sid
     return session
 
@@ -2372,6 +2427,7 @@ def serialize_state(session: SessionState) -> dict:
         "active_branch": session.active_branch,
         "pending_artistic_decision": serialize_pending_artistic_decision(session.pending_artistic_decision),
         "artistic_panel_state": _serialize_artistic_panel_state(session.artistic_panel_state),
+        "survey": session.demographic_survey,
     }
 
 
@@ -3202,6 +3258,66 @@ def api_save_version():
     return jsonify({"ok": True, "state": serialize_state(session)})
 
 
+@app.route("/api/survey", methods=["POST"])
+def api_survey():
+    data = request.get_json(silent=True) or {}
+    sid = data.get("session_id")
+    if not sid:
+        return jsonify({"error": "Missing session_id"}), 400
+
+    session = get_or_create_session(sid)
+    age_range = _clean_text(data.get("age_range")) or None
+    gender = _clean_text(data.get("gender")) or None
+    ai_experience_raw = data.get("ai_experience")
+
+    valid_age_ranges = {
+        "Under 18",
+        "18-24",
+        "25-34",
+        "35-44",
+        "45-54",
+        "55-64",
+        "65+",
+    }
+    valid_genders = {"male", "female", "other"}
+
+    if age_range is not None and age_range not in valid_age_ranges:
+        return jsonify({"error": "Invalid age range"}), 400
+    if gender is not None and gender not in valid_genders:
+        return jsonify({"error": "Invalid gender"}), 400
+
+    ai_experience = None
+    if ai_experience_raw not in (None, ""):
+        try:
+            ai_experience = int(ai_experience_raw)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Invalid AI experience"}), 400
+        if ai_experience < 0 or ai_experience > 10:
+            return jsonify({"error": "Invalid AI experience"}), 400
+
+    survey = {
+        "type": "demographic_fairness",
+        "submitted_at": datetime.now(timezone.utc).isoformat(),
+        "age_range": age_range,
+        "gender": gender,
+        "ai_experience": ai_experience,
+        "skipped": {
+            "age_range": age_range is None,
+            "gender": gender is None,
+            "ai_experience": ai_experience is None,
+        },
+        "privacy_notes": [
+            "Data not linked to personally identifiable information",
+            "Used only for internal tracking and quality assurance",
+        ],
+    }
+
+    session.demographic_survey = survey
+    logger = get_session_logger(session.session_id)
+    logger.log_survey(survey)
+    return jsonify({"ok": True, "survey": survey, "state": serialize_state(session)})
+
+
 @app.route("/api/restore-version", methods=["POST"])
 def api_restore_version():
     data = request.get_json(silent=True) or {}
@@ -3284,6 +3400,7 @@ if __name__ == "__main__":
     print("GET  /api/state        -> Current state")
     print("POST /api/chat         -> Chat + LLM JSON parsing")
     print("POST /api/save-version -> Manual version save")
+    print("POST /api/survey       -> Optional demographic survey")
     print("POST /api/restore-version -> Restore selected version")
     print("GET  /api/history      -> Version graph data")
     print("POST /api/new-session  -> New session")
