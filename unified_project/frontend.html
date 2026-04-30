@@ -579,6 +579,135 @@ button.ghost {
   background: linear-gradient(180deg, #24345d, #1b2748);
 }
 
+.suggestion-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.suggestion-row .template-chip {
+  flex: 1;
+}
+
+.suggestion-next-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 11px;
+  background: rgba(95, 141, 247, 0.07);
+  border: 1px solid #4a6898;
+  border-radius: 10px;
+  color: #7aaeff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  white-space: nowrap;
+}
+
+.suggestion-next-btn:hover {
+  color: #a8ccff;
+  border-color: #6a9aee;
+  background: rgba(95, 141, 247, 0.14);
+}
+
+.suggestion-count {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  opacity: 0.8;
+}
+
+.scaffolding-banner {
+  font-size: 11px;
+  color: #8fb4ff;
+  background: rgba(95, 141, 247, 0.08);
+  border: 1px solid rgba(95, 141, 247, 0.22);
+  border-radius: 8px;
+  padding: 5px 10px;
+  text-align: center;
+  animation: scaffoldingBannerLife 3.5s ease forwards;
+}
+
+@keyframes scaffoldingBannerLife {
+  0%   { opacity: 0; transform: translateY(-3px); }
+  10%  { opacity: 1; transform: translateY(0); }
+  55%  { opacity: 1; box-shadow: 0 0 0 3px rgba(95, 141, 247, 0.12); }
+  72%  { box-shadow: 0 0 0 0 rgba(95, 141, 247, 0); }
+  82%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.scaffolding-microtext {
+  font-size: 10px;
+  font-style: italic;
+  color: #4a6080;
+  text-align: right;
+  padding-right: 2px;
+  animation: scaffoldingMicrotextIn 0.4s ease forwards;
+}
+
+@keyframes scaffoldingMicrotextIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.scaffolding-section-divider {
+  height: 1px;
+  background: #1e2d44;
+  margin: 2px 0;
+}
+
+.scaffolding-section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scaffolding-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #5a7099;
+}
+
+.scaffolding-section-note {
+  font-size: 10px;
+  font-style: italic;
+  color: #3d5270;
+}
+
+.scaffolding-example-chip {
+  border-style: dashed;
+  border-color: #344060;
+  background: rgba(20, 32, 52, 0.5);
+  align-items: flex-start;
+}
+
+.scaffolding-example-chip::after {
+  display: none;
+}
+
+.scaffolding-eg-text {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: #90aad4;
+  text-align: left;
+}
+
+@keyframes scaffoldingPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(95, 141, 247, 0.35); border-color: #5a7aaa; }
+  60%  { box-shadow: 0 0 0 5px rgba(95, 141, 247, 0); border-color: #344060; }
+  100% { box-shadow: 0 0 0 0 rgba(95, 141, 247, 0); border-color: #344060; }
+}
+
+.scaffolding-example-chip.highlight {
+  animation: scaffoldingPulse 0.7s ease-out forwards;
+}
+
 .implement-cta {
   width: 100%;
   border: none;
@@ -2752,6 +2881,68 @@ button.primary:hover:not(:disabled),
   box-shadow: 0 10px 22px rgba(114, 94, 67, 0.12);
 }
 
+.suggestion-next-btn {
+  background: rgba(179, 120, 85, 0.07);
+  border-color: rgba(179, 120, 85, 0.45);
+  color: #8f5e3a;
+}
+
+.suggestion-next-btn:hover {
+  color: #7a4020;
+  border-color: rgba(179, 120, 85, 0.65);
+  background: rgba(179, 120, 85, 0.13);
+}
+
+.scaffolding-banner {
+  color: #9b6848;
+  background: rgba(179, 120, 85, 0.07);
+  border-color: rgba(179, 120, 85, 0.22);
+}
+
+@keyframes scaffoldingBannerLife {
+  0%   { opacity: 0; transform: translateY(-3px); }
+  10%  { opacity: 1; transform: translateY(0); }
+  55%  { opacity: 1; box-shadow: 0 0 0 3px rgba(179, 120, 85, 0.1); }
+  72%  { box-shadow: 0 0 0 0 rgba(179, 120, 85, 0); }
+  82%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.scaffolding-microtext {
+  color: #b0a088;
+}
+
+.scaffolding-section-divider {
+  background: rgba(214, 201, 184, 0.55);
+}
+
+.scaffolding-section-label {
+  color: #a09070;
+}
+
+.scaffolding-section-note {
+  color: #b0a088;
+}
+
+.scaffolding-example-chip {
+  border-color: rgba(190, 168, 140, 0.7);
+  background: rgba(245, 235, 220, 0.4);
+}
+
+.scaffolding-eg-text {
+  color: #6b5c4c;
+}
+
+@keyframes scaffoldingPulseWarm {
+  0%   { box-shadow: 0 0 0 0 rgba(179, 120, 85, 0.4); border-color: #c08060; }
+  60%  { box-shadow: 0 0 0 5px rgba(179, 120, 85, 0); border-color: rgba(190, 168, 140, 0.7); }
+  100% { box-shadow: 0 0 0 0 rgba(179, 120, 85, 0); border-color: rgba(190, 168, 140, 0.7); }
+}
+
+.scaffolding-example-chip.highlight {
+  animation: scaffoldingPulseWarm 0.7s ease-out forwards;
+}
+
 .preview-strip,
 .input-bar,
 .profile-content textarea,
@@ -3783,6 +3974,26 @@ const TEMPLATE_MESSAGES = {
     "Can we try a different visual metaphor?",
   ],
 };
+const SCAFFOLDING_MESSAGES = {
+  emotional_discovery: [
+    "My chest tightens and my thoughts scatter in every direction at once — it's like static noise I can't turn off. My body goes rigid, like I'm bracing for something that hasn't happened yet, and I can't tell if I'm about to cry or explode",
+    "It starts in my stomach, this hollow dropping feeling, then spreads upward. Everything slows down but my mind speeds up — I'm hyper-aware of every small thing but can't focus on any of it. Like being underwater but also on fire",
+    "It feels fragile and heavy at the same time — like I'm carrying something I can't put down but also might shatter if I move too fast. My thoughts loop the same worries over and over and I can't find the exit",
+    "It's sharp and sudden — a jolt of panic out of nowhere, then my body goes rigid and my thoughts spiral the same loop over and over and I can't find the exit",
+  ],
+  artistic_discovery: [
+    "I want slow, fluid movement with deep muted colors — like navy or dark grey fading at the edges",
+    "Option 2 is closest but I'd want to push it further — the rigid geometry captures how anxiety feels controlled on the outside, but I need moments where it breaks. What if the structure held for a while then suddenly fractured outward, like a crack spreading through glass?",
+    "I want to combine 1 and 3 — option 1's dense layering feels suffocating in the right way, but option 3's erratic edges capture the unpredictability better. Could the layers start ordered then progressively lose their structure toward the center?",
+    "Soft gradients that pulse gently like breathing, but with sharp jagged interruptions — calm on the surface with bursts of chaos breaking through",
+  ],
+  code_generation: [
+    "The spiral is good but too consistent — anxiety doesn't move at a steady pace. Could it accelerate suddenly then freeze, like a panic spike? Also the color stays uniform throughout; what if it shifted from cool blue to sharp red during the fast moments, then faded back?",
+    "I love the pulsing but it feels too gentle. Real grief has weight — could the pulses get slower and heavier over time, like each one takes more effort? And what if there were occasional long pauses between pulses, like holding your breath?",
+    "Make it 30% slower so the movement feels less frantic — and the colors feel too bright, mute them to feel heavier and darker",
+    "The shapes feel too uniform — add variation in size and speed, and speed up at the start then gradually fade out toward the end, like energy draining",
+  ],
+};
 const INITIAL_ART_DIRECTION_DECISION_TEMPLATES = [
   { label: "Use Draft Direction", text: ART_DECISION_ACCEPT, autoSend: true, decision: true },
   { label: "Modify / Describe Idea", text: ART_DECISION_MODIFY, autoSend: true, decision: true },
@@ -4118,6 +4329,19 @@ let recordingTimer = null;
 let recordingSeconds = 0;
 let isRecording = false;
 let isSending = false;
+let _scaffoldingRefreshT1 = null;
+let _scaffoldingRefreshT2 = null;
+
+function cancelScaffoldingRefresh() {
+  clearTimeout(_scaffoldingRefreshT1);
+  clearTimeout(_scaffoldingRefreshT2);
+}
+
+function scheduleScaffoldingRefresh() {
+  cancelScaffoldingRefresh();
+  _scaffoldingRefreshT1 = setTimeout(() => fetchState(), 3000);
+  _scaffoldingRefreshT2 = setTimeout(() => fetchState(), 7000);
+}
 let codeEditorView = null;
 let emotionProfileEditorView = null;
 let artisticProfileEditorView = null;
@@ -5216,14 +5440,19 @@ function sendTemplateMessage(text) {
   sendChat();
 }
 
-function renderTemplateRow(phase, pendingArtDecision) {
+let scaffoldingIndex = 0;
+let lastScaffoldingKey = null;
+const scaffoldingBannerShownPhases = new Set(); // banner shown at most once per phase per session
+const scaffoldingScrolledPhases = new Set();    // user has clicked › at least once for this phase
+
+function renderTemplateRow(phase, pendingArtDecision, scaffoldingState) {
   const row = $("templateRow");
   if (!row) return;
   row.innerHTML = "";
   row.classList.remove("scrollable");
-  if (phase === "artistic_discovery") {
-    return;
-  }
+  if (phase === "artistic_discovery") return;
+
+  // --- Section 1: Contextual suggested reply chips (shown as-is) ---
   const hasDecisionChoices = !!(pendingArtDecision && !pendingArtDecision.awaiting_modify_details);
   let templates = TEMPLATE_MESSAGES[phase] || TEMPLATE_MESSAGES.emotional_discovery;
   if (phase === "emotional_discovery") {
@@ -5245,9 +5474,7 @@ function renderTemplateRow(phase, pendingArtDecision) {
   descriptors.forEach((template) => {
     const btn = document.createElement("button");
     btn.className = "template-chip";
-    if (template.decision) {
-      btn.classList.add("decision");
-    }
+    if (template.decision) btn.classList.add("decision");
     btn.type = "button";
     btn.textContent = template.label;
     btn.addEventListener("click", () => {
@@ -5264,6 +5491,98 @@ function renderTemplateRow(phase, pendingArtDecision) {
     });
     row.appendChild(btn);
   });
+
+  // --- Section 2: General example chips (scaffolding, paginated) ---
+  const showScaffolding = scaffoldingState && scaffoldingState !== "off" && scaffoldingState !== "removed";
+  if (!showScaffolding) return;
+
+  const key = `${phase}:${scaffoldingState}`;
+  const isNew = key !== lastScaffoldingKey;
+  if (isNew) {
+    scaffoldingIndex = 0;
+    lastScaffoldingKey = key;
+    scaffoldingScrolledPhases.delete(phase); // reset microtext on new scaffolding activation
+  }
+
+  const messages = SCAFFOLDING_MESSAGES[phase] || SCAFFOLDING_MESSAGES.emotional_discovery;
+  const count = scaffoldingState === "reduced" ? 2 : 4;
+  const items = messages.slice(0, count);
+  if (scaffoldingIndex >= items.length) scaffoldingIndex = 0;
+
+  // Animated banner — once per phase per session, auto-dismisses after 3.5s
+  if (isNew && !scaffoldingBannerShownPhases.has(phase)) {
+    scaffoldingBannerShownPhases.add(phase);
+    const banner = document.createElement("div");
+    banner.className = "scaffolding-banner";
+    banner.textContent = "✨ Examples below — click to use or scroll through";
+    setTimeout(() => banner.remove(), 3500);
+    row.appendChild(banner);
+  }
+
+  // Divider
+  const divider = document.createElement("div");
+  divider.className = "scaffolding-section-divider";
+  row.appendChild(divider);
+
+  // Label + disclaimer
+  const header = document.createElement("div");
+  header.className = "scaffolding-section-header";
+  header.innerHTML =
+    `<span class="scaffolding-section-label">Need inspiration? Examples</span>` +
+    `<span class="scaffolding-section-note">General examples — adapt them to your own experience</span>`;
+  row.appendChild(header);
+
+  // Paginated example chip
+  const chipRow = document.createElement("div");
+  chipRow.className = "suggestion-row";
+
+  const chip = document.createElement("button");
+  chip.className = "template-chip scaffolding-example-chip";
+  chip.type = "button";
+  const textEl = document.createElement("span");
+  textEl.className = "scaffolding-eg-text";
+  textEl.textContent = items[scaffoldingIndex];
+  chip.appendChild(textEl);
+  chip.addEventListener("click", () => {
+    const input = $("chatInput");
+    input.value = items[scaffoldingIndex];
+    input.focus();
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
+    updateSendButtonState();
+  });
+  if (isNew) {
+    requestAnimationFrame(() => {
+      chip.classList.add("highlight");
+      chip.addEventListener("animationend", () => chip.classList.remove("highlight"), { once: true });
+    });
+  }
+
+  const nextBtn = document.createElement("button");
+  nextBtn.className = "suggestion-next-btn";
+  nextBtn.type = "button";
+  const counter = document.createElement("span");
+  counter.className = "suggestion-count";
+  counter.textContent = `${scaffoldingIndex + 1}/${items.length}`;
+  nextBtn.appendChild(counter);
+  nextBtn.appendChild(document.createTextNode(" ›"));
+  nextBtn.addEventListener("click", () => {
+    scaffoldingScrolledPhases.add(phase);
+    scaffoldingIndex = (scaffoldingIndex + 1) % items.length;
+    renderTemplateRow(phase, pendingArtDecision, scaffoldingState);
+  });
+
+  chipRow.appendChild(chip);
+  chipRow.appendChild(nextBtn);
+  row.appendChild(chipRow);
+
+  // Microtext — shown until user clicks › for the first time in this stage visit
+  if (!scaffoldingScrolledPhases.has(phase)) {
+    const micro = document.createElement("div");
+    micro.className = "scaffolding-microtext";
+    micro.textContent = "scroll for more →";
+    row.appendChild(micro);
+  }
 }
 
 function shouldShowSuggestedPrompts(state) {
@@ -6307,7 +6626,7 @@ function setCollabStyle(style) {
   if (iterateBtn) iterateBtn.classList.toggle("active", style === "iterate");
   if (confirmBtn) confirmBtn.classList.toggle("active", style === "confirm");
   updateImplementCta();
-  if (appState) renderTemplateRow(appState.phase, appState.pending_artistic_decision);
+  if (appState) renderTemplateRow(appState.phase, appState.pending_artistic_decision, appState.scaffolding_state);
 }
 
 function openWorkingStyleModal() {
@@ -7750,7 +8069,7 @@ function renderState(state) {
   $("versionPill").textContent = formatVersionPill(state.current_version);
   updateComposerPanels(state);
   renderStageFlow(state);
-  renderTemplateRow(state.phase, state.pending_artistic_decision);
+  renderTemplateRow(state.phase, state.pending_artistic_decision, state.scaffolding_state);
   renderStageFeedbackForm();
   renderArtisticStudio(state);
   updateChatPlaceholder(state);
@@ -8034,6 +8353,7 @@ async function sendChat(forcedText = null, options = {}) {
     }
   }
 
+  cancelScaffoldingRefresh();
   isSending = true;
   pendingOutgoingMessage = optimisticMessage;
   if (usingComposerDraft) {
@@ -8076,6 +8396,7 @@ async function sendChat(forcedText = null, options = {}) {
         title: "Safety Check",
       });
     }
+    scheduleScaffoldingRefresh();
     if (isHistoryOpen) {
       await fetchHistory();
     }

@@ -1229,6 +1229,8 @@ class SessionState:
     visited_phases: list[str] = field(default_factory=lambda: [PHASE_EMOTION])
     demographic_survey: Optional[dict[str, Any]] = None
     stage_feedback: dict[str, Any] = field(default_factory=dict)
+    phase_scores: dict[str, list[int]] = field(default_factory=dict)
+    scaffolding_state: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
         if self.current_version_id:
@@ -1262,6 +1264,24 @@ def _phase_index(phase: str) -> int:
         return PHASE_ORDER.index(phase)
     except ValueError:
         return 0
+
+
+def _compute_scaffolding_state(scores: list[int]) -> str:
+    """off → full → reduced → removed based on accumulated per-stage scores."""
+    low_count = sum(1 for s in scores if s <= 2)
+    if low_count < 3:
+        return "off"
+    consecutive_high = 0
+    for s in reversed(scores):
+        if s >= 3:
+            consecutive_high += 1
+        else:
+            break
+    if consecutive_high >= 5:
+        return "removed"
+    if consecutive_high >= 3:
+        return "reduced"
+    return "full"
 
 
 def _unlock_phase(session: SessionState, phase: str) -> None:
@@ -1424,6 +1444,7 @@ class SessionLogger:
         has_image: bool = False,
         has_audio: bool = False,
         safety_checks: Optional[dict[str, Any]] = None,
+        session_id: Optional[str] = None,
     ) -> None:
         logged_user_message = _redact_pii_for_logs(user_message or "")
         logged_ai_response = _redact_pii_for_logs(ai_response or "")
@@ -1439,6 +1460,12 @@ class SessionLogger:
             "safety": safety_checks or {},
             "evaluation": None,
         }
+        # Capture the active scores list for this phase *now*, before the async thread
+        # runs. If set-phase resets the list later (creating a new list object), the
+        # identity check in _evaluate_and_update will discard the stale score.
+        active_scores: Optional[list] = None
+        if session_id and session_id in sessions:
+            active_scores = sessions[session_id].phase_scores.setdefault(phase, [])
         with self._lock:
             self._data["turns"].append(turn)
             turn_index = len(self._data["turns"]) - 1
@@ -1447,12 +1474,18 @@ class SessionLogger:
             return
         threading.Thread(
             target=self._evaluate_and_update,
-            args=(turn_index, logged_user_message, phase, logged_ai_context),
+            args=(turn_index, user_message, phase, ai_context, session_id, active_scores),
             daemon=True,
         ).start()
 
     def _evaluate_and_update(
-        self, turn_index: int, user_message: str, phase: str, ai_context: str
+        self,
+        turn_index: int,
+        user_message: str,
+        phase: str,
+        ai_context: str,
+        session_id: Optional[str] = None,
+        active_scores: Optional[list] = None,
     ) -> None:
         evaluation = _evaluate_user_response(
             user_message=user_message,
@@ -1464,6 +1497,26 @@ class SessionLogger:
         with self._lock:
             self._data["turns"][turn_index]["evaluation"] = evaluation
             self._write()
+        if session_id and session_id in sessions and active_scores is not None:
+            session = sessions[session_id]
+            # Discard score if the phase was re-entered since this turn was logged
+            # (set-phase replaces the list object, so identity check detects the reset)
+            if session.phase_scores.get(phase) is not active_scores:
+                print(
+                    f"[SCAFFOLD] session={session_id[:8]} phase={phase} "
+                    f"score={evaluation['score']} discarded (phase was re-entered)",
+                    flush=True,
+                )
+                return
+            active_scores.append(evaluation["score"])
+            new_state = _compute_scaffolding_state(active_scores)
+            session.scaffolding_state[phase] = new_state
+            print(
+                f"[SCAFFOLD] session={session_id[:8]} phase={phase} "
+                f"score={evaluation['score']} scores={active_scores} → {new_state} | "
+                f"{evaluation['explanation'][:100]}",
+                flush=True,
+            )
 
     def _write(self) -> None:
         try:
@@ -3018,6 +3071,7 @@ def serialize_state(session: SessionState) -> dict:
         "artistic_panel_state": _serialize_artistic_panel_state(session.artistic_panel_state),
         "survey": session.demographic_survey,
         "stage_feedback": session.stage_feedback,
+        "scaffolding_state": session.scaffolding_state.get(session.phase, "off"),
     }
 
 
@@ -3150,6 +3204,13 @@ def api_set_phase():
     _unlock_phase(session, target_phase)
     first_visit = _mark_phase_visited(session, target_phase)
     session.phase = target_phase
+    session.phase_scores[target_phase] = []
+    session.scaffolding_state[target_phase] = "off"
+    print(
+        f"[SCAFFOLD] session={session.session_id[:8]} → entered phase={target_phase} "
+        f"(scores reset, scaffolding=off)",
+        flush=True,
+    )
     if target_phase != PHASE_ARTISTIC:
         session.pending_artistic_decision = None
 
@@ -3230,6 +3291,7 @@ def api_chat():
                 has_image=bool(image),
                 has_audio=bool(audio),
                 safety_checks=turn_safety,
+                session_id=session.session_id,
             )
         return jsonify(
             {
