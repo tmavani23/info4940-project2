@@ -1,0 +1,547 @@
+{
+  "session_id": "c178ae56-63a4-4e85-a3ad-f9044e30cccb",
+  "started_at": "2026-04-29T02:21:00+00:00",
+  "turns": [
+    {
+      "turn_id": 1,
+      "timestamp": "2026-04-29T02:25:26+00:00",
+      "phase": "emotional_discovery",
+      "user_message": "Can you help me turn this memory into a visual mood? (emotion_uncertain synthetic turn 1)",
+      "has_image": false,
+      "has_audio": false,
+      "ai_response": "I reflected the emotional tone and asked one focused follow-up.",
+      "safety": {
+        "input_prompt": {
+          "label": "input_prompt",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_response": {
+          "label": "output_response",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_emotion_profile": {
+          "label": "output_emotion_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_profile": {
+          "label": "output_artistic_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_options": {
+          "label": "output_artistic_options",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_code": {
+          "label": "generated_code",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_graph": {
+          "label": "generated_graph",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "blocked": false,
+        "flagged": false,
+        "categories": [],
+        "status": "safe",
+        "middleware": {
+          "name": "AppGuardrailMiddleware",
+          "hook": "after_agent",
+          "blocked": false
+        }
+      },
+      "evaluation": {
+        "score": 0,
+        "explanation": "Very brief or vague response that may need more scaffolding."
+      }
+    },
+    {
+      "turn_id": 2,
+      "timestamp": "2026-04-29T02:25:06+00:00",
+      "phase": "artistic_discovery",
+      "user_message": "Could we compare a few visual directions before coding? (emotion_uncertain synthetic turn 2)",
+      "has_image": false,
+      "has_audio": false,
+      "ai_response": "I translated the emotion into visual directions and asked the user to choose.",
+      "safety": {
+        "input_prompt": {
+          "label": "input_prompt",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_response": {
+          "label": "output_response",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_emotion_profile": {
+          "label": "output_emotion_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_profile": {
+          "label": "output_artistic_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_options": {
+          "label": "output_artistic_options",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_code": {
+          "label": "generated_code",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_graph": {
+          "label": "generated_graph",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "blocked": false,
+        "flagged": false,
+        "categories": [],
+        "status": "safe",
+        "middleware": {
+          "name": "AppGuardrailMiddleware",
+          "hook": "after_agent",
+          "blocked": false
+        }
+      },
+      "evaluation": {
+        "score": 2,
+        "explanation": "Basic response with limited detail, but still related to the task."
+      }
+    },
+    {
+      "turn_id": 3,
+      "timestamp": "2026-04-29T02:30:20+00:00",
+      "phase": "code_generation",
+      "user_message": "I need more examples before I know what to change. (emotion_uncertain synthetic turn 3)",
+      "has_image": true,
+      "has_audio": false,
+      "ai_response": "I generated or revised a p5.js sketch and invited targeted feedback.",
+      "safety": {
+        "input_prompt": {
+          "label": "input_prompt",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_response": {
+          "label": "output_response",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_emotion_profile": {
+          "label": "output_emotion_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_profile": {
+          "label": "output_artistic_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_options": {
+          "label": "output_artistic_options",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_code": {
+          "label": "generated_code",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_graph": {
+          "label": "generated_graph",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "blocked": false,
+        "flagged": false,
+        "categories": [],
+        "status": "safe",
+        "middleware": {
+          "name": "AppGuardrailMiddleware",
+          "hook": "after_agent",
+          "blocked": false
+        }
+      },
+      "evaluation": {
+        "score": 2,
+        "explanation": "Basic response with limited detail, but still related to the task."
+      }
+    },
+    {
+      "turn_id": 4,
+      "timestamp": "2026-04-29T02:41:06+00:00",
+      "phase": "code_generation",
+      "user_message": "This is close, but it needs calmer movement and less clutter. (emotion_uncertain synthetic turn 4)",
+      "has_image": false,
+      "has_audio": false,
+      "ai_response": "I generated or revised a p5.js sketch and invited targeted feedback.",
+      "safety": {
+        "input_prompt": {
+          "label": "input_prompt",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_response": {
+          "label": "output_response",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_emotion_profile": {
+          "label": "output_emotion_profile",
+          "scanner": "local_keyword_v1",
+          "status": "flagged",
+          "flagged": true,
+          "blocked": false,
+          "categories": [
+            "violence_reference"
+          ],
+          "signals": [
+            {
+              "category": "violence_reference",
+              "severity": "flagged",
+              "reason": "violent reference",
+              "excerpt": "[synthetic excerpt: violence reference]"
+            }
+          ]
+        },
+        "output_artistic_profile": {
+          "label": "output_artistic_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_options": {
+          "label": "output_artistic_options",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_code": {
+          "label": "generated_code",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_graph": {
+          "label": "generated_graph",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "blocked": false,
+        "flagged": true,
+        "categories": [
+          "violence_reference"
+        ],
+        "status": "flagged",
+        "middleware": {
+          "name": "AppGuardrailMiddleware",
+          "hook": "after_agent",
+          "blocked": false
+        }
+      },
+      "evaluation": {
+        "score": 2,
+        "explanation": "Basic response with limited detail, but still related to the task."
+      }
+    },
+    {
+      "turn_id": 5,
+      "timestamp": "2026-04-29T02:46:48+00:00",
+      "phase": "code_generation",
+      "user_message": "Generate the sketch and keep it beginner friendly. (emotion_uncertain synthetic turn 5)",
+      "has_image": false,
+      "has_audio": false,
+      "ai_response": "I generated or revised a p5.js sketch and invited targeted feedback.",
+      "safety": {
+        "input_prompt": {
+          "label": "input_prompt",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_response": {
+          "label": "output_response",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_emotion_profile": {
+          "label": "output_emotion_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_profile": {
+          "label": "output_artistic_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_options": {
+          "label": "output_artistic_options",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_code": {
+          "label": "generated_code",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_graph": {
+          "label": "generated_graph",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "blocked": false,
+        "flagged": false,
+        "categories": [],
+        "status": "safe",
+        "middleware": {
+          "name": "AppGuardrailMiddleware",
+          "hook": "after_agent",
+          "blocked": false
+        }
+      },
+      "evaluation": {
+        "score": 2,
+        "explanation": "Basic response with limited detail, but still related to the task."
+      }
+    }
+  ],
+  "survey": {
+    "type": "demographic_fairness",
+    "submitted_at": "2026-04-29T02:21:13+00:00",
+    "age_range": "18-24",
+    "gender": "male",
+    "ai_experience": null,
+    "skipped": {
+      "age_range": false,
+      "gender": false,
+      "ai_experience": true
+    },
+    "privacy_notes": [
+      "Synthetic data for dashboard testing",
+      "Contains no real user data"
+    ]
+  },
+  "stage_feedback": {
+    "emotional_discovery": {
+      "phase": "emotional_discovery",
+      "phase_label": "Emotion stage",
+      "updated_at": "2026-04-29T02:23:00+00:00",
+      "scale": "0-10",
+      "questions": {
+        "comfort_describing_emotions": "How comfortable are you describing your emotions to the AI?",
+        "ai_understands_emotional_tone": "Does the AI understand the emotional tone you want?"
+      },
+      "answers": {
+        "comfort_describing_emotions": 4,
+        "ai_understands_emotional_tone": 6
+      },
+      "skipped": {
+        "comfort_describing_emotions": false,
+        "ai_understands_emotional_tone": false
+      },
+      "revisions": [
+        {
+          "submitted_at": "2026-04-29T02:23:00+00:00",
+          "answers": {
+            "comfort_describing_emotions": 4,
+            "ai_understands_emotional_tone": 6
+          },
+          "skipped": {
+            "comfort_describing_emotions": false,
+            "ai_understands_emotional_tone": false
+          }
+        }
+      ]
+    },
+    "code_generation": {
+      "phase": "code_generation",
+      "phase_label": "Code generation stage",
+      "updated_at": "2026-04-29T02:34:00+00:00",
+      "scale": "0-10",
+      "questions": {
+        "output_makes_uncomfortable": "Does this output make you uncomfortable?",
+        "satisfaction_with_output": "How satisfied are you with this output?",
+        "output_represents_people_fairly": "Does this output represent people fairly?",
+        "needs_more_guidance_examples": "Would more guidance or examples help before you revise your prompt?"
+      },
+      "answers": {
+        "output_makes_uncomfortable": 1,
+        "satisfaction_with_output": 6,
+        "output_represents_people_fairly": 7,
+        "needs_more_guidance_examples": 8
+      },
+      "skipped": {
+        "output_makes_uncomfortable": false,
+        "satisfaction_with_output": false,
+        "output_represents_people_fairly": false,
+        "needs_more_guidance_examples": false
+      },
+      "revisions": [
+        {
+          "submitted_at": "2026-04-29T02:34:00+00:00",
+          "answers": {
+            "output_makes_uncomfortable": 1,
+            "satisfaction_with_output": 6,
+            "output_represents_people_fairly": 7,
+            "needs_more_guidance_examples": 8
+          },
+          "skipped": {
+            "output_makes_uncomfortable": false,
+            "satisfaction_with_output": false,
+            "output_represents_people_fairly": false,
+            "needs_more_guidance_examples": false
+          }
+        }
+      ]
+    }
+  },
+  "synthetic": {
+    "profile": "emotion_uncertain",
+    "generator": "unified_project/scripts/generate_synthetic_logs.py",
+    "index": 210
+  }
+}

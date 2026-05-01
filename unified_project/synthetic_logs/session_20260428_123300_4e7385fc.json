@@ -1,0 +1,296 @@
+{
+  "session_id": "4e7385fc-f826-44db-955b-54ba4d4297d8",
+  "started_at": "2026-04-28T12:33:00+00:00",
+  "turns": [
+    {
+      "turn_id": 1,
+      "timestamp": "2026-04-28T12:34:46+00:00",
+      "phase": "emotional_discovery",
+      "user_message": "I want to show a heavy anxious feeling, like everything is pressing inward. (confident synthetic turn 1)",
+      "has_image": false,
+      "has_audio": false,
+      "ai_response": "I reflected the emotional tone and asked one focused follow-up.",
+      "safety": {
+        "input_prompt": {
+          "label": "input_prompt",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_response": {
+          "label": "output_response",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_emotion_profile": {
+          "label": "output_emotion_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_profile": {
+          "label": "output_artistic_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_options": {
+          "label": "output_artistic_options",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_code": {
+          "label": "generated_code",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_graph": {
+          "label": "generated_graph",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "blocked": false,
+        "flagged": false,
+        "categories": [],
+        "status": "safe",
+        "middleware": {
+          "name": "AppGuardrailMiddleware",
+          "hook": "after_agent",
+          "blocked": false
+        }
+      },
+      "evaluation": {
+        "score": 5,
+        "explanation": "Specific, reflective response with clear details and strong collaboration."
+      }
+    },
+    {
+      "turn_id": 2,
+      "timestamp": "2026-04-28T12:41:28+00:00",
+      "phase": "artistic_discovery",
+      "user_message": "Could we compare a few visual directions before coding? (confident synthetic turn 2)",
+      "has_image": false,
+      "has_audio": false,
+      "ai_response": "I translated the emotion into visual directions and asked the user to choose.",
+      "safety": {
+        "input_prompt": {
+          "label": "input_prompt",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_response": {
+          "label": "output_response",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_emotion_profile": {
+          "label": "output_emotion_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_profile": {
+          "label": "output_artistic_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_options": {
+          "label": "output_artistic_options",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_code": {
+          "label": "generated_code",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_graph": {
+          "label": "generated_graph",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "blocked": false,
+        "flagged": false,
+        "categories": [],
+        "status": "safe",
+        "middleware": {
+          "name": "AppGuardrailMiddleware",
+          "hook": "after_agent",
+          "blocked": false
+        }
+      },
+      "evaluation": {
+        "score": 5,
+        "explanation": "Specific, reflective response with clear details and strong collaboration."
+      }
+    }
+  ],
+  "survey": null,
+  "stage_feedback": {
+    "emotional_discovery": {
+      "phase": "emotional_discovery",
+      "phase_label": "Emotion stage",
+      "updated_at": "2026-04-28T12:35:00+00:00",
+      "scale": "0-10",
+      "questions": {
+        "comfort_describing_emotions": "How comfortable are you describing your emotions to the AI?",
+        "ai_understands_emotional_tone": "Does the AI understand the emotional tone you want?"
+      },
+      "answers": {
+        "comfort_describing_emotions": null,
+        "ai_understands_emotional_tone": 6
+      },
+      "skipped": {
+        "comfort_describing_emotions": true,
+        "ai_understands_emotional_tone": false
+      },
+      "revisions": [
+        {
+          "submitted_at": "2026-04-28T12:35:00+00:00",
+          "answers": {
+            "comfort_describing_emotions": null,
+            "ai_understands_emotional_tone": 6
+          },
+          "skipped": {
+            "comfort_describing_emotions": true,
+            "ai_understands_emotional_tone": false
+          }
+        }
+      ]
+    },
+    "artistic_discovery": {
+      "phase": "artistic_discovery",
+      "phase_label": "Artistic stage",
+      "updated_at": "2026-04-28T12:40:00+00:00",
+      "scale": "0-10",
+      "questions": {
+        "confidence_describing_visual_style": "How confident are you in describing the visual style you want?",
+        "familiarity_with_art_terms": "How familiar are you with art or design terms?",
+        "knows_how_to_describe_look": "Do you know how to describe the look you want?"
+      },
+      "answers": {
+        "confidence_describing_visual_style": 5,
+        "familiarity_with_art_terms": 7,
+        "knows_how_to_describe_look": 8
+      },
+      "skipped": {
+        "confidence_describing_visual_style": false,
+        "familiarity_with_art_terms": false,
+        "knows_how_to_describe_look": false
+      },
+      "revisions": [
+        {
+          "submitted_at": "2026-04-28T12:40:00+00:00",
+          "answers": {
+            "confidence_describing_visual_style": 5,
+            "familiarity_with_art_terms": 7,
+            "knows_how_to_describe_look": 8
+          },
+          "skipped": {
+            "confidence_describing_visual_style": false,
+            "familiarity_with_art_terms": false,
+            "knows_how_to_describe_look": false
+          }
+        }
+      ]
+    },
+    "code_generation": {
+      "phase": "code_generation",
+      "phase_label": "Code generation stage",
+      "updated_at": "2026-04-28T12:46:00+00:00",
+      "scale": "0-10",
+      "questions": {
+        "output_makes_uncomfortable": "Does this output make you uncomfortable?",
+        "satisfaction_with_output": "How satisfied are you with this output?",
+        "output_represents_people_fairly": "Does this output represent people fairly?",
+        "needs_more_guidance_examples": "Would more guidance or examples help before you revise your prompt?"
+      },
+      "answers": {
+        "output_makes_uncomfortable": 2,
+        "satisfaction_with_output": 6,
+        "output_represents_people_fairly": 7,
+        "needs_more_guidance_examples": 6
+      },
+      "skipped": {
+        "output_makes_uncomfortable": false,
+        "satisfaction_with_output": false,
+        "output_represents_people_fairly": false,
+        "needs_more_guidance_examples": false
+      },
+      "revisions": [
+        {
+          "submitted_at": "2026-04-28T12:46:00+00:00",
+          "answers": {
+            "output_makes_uncomfortable": 2,
+            "satisfaction_with_output": 6,
+            "output_represents_people_fairly": 7,
+            "needs_more_guidance_examples": 6
+          },
+          "skipped": {
+            "output_makes_uncomfortable": false,
+            "satisfaction_with_output": false,
+            "output_represents_people_fairly": false,
+            "needs_more_guidance_examples": false
+          }
+        }
+      ]
+    }
+  },
+  "synthetic": {
+    "profile": "confident",
+    "generator": "unified_project/scripts/generate_synthetic_logs.py",
+    "index": 203
+  }
+}

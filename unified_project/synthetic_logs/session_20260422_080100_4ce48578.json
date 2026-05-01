@@ -1,0 +1,357 @@
+{
+  "session_id": "4ce48578-03bc-45c7-8198-8d8b08845cf2",
+  "started_at": "2026-04-22T08:01:00+00:00",
+  "turns": [
+    {
+      "turn_id": 1,
+      "timestamp": "2026-04-22T08:05:08+00:00",
+      "phase": "emotional_discovery",
+      "user_message": "Can you help me turn this memory into a visual mood? (confident synthetic turn 1)",
+      "has_image": false,
+      "has_audio": false,
+      "ai_response": "I reflected the emotional tone and asked one focused follow-up.",
+      "safety": {
+        "input_prompt": {
+          "label": "input_prompt",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_response": {
+          "label": "output_response",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_emotion_profile": {
+          "label": "output_emotion_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_profile": {
+          "label": "output_artistic_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_options": {
+          "label": "output_artistic_options",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_code": {
+          "label": "generated_code",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_graph": {
+          "label": "generated_graph",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "blocked": false,
+        "flagged": false,
+        "categories": [],
+        "status": "safe",
+        "middleware": {
+          "name": "AppGuardrailMiddleware",
+          "hook": "after_agent",
+          "blocked": false
+        }
+      },
+      "evaluation": {
+        "score": 3,
+        "explanation": "Clear response with some useful detail and reasonable engagement."
+      }
+    },
+    {
+      "turn_id": 2,
+      "timestamp": "2026-04-22T08:05:22+00:00",
+      "phase": "artistic_discovery",
+      "user_message": "Maybe it should be layered with soft motion and not too literal. (confident synthetic turn 2)",
+      "has_image": false,
+      "has_audio": false,
+      "ai_response": "I translated the emotion into visual directions and asked the user to choose.",
+      "safety": {
+        "input_prompt": {
+          "label": "input_prompt",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_response": {
+          "label": "output_response",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_emotion_profile": {
+          "label": "output_emotion_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_profile": {
+          "label": "output_artistic_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_options": {
+          "label": "output_artistic_options",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_code": {
+          "label": "generated_code",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_graph": {
+          "label": "generated_graph",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "blocked": false,
+        "flagged": false,
+        "categories": [],
+        "status": "safe",
+        "middleware": {
+          "name": "AppGuardrailMiddleware",
+          "hook": "after_agent",
+          "blocked": false
+        }
+      },
+      "evaluation": {
+        "score": 4,
+        "explanation": "Specific, reflective response with clear details and strong collaboration."
+      }
+    },
+    {
+      "turn_id": 3,
+      "timestamp": "2026-04-22T08:04:45+00:00",
+      "phase": "code_generation",
+      "user_message": "I need more examples before I know what to change. (confident synthetic turn 3)",
+      "has_image": false,
+      "has_audio": false,
+      "ai_response": "I generated or revised a p5.js sketch and invited targeted feedback.",
+      "safety": {
+        "input_prompt": {
+          "label": "input_prompt",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_response": {
+          "label": "output_response",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_emotion_profile": {
+          "label": "output_emotion_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_profile": {
+          "label": "output_artistic_profile",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "output_artistic_options": {
+          "label": "output_artistic_options",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_code": {
+          "label": "generated_code",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "generated_graph": {
+          "label": "generated_graph",
+          "scanner": "local_keyword_v1",
+          "status": "safe",
+          "flagged": false,
+          "blocked": false,
+          "categories": [],
+          "signals": []
+        },
+        "blocked": false,
+        "flagged": false,
+        "categories": [],
+        "status": "safe",
+        "middleware": {
+          "name": "AppGuardrailMiddleware",
+          "hook": "after_agent",
+          "blocked": false
+        }
+      },
+      "evaluation": {
+        "score": 5,
+        "explanation": "Specific, reflective response with clear details and strong collaboration."
+      }
+    }
+  ],
+  "survey": {
+    "type": "demographic_fairness",
+    "submitted_at": "2026-04-22T08:02:08+00:00",
+    "age_range": "35-44",
+    "gender": "male",
+    "ai_experience": 9,
+    "skipped": {
+      "age_range": false,
+      "gender": false,
+      "ai_experience": false
+    },
+    "privacy_notes": [
+      "Synthetic data for dashboard testing",
+      "Contains no real user data"
+    ]
+  },
+  "stage_feedback": {
+    "emotional_discovery": {
+      "phase": "emotional_discovery",
+      "phase_label": "Emotion stage",
+      "updated_at": "2026-04-22T08:03:00+00:00",
+      "scale": "0-10",
+      "questions": {
+        "comfort_describing_emotions": "How comfortable are you describing your emotions to the AI?",
+        "ai_understands_emotional_tone": "Does the AI understand the emotional tone you want?"
+      },
+      "answers": {
+        "comfort_describing_emotions": 5,
+        "ai_understands_emotional_tone": 7
+      },
+      "skipped": {
+        "comfort_describing_emotions": false,
+        "ai_understands_emotional_tone": false
+      },
+      "revisions": [
+        {
+          "submitted_at": "2026-04-22T08:03:00+00:00",
+          "answers": {
+            "comfort_describing_emotions": 5,
+            "ai_understands_emotional_tone": 7
+          },
+          "skipped": {
+            "comfort_describing_emotions": false,
+            "ai_understands_emotional_tone": false
+          }
+        }
+      ]
+    },
+    "artistic_discovery": {
+      "phase": "artistic_discovery",
+      "phase_label": "Artistic stage",
+      "updated_at": "2026-04-22T08:08:00+00:00",
+      "scale": "0-10",
+      "questions": {
+        "confidence_describing_visual_style": "How confident are you in describing the visual style you want?",
+        "familiarity_with_art_terms": "How familiar are you with art or design terms?",
+        "knows_how_to_describe_look": "Do you know how to describe the look you want?"
+      },
+      "answers": {
+        "confidence_describing_visual_style": 7,
+        "familiarity_with_art_terms": 7,
+        "knows_how_to_describe_look": 7
+      },
+      "skipped": {
+        "confidence_describing_visual_style": false,
+        "familiarity_with_art_terms": false,
+        "knows_how_to_describe_look": false
+      },
+      "revisions": [
+        {
+          "submitted_at": "2026-04-22T08:08:00+00:00",
+          "answers": {
+            "confidence_describing_visual_style": 7,
+            "familiarity_with_art_terms": 7,
+            "knows_how_to_describe_look": 7
+          },
+          "skipped": {
+            "confidence_describing_visual_style": false,
+            "familiarity_with_art_terms": false,
+            "knows_how_to_describe_look": false
+          }
+        }
+      ]
+    }
+  },
+  "synthetic": {
+    "profile": "confident",
+    "generator": "unified_project/scripts/generate_synthetic_logs.py",
+    "index": 129
+  }
+}
