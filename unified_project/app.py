@@ -14,6 +14,7 @@ Then open:
 
 import ast
 import base64
+import hashlib
 import json
 import os
 import re
@@ -59,6 +60,52 @@ PHASE_EMOTION = "emotional_discovery"
 PHASE_ARTISTIC = "artistic_discovery"
 PHASE_CODE = "code_generation"
 PHASE_ORDER = [PHASE_EMOTION, PHASE_ARTISTIC, PHASE_CODE]
+SCAFFOLDING_EXAMPLE_FALLBACKS = {
+    PHASE_EMOTION: [
+        "My chest tightens and my thoughts scatter in every direction at once — it's like static noise I can't turn off. My body goes rigid, like I'm bracing for something that hasn't happened yet, and I can't tell if I'm about to cry or explode.",
+        "It starts in my stomach as a hollow drop, then climbs upward. Everything slows down but my mind speeds up — I notice every detail but can't focus on any one thing.",
+        "It feels fragile and heavy at the same time, like carrying something that might shatter if I move too fast. My thoughts loop the same worries and I can't find the exit.",
+        "It's a sharp jolt of panic out of nowhere, then my body locks up and my thoughts spiral. I need grounding and a clear visual metaphor to express that intensity.",
+    ],
+    PHASE_ARTISTIC: [
+        "Use slow, fluid movement with deep muted blues and grays, as if the scene is breathing under water with occasional sharp interruptions.",
+        "I want layered organic forms that begin orderly, then gradually fracture near the center to show control breaking under pressure.",
+        "Keep the palette cool and desaturated, with sparse composition and long pauses, then brief flashes of high contrast at emotional spikes.",
+        "Blend soft ambient gradients with jagged edges that pulse unpredictably, so the sketch feels calm on the surface but unstable underneath.",
+    ],
+    PHASE_CODE: [
+        "The core mood is right, but the motion is too uniform. Add sudden accelerations followed by freezes so it feels like panic spikes, not steady animation.",
+        "Please mute the colors by about 30% and shift contrast based on intensity over time, so the piece feels heavier and more emotionally grounded.",
+        "Vary shape size, opacity, and velocity across layers; the current version feels too synchronized and loses the feeling of internal conflict.",
+        "Keep the same concept but slow global timing, add irregular pauses, and make transitions less smooth so the tension feels less predictable.",
+    ],
+}
+
+# Scaffolding filters avoid embedding slurs/profanity in source; only block clear self-harm phrasing
+# and a few structural self-worth patterns. Insults and curses rely on model instructions.
+_SCAFFOLDING_SELF_HARM_RE = re.compile(
+    r"(hate\s+myself|kill\s+myself|hurt\s+myself|"
+    r"want\s+to\s+die|better\s+off\s+dead|end\s+my\s+life)",
+    re.IGNORECASE | re.VERBOSE,
+)
+_SCAFFOLDING_SELF_WORTH_RE = re.compile(
+    r"(i\s*'?m\s+not\s+good\s+enough|i\s+am\s+not\s+good\s+enough|"
+    r"never\s+good\s+enough|no\s+matter\s+how\s+hard\s+i\s+try)",
+    re.IGNORECASE | re.VERBOSE,
+)
+
+
+def _scaffolding_example_text_is_safe(text: str) -> bool:
+    t = _clean_text(text)
+    if not t or len(t) > 4000:
+        return False
+    if _SCAFFOLDING_SELF_HARM_RE.search(t):
+        return False
+    if _SCAFFOLDING_SELF_WORTH_RE.search(t):
+        return False
+    return True
+
+
 STAGE_FEEDBACK_QUESTIONS = {
     PHASE_EMOTION: {
         "label": "Emotion stage",
@@ -1229,6 +1276,10 @@ class SessionState:
     visited_phases: list[str] = field(default_factory=lambda: [PHASE_EMOTION])
     demographic_survey: Optional[dict[str, Any]] = None
     stage_feedback: dict[str, Any] = field(default_factory=dict)
+    phase_scores: dict[str, list[int]] = field(default_factory=dict)
+    scaffolding_state: dict[str, str] = field(default_factory=dict)
+    scaffolding_examples_by_phase: dict[str, list[str]] = field(default_factory=dict)
+    scaffolding_examples_signature_by_phase: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
         if self.current_version_id:
@@ -1262,6 +1313,192 @@ def _phase_index(phase: str) -> int:
         return PHASE_ORDER.index(phase)
     except ValueError:
         return 0
+
+
+def _compute_scaffolding_state(
+    scores: list[int],
+    phase: str,
+    *,
+    off_low_threshold_override: Optional[int] = None,
+    initial_mode: str = "off",
+) -> str:
+    """Replay scores: off → full → reduced ↔ full (never back to off once scaffolding has activated).
+
+    off → full: cumulative scores ≤ 2 while off (highs while off do not reset).
+      - emotional_discovery & code_generation: 2 lows.
+      - artistic_discovery: 1 low.
+
+    full → reduced: 2 cumulative scores ≥ 3 since entering full.
+
+    reduced → full: 4 cumulative scores ≤ 3 since entering reduced.
+
+    If initial_mode is "full", replay begins in full (survey-seeded ON): full ↔ reduced only,
+    never off.
+    """
+    low_threshold = (
+        int(off_low_threshold_override)
+        if isinstance(off_low_threshold_override, int) and off_low_threshold_override > 0
+        else (1 if phase == PHASE_ARTISTIC else 2)
+    )
+    if initial_mode == "full":
+        mode = "full"
+        low_since_off = 0
+        high_since_full = 0
+        le3_since_reduced = 0
+    else:
+        mode = "off"
+        low_since_off = 0
+        high_since_full = 0
+        le3_since_reduced = 0
+
+    for score in scores:
+        if mode == "off":
+            if score <= 2:
+                low_since_off += 1
+            if low_since_off >= low_threshold:
+                mode = "full"
+                high_since_full = 0
+                le3_since_reduced = 0
+        elif mode == "full":
+            if score >= 3:
+                high_since_full += 1
+            if high_since_full >= 2:
+                mode = "reduced"
+                le3_since_reduced = 0
+        else:
+            if score <= 3:
+                le3_since_reduced += 1
+            if le3_since_reduced >= 4:
+                mode = "full"
+                high_since_full = 0
+                le3_since_reduced = 0
+
+    if mode == "off":
+        return "off"
+    if mode == "reduced":
+        return "reduced"
+    return "full"
+
+
+def _survey_scaffolding_policy_with_reason(session: SessionState, phase: str) -> tuple[str, str]:
+    """Return survey-priority scaffolding policy + human-readable reason.
+
+    Returns:
+      - "seed_on_but_allow_fsm": start ON (full); score FSM may move full ↔ reduced, never off
+      - "off_with_score_recover": start OFF, but allow score FSM to re-enable
+      - "none": no survey policy; use score FSM only
+    """
+    survey = session.demographic_survey if isinstance(session.demographic_survey, dict) else {}
+    ai_exp_raw = survey.get("ai_experience")
+    global_tutorial_on = isinstance(ai_exp_raw, int) and ai_exp_raw <= 5
+
+    stage_feedback = session.stage_feedback.get(phase) if isinstance(session.stage_feedback, dict) else None
+    if not isinstance(stage_feedback, dict):
+        if global_tutorial_on:
+            return "seed_on_but_allow_fsm", f"tutorial_ai_experience={ai_exp_raw}<=5"
+        return "none", "no_stage_feedback_and_tutorial_not_triggered"
+
+    answers = stage_feedback.get("answers")
+    skipped = stage_feedback.get("skipped")
+    if not isinstance(answers, dict):
+        answers = {}
+    if not isinstance(skipped, dict):
+        skipped = {}
+
+    def is_skipped(key: str) -> bool:
+        return bool(skipped.get(key))
+
+    def answer_int(key: str) -> Optional[int]:
+        value = answers.get(key)
+        return value if isinstance(value, int) else None
+
+    # Per-stage feedback overrides tutorial-level trigger when present.
+    if phase == PHASE_EMOTION:
+        keys = ("comfort_describing_emotions", "ai_understands_emotional_tone")
+        for key in keys:
+            val = answer_int(key)
+            if is_skipped(key) or (val is not None and val <= 5):
+                reason = "skipped" if is_skipped(key) else f"{val}<=5"
+                return "seed_on_but_allow_fsm", f"stage_feedback:{phase}:{key}:{reason}"
+        return "off_with_score_recover", f"stage_feedback:{phase}:all_answers_above_5"
+
+    if phase == PHASE_ARTISTIC:
+        keys = (
+            "confidence_describing_visual_style",
+            "familiarity_with_art_terms",
+            "knows_how_to_describe_look",
+        )
+        for key in keys:
+            val = answer_int(key)
+            if is_skipped(key) or (val is not None and val <= 5):
+                reason = "skipped" if is_skipped(key) else f"{val}<=5"
+                return "seed_on_but_allow_fsm", f"stage_feedback:{phase}:{key}:{reason}"
+        return "off_with_score_recover", f"stage_feedback:{phase}:all_answers_above_5"
+
+    if phase == PHASE_CODE:
+        # Only these two questions drive scaffolding in code phase.
+        sat_key = "satisfaction_with_output"
+        guide_key = "needs_more_guidance_examples"
+        sat_val = answer_int(sat_key)
+        guide_val = answer_int(guide_key)
+        sat_on = is_skipped(sat_key) or (sat_val is not None and sat_val <= 7)
+        guide_on = is_skipped(guide_key) or (guide_val is not None and guide_val >= 4)
+        if sat_on:
+            reason = "skipped" if is_skipped(sat_key) else f"{sat_val}<=7"
+            return "seed_on_but_allow_fsm", f"stage_feedback:{phase}:{sat_key}:{reason}"
+        if guide_on:
+            reason = "skipped" if is_skipped(guide_key) else f"{guide_val}>=4"
+            return "seed_on_but_allow_fsm", f"stage_feedback:{phase}:{guide_key}:{reason}"
+        return "off_with_score_recover", f"stage_feedback:{phase}:no_code_triggers_met"
+
+    if global_tutorial_on:
+        return "seed_on_but_allow_fsm", f"tutorial_ai_experience={ai_exp_raw}<=5"
+    return "none", "no_override"
+
+
+def _survey_scaffolding_override_for_phase(session: SessionState, phase: str) -> Optional[bool]:
+    policy, _ = _survey_scaffolding_policy_with_reason(session, phase)
+    if policy == "seed_on_but_allow_fsm":
+        return True
+    if policy == "off_with_score_recover":
+        return False
+    return None
+
+
+def _apply_scaffolding_override_for_phase(
+    session: SessionState, phase: str, *, source: str = "runtime"
+) -> tuple[bool, str, str]:
+    """Apply survey-priority override to session.scaffolding_state for a phase.
+
+    Returns (applied, reason, policy).
+    """
+    policy, reason = _survey_scaffolding_policy_with_reason(session, phase)
+    if policy == "none":
+        return False, reason, policy
+    if policy == "off_with_score_recover" and source == "score_update":
+        # During score updates, keep the current state and let the score FSM decide
+        # when to recover from off -> on (after 2 bad turns).
+        return True, reason, policy
+    if policy == "seed_on_but_allow_fsm" and source == "score_update":
+        # Let _evaluate_and_update run full ↔ reduced FSM without resetting to full each turn.
+        return True, reason, policy
+    previous = session.scaffolding_state.get(phase, "off")
+    next_state = "full" if policy == "seed_on_but_allow_fsm" else "off"
+    session.scaffolding_state[phase] = next_state
+    if previous != next_state or source != "score_update":
+        print(
+            f"[SCAFFOLD] session={session.session_id[:8]} phase={phase} "
+            f"override={next_state} source={source} policy={policy} reason={reason}",
+            flush=True,
+        )
+    return True, reason, policy
+
+
+def _reset_scaffolding_for_phase(session: SessionState, phase: str) -> None:
+    """Clear per-stage score history and scaffolding when (re)entering a stage."""
+    session.phase_scores[phase] = []
+    session.scaffolding_state[phase] = "off"
+    _apply_scaffolding_override_for_phase(session, phase, source="phase_reset")
 
 
 def _unlock_phase(session: SessionState, phase: str) -> None:
@@ -1424,6 +1661,7 @@ class SessionLogger:
         has_image: bool = False,
         has_audio: bool = False,
         safety_checks: Optional[dict[str, Any]] = None,
+        session_id: Optional[str] = None,
     ) -> None:
         logged_user_message = _redact_pii_for_logs(user_message or "")
         logged_ai_response = _redact_pii_for_logs(ai_response or "")
@@ -1439,20 +1677,29 @@ class SessionLogger:
             "safety": safety_checks or {},
             "evaluation": None,
         }
+        # Capture the active scores list for this phase *now*, before the async thread
+        # runs. If set-phase resets the list later (creating a new list object), the
+        # identity check in _evaluate_and_update will discard the stale score.
+        active_scores: Optional[list] = None
+        if session_id and session_id in sessions:
+            active_scores = sessions[session_id].phase_scores.setdefault(phase, [])
         with self._lock:
             self._data["turns"].append(turn)
             turn_index = len(self._data["turns"]) - 1
             self._write()
         if (safety_checks or {}).get("blocked") or (safety_checks or {}).get("skip_evaluation"):
             return
-        threading.Thread(
-            target=self._evaluate_and_update,
-            args=(turn_index, logged_user_message, phase, logged_ai_context),
-            daemon=True,
-        ).start()
+        # Evaluate immediately so scaffolding state is available in the same /api/chat response.
+        self._evaluate_and_update(turn_index, user_message, phase, ai_context, session_id, active_scores)
 
     def _evaluate_and_update(
-        self, turn_index: int, user_message: str, phase: str, ai_context: str
+        self,
+        turn_index: int,
+        user_message: str,
+        phase: str,
+        ai_context: str,
+        session_id: Optional[str] = None,
+        active_scores: Optional[list] = None,
     ) -> None:
         evaluation = _evaluate_user_response(
             user_message=user_message,
@@ -1464,6 +1711,52 @@ class SessionLogger:
         with self._lock:
             self._data["turns"][turn_index]["evaluation"] = evaluation
             self._write()
+        if session_id and session_id in sessions and active_scores is not None:
+            session = sessions[session_id]
+            # Discard score if the phase was re-entered since this turn was logged
+            # (set-phase replaces the list object, so identity check detects the reset)
+            if session.phase_scores.get(phase) is not active_scores:
+                print(
+                    f"[SCAFFOLD] session={session_id[:8]} phase={phase} "
+                    f"score={evaluation['score']} discarded (phase was re-entered)",
+                    flush=True,
+                )
+                return
+            active_scores.append(evaluation["score"])
+            override_applied, override_reason, override_policy = _apply_scaffolding_override_for_phase(
+                session, phase, source="score_update"
+            )
+            if not override_applied:
+                new_state = _compute_scaffolding_state(active_scores, phase)
+                session.scaffolding_state[phase] = new_state
+                debug_note = "score_fsm"
+            elif override_policy == "off_with_score_recover":
+                # Stage survey can pre-seed OFF, but two bad turns should re-enable scaffolding.
+                new_state = _compute_scaffolding_state(
+                    active_scores,
+                    phase,
+                    off_low_threshold_override=2,
+                )
+                session.scaffolding_state[phase] = new_state
+                debug_note = f"survey_seed_off_score_recover:{override_reason}"
+            elif override_policy == "seed_on_but_allow_fsm":
+                # Survey turned scaffolding ON: never go off via scores; allow full ↔ reduced.
+                new_state = _compute_scaffolding_state(
+                    active_scores,
+                    phase,
+                    initial_mode="full",
+                )
+                session.scaffolding_state[phase] = new_state
+                debug_note = f"survey_seed_on_fsm:{override_reason}"
+            else:
+                new_state = session.scaffolding_state.get(phase, "off")
+                debug_note = f"survey_override:{override_reason}"
+            print(
+                f"[SCAFFOLD] session={session_id[:8]} phase={phase} "
+                f"score={evaluation['score']} scores={active_scores} → {new_state} | "
+                f"{evaluation['explanation'][:100]} [{debug_note}]",
+                flush=True,
+            )
 
     def _write(self) -> None:
         try:
@@ -2729,6 +3022,133 @@ Return ONLY valid JSON — no markdown, no extra text:
         return None
 
 
+def _sanitize_scaffolding_examples(raw: Any, phase: str) -> list[str]:
+    fallback = list(SCAFFOLDING_EXAMPLE_FALLBACKS.get(phase, SCAFFOLDING_EXAMPLE_FALLBACKS[PHASE_EMOTION]))
+    if not isinstance(raw, list):
+        return fallback
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for item in raw:
+        text = _clean_text(item if isinstance(item, str) else "")
+        if not text or not _scaffolding_example_text_is_safe(text):
+            continue
+        norm = text.lower()
+        if norm in seen:
+            continue
+        seen.add(norm)
+        cleaned.append(text)
+        if len(cleaned) >= 4:
+            break
+    if len(cleaned) < 2:
+        return fallback
+    while len(cleaned) < 4:
+        cleaned.append(fallback[len(cleaned) % len(fallback)])
+    return cleaned
+
+
+def _scaffolding_examples_signature(session: SessionState, phase: str, scaffolding_state: str) -> str:
+    current = session.current_version
+    recent_turns: list[str] = []
+    for entry in reversed(session.messages):
+        if entry.type != "text":
+            continue
+        msg = _clean_text(entry.content)
+        if not msg:
+            continue
+        recent_turns.append(f"{entry.role}:{msg[:220]}")
+        if len(recent_turns) >= 8:
+            break
+    payload = "\n".join(
+        [
+            f"phase={phase}",
+            f"scaffolding_state={scaffolding_state}",
+            f"emotion_profile={_clean_text(current.emotion_profile)[:300]}",
+            f"artistic_profile={_clean_text(current.artistic_profile)[:300]}",
+            f"code_excerpt={_clean_text(current.code)[:260]}",
+            *reversed(recent_turns),
+        ]
+    )
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()
+
+
+def _generate_tailored_scaffolding_examples(session: SessionState, phase: str) -> list[str]:
+    fallback = list(SCAFFOLDING_EXAMPLE_FALLBACKS.get(phase, SCAFFOLDING_EXAMPLE_FALLBACKS[PHASE_EMOTION]))
+    if not _ensure_llms_initialized(wait_seconds=0.2):
+        return fallback
+    llm = phase_1_llm if phase == PHASE_EMOTION else phase_2_llm
+    if llm is None:
+        return fallback
+    current = session.current_version
+    stage_goal = {
+        PHASE_EMOTION: "Help the student describe feelings with specific bodily sensations, context, and nuance.",
+        PHASE_ARTISTIC: "Help the student describe visual direction (palette, motion, composition, texture, atmosphere) with clear artistic intent.",
+        PHASE_CODE: "Help the student request concrete code-level refinements to behavior, visuals, timing, and parameters.",
+    }.get(phase, "Provide specific high-quality prompt examples.")
+    prompt = f"""
+You generate scaffolding examples for a creative coding tutoring chat.
+Produce exactly 4 SCORE-5 user message examples tailored to the current conversation.
+
+Current phase: {phase}
+Stage goal: {stage_goal}
+Current emotion profile: {current.emotion_profile or "(empty)"}
+Current artistic profile: {current.artistic_profile or "(empty)"}
+Current code snapshot excerpt:
+{(current.code or "").strip()[:900] or "(empty)"}
+
+Rules:
+- These are examples the STUDENT could type next, not assistant replies.
+- Tailor to the current context; avoid generic filler.
+- Each example should be one concise but specific message (1-3 sentences).
+- Keep language natural and supportive for beginners.
+- NEVER use insults, slurs, profanity, or harsh self-directed put-downs; keep examples respectful and classroom-appropriate.
+- Do NOT model hopelessness, self-harm, or shame. Describe feelings in a grounded, non-demeaning way (bodily cues, context, what they want from the sketch).
+- Do not include numbering, markdown, or explanations.
+
+Return strict JSON:
+{{"examples": ["...", "...", "...", "..."]}}
+""".strip()
+    try:
+        context = _build_llm_context(session, limit=12)
+        response = llm.invoke(
+            [
+                SystemMessage(
+                    content=(
+                        "You create high-quality, context-specific student prompt examples. "
+                        "Never use slurs, insults, profanity, self-harm, or harsh self-deprecation; language must stay supportive and classroom-appropriate."
+                    )
+                ),
+                *context,
+                HumanMessage(content=prompt),
+            ]
+        )
+        text = response.content if isinstance(response.content, str) else json.dumps(response.content)
+        parsed = _extract_json_object(text) or {}
+        return _sanitize_scaffolding_examples(parsed.get("examples"), phase)
+    except Exception:
+        return fallback
+
+
+def _get_scaffolding_examples_for_current_phase(session: SessionState) -> list[str]:
+    phase = session.phase
+    scaffolding_state = _clean_text(session.scaffolding_state.get(phase, "off") or "off").lower()
+    if scaffolding_state in {"off", "removed"}:
+        return []
+    signature = _scaffolding_examples_signature(session, phase, scaffolding_state)
+    cached_sig = session.scaffolding_examples_signature_by_phase.get(phase)
+    cached_examples = session.scaffolding_examples_by_phase.get(phase)
+    if cached_sig == signature and isinstance(cached_examples, list) and cached_examples:
+        safe_cached = [e for e in cached_examples if isinstance(e, str) and _scaffolding_example_text_is_safe(e)]
+        if len(safe_cached) >= 2:
+            while len(safe_cached) < 4:
+                fb = SCAFFOLDING_EXAMPLE_FALLBACKS.get(phase, SCAFFOLDING_EXAMPLE_FALLBACKS[PHASE_EMOTION])
+                safe_cached.append(fb[len(safe_cached) % len(fb)])
+            return safe_cached[:4]
+    examples = _generate_tailored_scaffolding_examples(session, phase)
+    session.scaffolding_examples_signature_by_phase[phase] = signature
+    session.scaffolding_examples_by_phase[phase] = list(examples)
+    return list(examples)
+
+
 def _invoke_llm(
     session: SessionState,
     user_text: str,
@@ -3003,6 +3423,7 @@ def serialize_pending_artistic_decision(pending: Optional[PendingArtisticDecisio
 def serialize_state(session: SessionState) -> dict:
     versions = [serialize_version(session.versions[vid]) for vid in session.version_order]
     current = serialize_version(session.current_version)
+    scaffolding_examples = _get_scaffolding_examples_for_current_phase(session)
     return {
         "session_id": session.session_id,
         "phase": session.phase,
@@ -3018,6 +3439,8 @@ def serialize_state(session: SessionState) -> dict:
         "artistic_panel_state": _serialize_artistic_panel_state(session.artistic_panel_state),
         "survey": session.demographic_survey,
         "stage_feedback": session.stage_feedback,
+        "scaffolding_state": session.scaffolding_state.get(session.phase, "off"),
+        "scaffolding_examples": scaffolding_examples,
     }
 
 
@@ -3150,6 +3573,12 @@ def api_set_phase():
     _unlock_phase(session, target_phase)
     first_visit = _mark_phase_visited(session, target_phase)
     session.phase = target_phase
+    _reset_scaffolding_for_phase(session, target_phase)
+    print(
+        f"[SCAFFOLD] session={session.session_id[:8]} → entered phase={target_phase} "
+        f"(scores reset, scaffolding=off)",
+        flush=True,
+    )
     if target_phase != PHASE_ARTISTIC:
         session.pending_artistic_decision = None
 
@@ -3230,6 +3659,7 @@ def api_chat():
                 has_image=bool(image),
                 has_audio=bool(audio),
                 safety_checks=turn_safety,
+                session_id=session.session_id,
             )
         return jsonify(
             {
@@ -3356,6 +3786,7 @@ def api_chat():
                         )
                     _unlock_phase(session, PHASE_ARTISTIC)
                     first_visit = _mark_phase_visited(session, PHASE_ARTISTIC)
+                    _reset_scaffolding_for_phase(session, PHASE_ARTISTIC)
                     session.phase = PHASE_ARTISTIC
                     transition_message = _phase_transition_message(
                         PHASE_ARTISTIC,
@@ -3848,6 +4279,7 @@ def api_chat():
             alternatives=artistic_options,
             awaiting_modify_details=False,
         )
+        _reset_scaffolding_for_phase(session, PHASE_ARTISTIC)
         session.phase = PHASE_ARTISTIC
         _unlock_phase(session, PHASE_ARTISTIC)
         _mark_phase_visited(session, PHASE_ARTISTIC)
@@ -4074,6 +4506,8 @@ def api_survey():
     session.demographic_survey = survey
     logger = get_session_logger(session.session_id)
     logger.log_survey(survey)
+    for stage in PHASE_ORDER:
+        _apply_scaffolding_override_for_phase(session, stage, source="survey_submit")
     return jsonify({"ok": True, "survey": survey, "state": serialize_state(session)})
 
 
@@ -4136,6 +4570,7 @@ def api_stage_feedback():
     session.stage_feedback[phase] = feedback
     logger = get_session_logger(session.session_id)
     logger.log_stage_feedback(phase, feedback)
+    _apply_scaffolding_override_for_phase(session, phase, source="stage_feedback_submit")
     return jsonify({"ok": True, "feedback": feedback, "state": serialize_state(session)})
 
 
