@@ -2981,6 +2981,39 @@ body.artistic-modal-active .input-bar {
   font-size: 12px;
 }
 
+.artistic-studio .artistic-studio-stage-feedback.stage-feedback-panel {
+  opacity: 1;
+  pointer-events: auto;
+  max-height: min(260px, 42vh);
+  margin: 0 0 12px;
+  border-color: rgba(90, 78, 68, 0.22);
+  background: rgba(255, 252, 247, 0.96);
+}
+
+.artistic-studio .artistic-studio-stage-feedback.stage-feedback-panel.attention {
+  border-color: rgba(217, 119, 87, 0.46);
+  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.14);
+}
+
+.artistic-studio .artistic-studio-stage-feedback .stage-feedback-head h3 {
+  color: #3a342f;
+}
+
+.artistic-studio .artistic-studio-stage-feedback .stage-feedback-desc {
+  color: #6b5d52;
+}
+
+.artistic-studio-feedback-gate-hint {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #6b5d52;
+  background: rgba(217, 119, 87, 0.08);
+  border: 1px dashed rgba(217, 119, 87, 0.35);
+  border-radius: 10px;
+}
+
 .tour-examples {
   margin-top: 12px;
 }
@@ -4089,10 +4122,8 @@ body.artistic-modal-active .artistic-studio {
           </div>
 
           <p id="artisticStudioCopy" class="artistic-copy">
-            Pick a few visual preferences, add your own note, and I’ll turn them into three artwork directions with previews.
+            Pick a few visual preferences, add your own note, then send the short feedback so we can tailor example phrasing. Skips are allowed on every question.
           </p>
-
-          <div id="artisticStudioScaffoldingHost" class="artistic-studio-scaffolding-host" aria-live="polite"></div>
 
           <div id="artisticStudioPage1" class="artistic-studio-page">
             <div id="artPreferenceGroups" class="art-pref-grid"></div>
@@ -4101,7 +4132,30 @@ body.artistic-modal-active .artistic-studio {
               <label for="artPreferenceNote">Artistic note</label>
               <textarea id="artPreferenceNote" class="art-note" rows="3" placeholder="Ex: muted blue haze, sparse composition, trembling light, slow drifting motion..."></textarea>
             </div>
+
+            <div id="artisticStudioStageFeedbackPanel" class="artistic-studio-stage-feedback stage-feedback-panel" hidden aria-live="polite">
+              <div class="stage-feedback-head">
+                <div>
+                  <h3 id="artisticStudioStageFeedbackTitle">Artistic Stage Feedback</h3>
+                  <p id="artisticStudioStageFeedbackDesc" class="stage-feedback-desc">
+                    This helps decide whether to show tailored example prompts below. You can skip any question.
+                  </p>
+                </div>
+              </div>
+              <div id="artisticStudioStageFeedbackBody"></div>
+              <div class="stage-feedback-scale-note">
+                Scale: 0 = not at all, 10 = completely. Leave any answer blank to skip it.
+              </div>
+              <div class="stage-feedback-actions">
+                <span id="artisticStudioStageFeedbackStatus" class="stage-feedback-status"></span>
+                <button id="sendArtisticStageFeedbackBtn" class="primary" type="button">Send Feedback</button>
+              </div>
+            </div>
+
+            <p id="artisticStudioFeedbackGateHint" class="artistic-studio-feedback-gate-hint" hidden></p>
           </div>
+
+          <div id="artisticStudioScaffoldingHost" class="artistic-studio-scaffolding-host" aria-live="polite"></div>
 
           <div id="artisticStudioPage2" class="artistic-studio-page" hidden>
             <div id="customArtIdeaGroup" class="art-custom-idea">
@@ -4821,6 +4875,7 @@ let selectedCustomArtisticIdea = "";
 let artisticOptionSelectionPending = false;
 let shouldRevealGeneratedArtOptions = false;
 let artisticStudioPage = 1;
+let isArtisticStageFeedbackExpanded = false;
 let hasHydratedInitialState = false;
 let lastRenderedPhase = "";
 let appNoticeSecondaryHandler = null;
@@ -5992,13 +6047,36 @@ function bindComposerScaffoldInstruction() {
     ?.addEventListener("click", dismissComposerScaffoldInstruction);
 }
 
+/** Drop API-generated scaffolding that matches self-harm or narrow self-worth patterns (no slur word lists in source). */
+function scaffoldingExampleTextLooksSafe(text) {
+  const t = String(text || "").toLowerCase();
+  if (!t.trim()) return false;
+  if (/hate\s+myself|kill\s+myself|hurt\s+myself|want\s+to\s+die|better\s+off\s+dead|end\s+my\s+life/.test(t)) {
+    return false;
+  }
+  if (
+    /i\s*'?m\s+not\s+good\s+enough|i\s+am\s+not\s+good\s+enough|never\s+good\s+enough|no\s+matter\s+how\s+hard\s+i\s+try/.test(
+      t
+    )
+  ) {
+    return false;
+  }
+  return true;
+}
+
 function getComposerScaffoldingExampleItems(phase, scaffoldingState) {
   const sc = String(scaffoldingState || "off").toLowerCase();
   if (sc === "off" || sc === "removed") return [];
-  const pool =
+  const generatedPool = Array.isArray(appState?.scaffolding_examples)
+    ? appState.scaffolding_examples.filter(
+        (item) => typeof item === "string" && item.trim() && scaffoldingExampleTextLooksSafe(item)
+      )
+    : [];
+  const fallbackPool =
     phase === "artistic_discovery"
       ? SCAFFOLDING_MESSAGES.artistic_discovery || []
       : SCAFFOLDING_MESSAGES[phase] || SCAFFOLDING_MESSAGES.emotional_discovery;
+  const pool = generatedPool.length ? generatedPool : fallbackPool;
   const count = sc === "reduced" ? 2 : 4;
   return pool.slice(0, count);
 }
@@ -6008,8 +6086,24 @@ function shouldShowComposerScaffoldingExamplesInMessages(phase, scaffoldingState
   return getComposerScaffoldingExampleItems(phase, scaffoldingState).length > 0;
 }
 
+function hasArtisticStageFeedbackSaved(state) {
+  const fb = state && state.stage_feedback && state.stage_feedback.artistic_discovery;
+  if (!fb || typeof fb !== "object") return false;
+  if (Array.isArray(fb.revisions) && fb.revisions.length > 0) return true;
+  return !!fb.updated_at;
+}
+
+function shouldUseArtisticStudioStageFeedback() {
+  return !!(
+    appState &&
+    appState.phase === "artistic_discovery" &&
+    document.body.classList.contains("artistic-modal-active")
+  );
+}
+
 function shouldShowArtisticScaffoldingInStudio(state) {
   if (!state || state.phase !== "artistic_discovery") return false;
+  if (!hasArtisticStageFeedbackSaved(state)) return false;
   return getComposerScaffoldingExampleItems("artistic_discovery", state.scaffolding_state).length > 0;
 }
 
@@ -6045,7 +6139,7 @@ function appendComposerScaffoldingExamplesBlock(container) {
   note.textContent =
     phase === "artistic_discovery"
       ? "General example — adapt it into your Artistic note (step 1) or Your Own Idea (step 2), then save or continue when it feels right."
-      : "General example — adapt it to your own experience.";
+      : "These are example responses - adapt it to your own experience.";
 
   const toolbar = document.createElement("div");
   toolbar.className = "scaffolding-in-messages-toolbar";
@@ -6645,12 +6739,38 @@ function renderArtisticStudio(state) {
   backBtn.hidden = !isOptionsPage;
   backBtn.disabled = isSending || isRecording;
   nextBtn.hidden = isOptionsPage;
-  nextBtn.disabled = isSending || isRecording;
+  const artisticFeedbackSaved = hasArtisticStageFeedbackSaved(state);
+  nextBtn.disabled = isSending || isRecording || (!isOptionsPage && !artisticFeedbackSaved);
   continueBtn.hidden = !isOptionsPage;
 
   copy.textContent = isOptionsPage
     ? "Choose your route on this page: write your own artistic idea above, or choose and edit one of the AI-generated ideas below."
-    : "Choose the visual ingredients and add your artistic note here. When this page feels right, click Next to generate three artwork options.";
+    : artisticFeedbackSaved
+      ? "Choose the visual ingredients and add your artistic note here. Tailored examples may appear below when your settings call for them. Click Next when you’re ready for three artwork options."
+      : "Choose preferences and your note, then send Artistic Stage Feedback below. That unlocks tailored examples when appropriate and enables Next.";
+
+  const feedbackPanel = $("artisticStudioStageFeedbackPanel");
+  const gateHint = $("artisticStudioFeedbackGateHint");
+  if (isOptionsPage) {
+    persistArtisticStudioStageFeedbackDraft();
+    if (feedbackPanel) feedbackPanel.hidden = true;
+    if (gateHint) gateHint.hidden = true;
+  } else if (feedbackPanel) {
+    const showFeedbackPanel = !artisticFeedbackSaved || isArtisticStageFeedbackExpanded;
+    feedbackPanel.hidden = !showFeedbackPanel;
+    if (showFeedbackPanel) {
+      renderArtisticStudioStageFeedbackForm();
+    }
+    if (gateHint) {
+      if (!artisticFeedbackSaved) {
+        gateHint.hidden = false;
+        gateHint.textContent =
+          "Send Artistic Stage Feedback above (you can skip every question). That records your stage settings, may show tailored examples, and unlocks Next.";
+      } else {
+        gateHint.hidden = true;
+      }
+    }
+  }
 
   optionPanel.hidden = !isOptionsPage || !hasVisibleOptions;
   refreshBtn.disabled = !hasVisibleOptions || isSending || isRecording;
@@ -6735,6 +6855,8 @@ function renderArtisticStudio(state) {
       lastArtisticStudioScaffoldKey = null;
     }
   }
+
+  syncStageFeedbackToggleAppearance();
 }
 
 function updateComposerPanels(state) {
@@ -7465,6 +7587,157 @@ function buildScaleOptions(value) {
   return html;
 }
 
+function persistArtisticStudioStageFeedbackDraft() {
+  const config = STAGE_FEEDBACK_CONFIG.artistic_discovery;
+  if (!config) return;
+  const draft = {};
+  config.questions.forEach((question) => {
+    draft[question.key] = $(`artisticStudioFeedbackInput_${question.key}`)?.value || "";
+  });
+  stageFeedbackAnswers.artistic_discovery = draft;
+}
+
+function collectArtisticStudioStageFeedbackAnswers() {
+  persistArtisticStudioStageFeedbackDraft();
+  const phase = "artistic_discovery";
+  const config = STAGE_FEEDBACK_CONFIG[phase];
+  const answers = {};
+  if (!config) return answers;
+  config.questions.forEach((question) => {
+    answers[question.key] = stageFeedbackAnswers[phase]?.[question.key] || "";
+  });
+  return answers;
+}
+
+function renderArtisticStudioStageFeedbackForm() {
+  const body = $("artisticStudioStageFeedbackBody");
+  if (!body) return;
+  const phase = "artistic_discovery";
+  const config = STAGE_FEEDBACK_CONFIG[phase];
+  if (!config) return;
+  const answers = stageFeedbackAnswers[phase] || normalizeStageFeedbackAnswers(phase, appState?.stage_feedback || {});
+  const fields = config.questions.map((question) => {
+    const value = answers[question.key] || "";
+    return `
+      <div class="tour-demographic-field">
+        <label for="artisticStudioFeedbackInput_${question.key}">${question.text}</label>
+        <select id="artisticStudioFeedbackInput_${question.key}" data-feedback-key="${question.key}">
+          ${buildScaleOptions(value)}
+        </select>
+      </div>
+    `;
+  }).join("");
+  body.innerHTML = `
+    <form class="tour-demographic-form" id="artisticStudioStageFeedbackForm" onsubmit="return false;">
+      ${fields}
+    </form>
+  `;
+}
+
+function setArtisticStudioStageFeedbackStatus(message) {
+  const status = $("artisticStudioStageFeedbackStatus");
+  if (status) status.textContent = message || "";
+}
+
+function syncStageFeedbackToggleAppearance() {
+  const button = $("stageFeedbackToggleBtn");
+  if (!button) return;
+  if (shouldUseArtisticStudioStageFeedback()) {
+    const saved = hasArtisticStageFeedbackSaved(appState);
+    const expanded = !saved || isArtisticStageFeedbackExpanded;
+    button.classList.toggle("active", expanded);
+    button.setAttribute("aria-expanded", expanded ? "true" : "false");
+    return;
+  }
+  button.classList.toggle("active", isStageFeedbackExpanded);
+  button.setAttribute("aria-expanded", isStageFeedbackExpanded ? "true" : "false");
+}
+
+function expandArtisticStageFeedbackInStudio(options = {}) {
+  isArtisticStageFeedbackExpanded = true;
+  // Only jump back to step 1 when the user still owes in-studio feedback. Otherwise this would run
+  // after "Next" (step 2 + art-gen chat) via maybeOpenStageFeedbackPrompt and force a second Next.
+  if (appState && artisticStudioPage !== 1 && !hasArtisticStageFeedbackSaved(appState)) {
+    setArtisticStudioPage(1, { render: true, resetScroll: false });
+  } else if (appState) {
+    renderArtisticStudio(appState);
+  }
+  const panel = $("artisticStudioStageFeedbackPanel");
+  const title = $("artisticStudioStageFeedbackTitle");
+  const desc = $("artisticStudioStageFeedbackDesc");
+  if (panel) panel.hidden = false;
+  if (title) title.textContent = STAGE_FEEDBACK_CONFIG.artistic_discovery.title;
+  if (desc) {
+    desc.textContent = options.auto
+      ? "Quick feedback after your first message in this stage unlocks tailored examples here. Skips allowed."
+      : "This helps decide whether to show tailored example prompts below. You can skip any question.";
+  }
+  renderArtisticStudioStageFeedbackForm();
+  setArtisticStudioStageFeedbackStatus(options.auto ? "Optional feedback available." : "");
+  if (panel) {
+    requestAnimationFrame(() => {
+      panel.scrollIntoView({ behavior: options.smooth ? "smooth" : "auto", block: "nearest" });
+      if (options.auto) {
+        panel.classList.add("attention");
+        window.setTimeout(() => panel.classList.remove("attention"), 1800);
+      }
+    });
+  }
+  syncStageFeedbackToggleAppearance();
+}
+
+function collapseArtisticStageFeedbackInStudio() {
+  persistArtisticStudioStageFeedbackDraft();
+  if (!hasArtisticStageFeedbackSaved(appState)) return;
+  isArtisticStageFeedbackExpanded = false;
+  const panel = $("artisticStudioStageFeedbackPanel");
+  if (panel) panel.hidden = true;
+  syncStageFeedbackToggleAppearance();
+}
+
+async function sendArtisticStageFeedbackFromStudio() {
+  if (!sessionId || isStageFeedbackSaving) return false;
+  const phase = "artistic_discovery";
+  const payload = {
+    session_id: sessionId,
+    phase,
+    answers: collectArtisticStudioStageFeedbackAnswers(),
+  };
+  isStageFeedbackSaving = true;
+  setArtisticStudioStageFeedbackStatus("Sending feedback...");
+  const button = $("sendArtisticStageFeedbackBtn");
+  if (button) button.disabled = true;
+  try {
+    const response = await fetch(`${API}/stage-feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || "Could not send feedback.");
+    }
+    stageFeedbackAnswers[phase] = normalizeStageFeedbackAnswers(phase, { [phase]: data.feedback });
+    isArtisticStageFeedbackExpanded = false;
+    setArtisticStudioStageFeedbackStatus("Feedback received.");
+    markStageFeedbackPrompted("artistic_discovery");
+    if (data && data.state) {
+      renderState(data.state);
+    } else {
+      syncStageFeedbackToggleAppearance();
+    }
+    return true;
+  } catch (error) {
+    appendConsoleLog("warn", error.message || "Could not send feedback.");
+    setArtisticStudioStageFeedbackStatus("Could not send feedback.");
+    alert(error.message || "Could not send feedback.");
+    return false;
+  } finally {
+    isStageFeedbackSaving = false;
+    if (button) button.disabled = false;
+  }
+}
+
 function renderStageFeedbackForm() {
   const body = $("stageFeedbackBody");
   const title = $("stageFeedbackTitle");
@@ -7518,17 +7791,6 @@ function setStageFeedbackStatus(message) {
   if (status) status.textContent = message || "";
 }
 
-function setStageFeedbackToggleState(isExpanded, options = {}) {
-  const button = $("stageFeedbackToggleBtn");
-  if (!button) return;
-  button.classList.toggle("active", !!isExpanded);
-  button.setAttribute("aria-expanded", isExpanded ? "true" : "false");
-  if (options.attention) {
-    button.classList.add("attention");
-    window.setTimeout(() => button.classList.remove("attention"), 1800);
-  }
-}
-
 function focusStageFeedbackPanel(options = {}) {
   const panel = $("stageFeedbackPanel");
   if (!panel) return;
@@ -7556,7 +7818,14 @@ function expandStageFeedbackPanel(phase = null, options = {}) {
   const panel = $("stageFeedbackPanel");
   if (panel) panel.hidden = false;
   isStageFeedbackExpanded = true;
-  setStageFeedbackToggleState(true, { attention: !!options.auto });
+  syncStageFeedbackToggleAppearance();
+  if (options.auto) {
+    const button = $("stageFeedbackToggleBtn");
+    if (button) {
+      button.classList.add("attention");
+      window.setTimeout(() => button.classList.remove("attention"), 1800);
+    }
+  }
   if (options.auto) {
     setStageFeedbackStatus("Optional feedback available.");
   } else {
@@ -7574,10 +7843,22 @@ function collapseStageFeedbackPanel() {
   const panel = $("stageFeedbackPanel");
   if (panel) panel.hidden = true;
   isStageFeedbackExpanded = false;
-  setStageFeedbackToggleState(false);
+  syncStageFeedbackToggleAppearance();
 }
 
 function toggleStageFeedbackPanel() {
+  if (shouldUseArtisticStudioStageFeedback()) {
+    if (!hasArtisticStageFeedbackSaved(appState)) {
+      expandArtisticStageFeedbackInStudio({ smooth: true });
+      return;
+    }
+    if (isArtisticStageFeedbackExpanded) {
+      collapseArtisticStageFeedbackInStudio();
+    } else {
+      expandArtisticStageFeedbackInStudio({ smooth: true });
+    }
+    return;
+  }
   const panel = $("stageFeedbackPanel");
   if (isStageFeedbackExpanded && panel && !panel.hidden) {
     collapseStageFeedbackPanel();
@@ -7628,13 +7909,10 @@ async function saveStageFeedback() {
       throw new Error(data.error || "Could not send feedback.");
     }
     stageFeedbackAnswers[phase] = normalizeStageFeedbackAnswers(phase, { [phase]: data.feedback });
-    if (appState) {
-      appState.stage_feedback = data.state?.stage_feedback || {
-        ...(appState.stage_feedback || {}),
-        [phase]: data.feedback,
-      };
-    }
     setStageFeedbackStatus("Feedback received.");
+    if (data && data.state) {
+      renderState(data.state);
+    }
     return true;
   } catch (error) {
     appendConsoleLog("warn", error.message || "Could not send feedback.");
@@ -7659,10 +7937,16 @@ async function sendStageFeedbackFromPanel() {
 function maybeOpenStageFeedbackPrompt(phase) {
   const promptPhase = getStageFeedbackPhase(phase);
   if (!sessionId || !STAGE_FEEDBACK_CONFIG[promptPhase] || hasPromptedStageFeedback(promptPhase)) return;
-  markStageFeedbackPrompted(promptPhase);
   window.setTimeout(() => {
     if (isTourOpen()) return;
-    openStageFeedbackModal(promptPhase, { auto: true });
+    markStageFeedbackPrompted(promptPhase);
+    if (promptPhase === "artistic_discovery") {
+      if (!hasArtisticStageFeedbackSaved(appState)) {
+        expandArtisticStageFeedbackInStudio({ auto: true, smooth: true });
+      }
+    } else {
+      openStageFeedbackModal(promptPhase, { auto: true });
+    }
   }, 500);
 }
 
@@ -8791,6 +9075,7 @@ function renderState(state) {
   renderTemplateRow(state.phase, state.pending_artistic_decision, state.scaffolding_state);
   renderStageFeedbackForm();
   renderArtisticStudio(state);
+  syncStageFeedbackToggleAppearance();
   updateChatPlaceholder(state);
   updateImplementCta(state);
   renderMessages(state.messages || []);
@@ -9026,6 +9311,11 @@ async function generateArtOptionsFromStudio() {
   if (!appState || appState.phase !== "artistic_discovery") {
     await setPhase("artistic_discovery");
     if (!appState || appState.phase !== "artistic_discovery") return;
+  }
+  if (!hasArtisticStageFeedbackSaved(appState)) {
+    appendConsoleLog("warn", "Send Artistic Stage Feedback first to continue.");
+    expandArtisticStageFeedbackInStudio({ smooth: true });
+    return;
   }
   setArtisticStudioPage(2);
   shouldRevealGeneratedArtOptions = true;
@@ -9321,6 +9611,7 @@ async function startNewSession() {
   demographicSurveyAnswers = null;
   isDemographicSurveySaving = false;
   stageFeedbackAnswers = {};
+  isArtisticStageFeedbackExpanded = false;
   isStageFeedbackSaving = false;
   const response = await fetch(`${API}/new-session`, { method: "POST" });
   const data = await response.json();
@@ -9339,6 +9630,7 @@ async function resetSession() {
   demographicSurveyAnswers = null;
   isDemographicSurveySaving = false;
   stageFeedbackAnswers = {};
+  isArtisticStageFeedbackExpanded = false;
   isStageFeedbackSaving = false;
   const response = await fetch(`${API}/reset`, {
     method: "POST",
@@ -9586,6 +9878,7 @@ function initializeApp() {
   bindById("workingStyleBtn", "click", openWorkingStyleModal);
   bindById("demographicSurveyBtn", "click", openDemographicSurveyModal);
   bindById("stageFeedbackToggleBtn", "click", toggleStageFeedbackPanel);
+  bindById("sendArtisticStageFeedbackBtn", "click", sendArtisticStageFeedbackFromStudio);
   bindById("helpBtn", "click", () => openTutorial("app"));
   bindById("tourNextBtn", "click", nextTourStep);
   bindById("tourBackBtn", "click", previousTourStep);
