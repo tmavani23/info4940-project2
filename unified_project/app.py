@@ -51,6 +51,32 @@ PHASE_EMOTION = "emotional_discovery"
 PHASE_ARTISTIC = "artistic_discovery"
 PHASE_CODE = "code_generation"
 PHASE_ORDER = [PHASE_EMOTION, PHASE_ARTISTIC, PHASE_CODE]
+STAGE_FEEDBACK_QUESTIONS = {
+    PHASE_EMOTION: {
+        "label": "Emotion stage",
+        "questions": {
+            "comfort_describing_emotions": "How comfortable are you describing your emotions to the AI?",
+            "ai_understands_emotional_tone": "Does the AI understand the emotional tone you want?",
+        },
+    },
+    PHASE_ARTISTIC: {
+        "label": "Artistic stage",
+        "questions": {
+            "confidence_describing_visual_style": "How confident are you in describing the visual style you want?",
+            "familiarity_with_art_terms": "How familiar are you with art or design terms?",
+            "knows_how_to_describe_look": "Do you know how to describe the look you want?",
+        },
+    },
+    PHASE_CODE: {
+        "label": "Code generation stage",
+        "questions": {
+            "output_makes_uncomfortable": "Does this output make you uncomfortable?",
+            "satisfaction_with_output": "How satisfied are you with this output?",
+            "output_represents_people_fairly": "Does this output represent people fairly?",
+            "needs_more_guidance_examples": "Would more guidance or examples help before you revise your prompt?",
+        },
+    },
+}
 ARTISTIC_PREFERENCE_GROUPS = (
     ("detail", "Detail"),
     ("motion", "Motion"),
@@ -245,6 +271,7 @@ Code requirements:
 - Put tweakable parameters near the top with comments.
 - Add clear beginner-friendly comments for each major section (state setup, animation logic, color/motion choices, and any interaction).
 - For non-obvious lines (timing math, mapping ranges, easing), include short explanatory comments.
+- Avoid declaring variables named `alpha`; p5.js has an `alpha()` color helper, and shadowing that name can break previews.
 
 {ARTISTIC_QUALITY_REFERENCE}
 
@@ -438,6 +465,12 @@ def _normalize_gaps(value: Any) -> list[str]:
             deduped.append(gap)
             seen.add(key)
     return deduped[:5]
+
+
+def _avoid_p5_alpha_shadowing(code: str) -> str:
+    if not code or not re.search(r"\b(?:let|const|var)\s+alpha\b", code):
+        return code
+    return re.sub(r"(?<![\w$.])alpha(?![\w$]|\s*\()", "alphaValue", code)
 
 
 def _normalize_artistic_options(value: Any) -> list[str]:
@@ -1187,6 +1220,7 @@ class SessionState:
     unlocked_phases: list[str] = field(default_factory=lambda: [PHASE_EMOTION])
     visited_phases: list[str] = field(default_factory=lambda: [PHASE_EMOTION])
     demographic_survey: Optional[dict[str, Any]] = None
+    stage_feedback: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         if self.current_version_id:
@@ -1332,6 +1366,7 @@ class SessionLogger:
             self._data.setdefault("started_at", datetime.now(timezone.utc).isoformat())
             self._data.setdefault("turns", [])
             self._data.setdefault("survey", None)
+            self._data.setdefault("stage_feedback", {})
             self._write()
             return
 
@@ -1343,6 +1378,7 @@ class SessionLogger:
             "started_at": started_at.isoformat(),
             "turns": [],
             "survey": None,
+            "stage_feedback": {},
         }
         self._write()
 
@@ -1354,6 +1390,20 @@ class SessionLogger:
     def log_survey(self, survey: dict[str, Any]) -> None:
         with self._lock:
             self._data["survey"] = survey
+            self._write()
+
+    def get_stage_feedback(self) -> dict[str, Any]:
+        with self._lock:
+            stage_feedback = self._data.get("stage_feedback")
+            return dict(stage_feedback) if isinstance(stage_feedback, dict) else {}
+
+    def log_stage_feedback(self, phase: str, feedback: dict[str, Any]) -> None:
+        with self._lock:
+            stage_feedback = self._data.setdefault("stage_feedback", {})
+            if not isinstance(stage_feedback, dict):
+                stage_feedback = {}
+                self._data["stage_feedback"] = stage_feedback
+            stage_feedback[phase] = feedback
             self._write()
 
     def log_turn(
@@ -1474,6 +1524,8 @@ def get_or_create_session(session_id: Optional[str] = None) -> SessionState:
         logger = get_session_logger(session_id)
         if sessions[session_id].demographic_survey is None:
             sessions[session_id].demographic_survey = logger.get_survey()
+        if not sessions[session_id].stage_feedback:
+            sessions[session_id].stage_feedback = logger.get_stage_feedback()
         latest_session_id = session_id
         return sessions[session_id]
     if session_id and session_id not in sessions:
@@ -1481,6 +1533,7 @@ def get_or_create_session(session_id: Optional[str] = None) -> SessionState:
         _inject_seed_reference(session)
         logger = get_session_logger(session_id)
         session.demographic_survey = logger.get_survey()
+        session.stage_feedback = logger.get_stage_feedback()
         sessions[session_id] = session
         latest_session_id = session_id
         return session
@@ -2314,6 +2367,7 @@ Requirements:
 - Include setup() and draw().
 - Preserve the intended visual idea if possible.
 - If the broken code is too incomplete to preserve, create a minimal but valid starter sketch that matches the profiles.
+- Avoid declaring variables named `alpha`; p5.js has an `alpha()` helper.
 - No markdown explanation. No JSON. Just code.
 """.strip()
 
@@ -2325,7 +2379,7 @@ Requirements:
             ]
         )
         repaired_text = response.content if isinstance(response.content, str) else json.dumps(response.content)
-        repaired_code = _extract_code_text(repaired_text)
+        repaired_code = _avoid_p5_alpha_shadowing(_extract_code_text(repaired_text))
         ok, _ = _is_probably_complete_p5_code(repaired_code)
         return repaired_code if ok else None
     except Exception:
@@ -2338,7 +2392,7 @@ def _sanitize_llm_payload(raw: dict, current: VersionNode) -> dict:
     emotion_profile = _ensure_emotion_prefix(_clean_text(raw.get("emotion_profile"))) or current.emotion_profile
     artistic_profile = _clean_text(raw.get("artistic_profile")) or current.artistic_profile
     artistic_confidence = _normalize_confidence(raw.get("artistic_confidence") or current.artistic_confidence)
-    code = _clean_text(raw.get("code")) or current.code
+    code = _avoid_p5_alpha_shadowing(_clean_text(raw.get("code")) or current.code)
     emotion_confidence = _normalize_confidence(raw.get("emotion_confidence") or current.emotion_confidence)
     emotion_gaps = _normalize_gaps(raw.get("emotion_gaps"))
     if "should_create_version" in raw:
@@ -2428,6 +2482,7 @@ def serialize_state(session: SessionState) -> dict:
         "pending_artistic_decision": serialize_pending_artistic_decision(session.pending_artistic_decision),
         "artistic_panel_state": _serialize_artistic_panel_state(session.artistic_panel_state),
         "survey": session.demographic_survey,
+        "stage_feedback": session.stage_feedback,
     }
 
 
@@ -3232,7 +3287,7 @@ def api_save_version():
     if "artistic_profile" in data:
         artistic_profile = _clean_text(data.get("artistic_profile"))
     if "code" in data:
-        code = _clean_text(data.get("code"))
+        code = _avoid_p5_alpha_shadowing(_clean_text(data.get("code")))
 
     summary = _clean_text(data.get("summary")) or _build_commit_summary(
         old, emotion_profile, artistic_profile, code, source="user"
@@ -3318,6 +3373,68 @@ def api_survey():
     return jsonify({"ok": True, "survey": survey, "state": serialize_state(session)})
 
 
+@app.route("/api/stage-feedback", methods=["POST"])
+def api_stage_feedback():
+    data = request.get_json(silent=True) or {}
+    sid = data.get("session_id")
+    phase = _clean_text(data.get("phase"))
+    if not sid or not phase:
+        return jsonify({"error": "Missing session_id or phase"}), 400
+    if phase not in STAGE_FEEDBACK_QUESTIONS:
+        return jsonify({"error": "Invalid phase"}), 400
+
+    session = get_or_create_session(sid)
+    raw_answers = data.get("answers") or {}
+    if not isinstance(raw_answers, dict):
+        return jsonify({"error": "Invalid answers"}), 400
+
+    config = STAGE_FEEDBACK_QUESTIONS[phase]
+    normalized_answers: dict[str, Optional[int]] = {}
+    skipped: dict[str, bool] = {}
+    for key in config["questions"]:
+        raw_value = raw_answers.get(key)
+        if raw_value in (None, ""):
+            normalized_answers[key] = None
+            skipped[key] = True
+            continue
+        try:
+            value = int(raw_value)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Feedback answers must be 0-10."}), 400
+        if value < 0 or value > 10:
+            return jsonify({"error": "Feedback answers must be 0-10."}), 400
+        normalized_answers[key] = value
+        skipped[key] = False
+
+    submitted_at = datetime.now(timezone.utc).isoformat()
+    previous = session.stage_feedback.get(phase, {})
+    revisions = []
+    if isinstance(previous, dict):
+        revisions = list(previous.get("revisions") or [])
+    revision = {
+        "submitted_at": submitted_at,
+        "answers": normalized_answers,
+        "skipped": skipped,
+    }
+    revisions.append(revision)
+
+    feedback = {
+        "phase": phase,
+        "phase_label": config["label"],
+        "updated_at": submitted_at,
+        "scale": "0-10",
+        "questions": dict(config["questions"]),
+        "answers": normalized_answers,
+        "skipped": skipped,
+        "revisions": revisions,
+    }
+
+    session.stage_feedback[phase] = feedback
+    logger = get_session_logger(session.session_id)
+    logger.log_stage_feedback(phase, feedback)
+    return jsonify({"ok": True, "feedback": feedback, "state": serialize_state(session)})
+
+
 @app.route("/api/restore-version", methods=["POST"])
 def api_restore_version():
     data = request.get_json(silent=True) or {}
@@ -3401,6 +3518,7 @@ if __name__ == "__main__":
     print("POST /api/chat         -> Chat + LLM JSON parsing")
     print("POST /api/save-version -> Manual version save")
     print("POST /api/survey       -> Optional demographic survey")
+    print("POST /api/stage-feedback -> Optional per-stage feedback")
     print("POST /api/restore-version -> Restore selected version")
     print("GET  /api/history      -> Version graph data")
     print("POST /api/new-session  -> New session")

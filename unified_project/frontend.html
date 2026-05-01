@@ -440,6 +440,45 @@ button.ghost {
   gap: 7px;
 }
 
+.input-wrap-top {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-height: 28px;
+}
+
+.input-wrap-top .template-label {
+  margin-right: auto;
+}
+
+.feedback-icon-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  color: #7a6757;
+}
+
+.feedback-icon-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.feedback-icon-btn.active {
+  background: rgba(217, 119, 87, 0.12);
+  border-color: rgba(217, 119, 87, 0.38);
+  color: #8f563c;
+}
+
+.feedback-icon-btn.attention {
+  border-color: rgba(217, 119, 87, 0.5);
+  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.12);
+}
+
 .template-row {
   display: flex;
   flex-direction: column;
@@ -808,8 +847,10 @@ body.artistic-modal-active #messages {
 }
 
 body.artistic-modal-active #previewStrip,
+body.artistic-modal-active .input-wrap-top,
 body.artistic-modal-active #templateLabel,
 body.artistic-modal-active #templateRow,
+body.artistic-modal-active #stageFeedbackPanel,
 body.artistic-modal-active .input-bar {
   opacity: 0.18;
   pointer-events: none;
@@ -2324,6 +2365,120 @@ body.artistic-modal-active .input-bar {
   border-radius: 10px;
 }
 
+.stage-feedback-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 7px;
+}
+
+.stage-feedback-tab {
+  min-width: 0;
+  min-height: 28px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.stage-feedback-tab.active {
+  background: rgba(217, 119, 87, 0.14);
+  border-color: rgba(217, 119, 87, 0.42);
+  color: #8f563c;
+  font-weight: 700;
+}
+
+.stage-feedback-scale-note {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+  margin-top: -1px;
+}
+
+.stage-feedback-panel {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 11px;
+  border: 1px solid rgba(217, 119, 87, 0.18);
+  border-radius: 12px;
+  background: rgba(252, 248, 242, 0.78);
+  max-height: min(178px, 28vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.stage-feedback-panel[hidden] {
+  display: none !important;
+}
+
+.stage-feedback-panel.attention {
+  border-color: rgba(217, 119, 87, 0.46);
+  background: rgba(217, 119, 87, 0.1);
+  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.12);
+}
+
+.stage-feedback-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stage-feedback-head h3 {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.stage-feedback-desc {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.stage-feedback-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.stage-feedback-status {
+  flex: 1;
+  min-height: 16px;
+  color: #7b5d4a;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.stage-feedback-actions .primary {
+  min-height: 30px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.stage-feedback-panel .tour-demographic-form {
+  gap: 6px;
+}
+
+.stage-feedback-panel .tour-demographic-field {
+  gap: 4px;
+}
+
+.stage-feedback-panel .tour-demographic-field label {
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.stage-feedback-panel .tour-demographic-field select {
+  min-height: 30px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
 .tour-examples {
   margin-top: 12px;
 }
@@ -3285,7 +3440,30 @@ body.artistic-modal-active .artistic-studio {
           <button id="removePreviewBtn" class="remove-preview" title="Remove">✕</button>
         </div>
 
-        <div id="templateLabel" class="template-label">Suggested Prompts</div>
+        <div class="input-wrap-top">
+          <div id="templateLabel" class="template-label">Suggested Prompts</div>
+          <button id="stageFeedbackToggleBtn" class="ghost feedback-icon-btn" type="button" title="Stage feedback" aria-label="Stage feedback" aria-expanded="false" aria-controls="stageFeedbackPanel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+              <path d="M8 9h8"></path>
+              <path d="M8 13h5"></path>
+            </svg>
+          </button>
+        </div>
+        <section id="stageFeedbackPanel" class="stage-feedback-panel" aria-live="polite" hidden>
+          <div class="stage-feedback-head">
+            <div>
+              <h3 id="stageFeedbackTitle">Stage Feedback</h3>
+              <p id="stageFeedbackDesc" class="stage-feedback-desc">Optional quick feedback helps us improve the experience. You can revise these answers any time.</p>
+            </div>
+          </div>
+          <div id="stageFeedbackBody"></div>
+          <div class="stage-feedback-scale-note">Scale: 0 = not at all, 10 = completely. Leave any answer blank to skip it.</div>
+          <div class="stage-feedback-actions">
+            <span id="stageFeedbackStatus" class="stage-feedback-status"></span>
+            <button id="sendStageFeedbackBtn" class="primary" type="button" onclick="sendStageFeedbackFromPanel()">Send Feedback</button>
+          </div>
+        </section>
         <div id="templateRow" class="template-row"></div>
 
         <button id="implementCtaBtn" class="implement-cta" type="button" hidden>Implement in Code</button>
@@ -3440,6 +3618,7 @@ const STORAGE_KEY_INSTRUCTIONS = "emotion-sketch-seen-instructions";
 const STORAGE_KEY_HISTORY_TUTORIAL = "emotion-sketch-seen-history-tutorial";
 const STORAGE_KEY_ARTISTIC_EDIT_TUTORIAL = "emotion-sketch-seen-artistic-edit-tutorial";
 const STORAGE_KEY_COLLAB_STYLE = "emotion-sketch-collab-style";
+const STORAGE_KEY_STAGE_FEEDBACK_PROMPT_PREFIX = "emotion-sketch-stage-feedback-prompted";
 const BRANCH_COLORS = ["#d97757", "#c69a4e", "#1f8b80", "#c56e73", "#9a7a68", "#6b948f", "#d4aa63"];
 const ART_DECISION_ACCEPT = "Art Direction Decision: Accept";
 const ART_DECISION_MODIFY = "Art Direction Decision: Modify";
@@ -3468,6 +3647,35 @@ const PHASE_FLOW = [
     placeholder: "Ask for code tweaks, motion changes, or visual refinements...",
   },
 ];
+const STAGE_FEEDBACK_CONFIG = {
+  emotional_discovery: {
+    label: "Emotion",
+    title: "Emotion Stage Feedback",
+    questions: [
+      { key: "comfort_describing_emotions", text: "How comfortable are you describing your emotions to the AI?" },
+      { key: "ai_understands_emotional_tone", text: "Does the AI understand the emotional tone you want?" },
+    ],
+  },
+  artistic_discovery: {
+    label: "Artistic",
+    title: "Artistic Stage Feedback",
+    questions: [
+      { key: "confidence_describing_visual_style", text: "How confident are you in describing the visual style you want?" },
+      { key: "familiarity_with_art_terms", text: "How familiar are you with art or design terms?" },
+      { key: "knows_how_to_describe_look", text: "Do you know how to describe the look you want?" },
+    ],
+  },
+  code_generation: {
+    label: "Coding",
+    title: "Code Generation Feedback",
+    questions: [
+      { key: "output_makes_uncomfortable", text: "Does this output make you uncomfortable?" },
+      { key: "satisfaction_with_output", text: "How satisfied are you with this output?" },
+      { key: "output_represents_people_fairly", text: "Does this output represent people fairly?" },
+      { key: "needs_more_guidance_examples", text: "Would more guidance or examples help before you revise your prompt?" },
+    ],
+  },
+};
 const ARTISTIC_PREFERENCE_GROUPS = [
   { key: "detail", label: "Detail", options: ["Abstract", "Balanced", "Detailed"] },
   { key: "motion", label: "Motion", options: ["Still", "Gentle motion", "Dynamic motion"] },
@@ -3835,6 +4043,11 @@ let activeTourKind = "app";
 let collabSurveyShownThisSession = false;
 let demographicSurveyAnswers = null;
 let isDemographicSurveySaving = false;
+let stageFeedbackAnswers = {};
+let activeStageFeedbackPhase = "emotional_discovery";
+let isStageFeedbackSaving = false;
+let isStageFeedbackExpanded = false;
+let stageFeedbackCollapseTimer = null;
 let isDownloadMenuOpen = false;
 let previewExportRequests = new Map();
 let artPreferenceSelections = {};
@@ -6043,6 +6256,261 @@ async function saveDemographicSurveyAndClose() {
   }
 }
 
+function normalizeStageFeedbackAnswers(phase, feedbackState = null) {
+  const config = STAGE_FEEDBACK_CONFIG[phase];
+  if (!config) return {};
+  const rawEntry = feedbackState && feedbackState[phase] ? feedbackState[phase] : {};
+  const rawAnswers = rawEntry.answers || rawEntry || {};
+  const normalized = {};
+  config.questions.forEach((question) => {
+    const rawValue = rawAnswers[question.key];
+    if (rawValue === undefined || rawValue === null || rawValue === "") {
+      normalized[question.key] = "";
+      return;
+    }
+    const parsed = Number.parseInt(rawValue, 10);
+    normalized[question.key] = Number.isFinite(parsed) ? String(Math.min(10, Math.max(0, parsed))) : "";
+  });
+  return normalized;
+}
+
+function normalizeStageFeedbackState(feedbackState = null) {
+  const normalized = {};
+  Object.keys(STAGE_FEEDBACK_CONFIG).forEach((phase) => {
+    normalized[phase] = normalizeStageFeedbackAnswers(phase, feedbackState || {});
+  });
+  return normalized;
+}
+
+function getStageFeedbackPromptKey(phase) {
+  return `${STORAGE_KEY_STAGE_FEEDBACK_PROMPT_PREFIX}:${sessionId || "unknown"}:${phase}`;
+}
+
+function hasPromptedStageFeedback(phase) {
+  if (!phase || !sessionId) return true;
+  return localStorage.getItem(getStageFeedbackPromptKey(phase)) === "true";
+}
+
+function markStageFeedbackPrompted(phase) {
+  if (!phase || !sessionId) return;
+  localStorage.setItem(getStageFeedbackPromptKey(phase), "true");
+}
+
+function getStageFeedbackPhase(phase = null) {
+  if (phase && STAGE_FEEDBACK_CONFIG[phase]) return phase;
+  if (appState && STAGE_FEEDBACK_CONFIG[appState.phase]) return appState.phase;
+  return "emotional_discovery";
+}
+
+function buildScaleOptions(value) {
+  let html = '<option value="">Skip</option>';
+  for (let i = 0; i <= 10; i += 1) {
+    html += `<option value="${i}"${String(value) === String(i) ? " selected" : ""}>${i}</option>`;
+  }
+  return html;
+}
+
+function renderStageFeedbackForm() {
+  const body = $("stageFeedbackBody");
+  const title = $("stageFeedbackTitle");
+  if (!body) return;
+  const phase = getStageFeedbackPhase(activeStageFeedbackPhase);
+  activeStageFeedbackPhase = phase;
+  const config = STAGE_FEEDBACK_CONFIG[phase];
+  if (title) title.textContent = config.title;
+  const answers = stageFeedbackAnswers[phase] || normalizeStageFeedbackAnswers(phase, appState?.stage_feedback || {});
+  const tabs = Object.entries(STAGE_FEEDBACK_CONFIG).map(([phaseId, item]) => (
+    `<button class="stage-feedback-tab${phaseId === phase ? " active" : ""}" type="button" onclick="setStageFeedbackPhase('${phaseId}')">${item.label}</button>`
+  )).join("");
+  const fields = config.questions.map((question) => {
+    const value = answers[question.key] || "";
+    return `
+      <div class="tour-demographic-field">
+        <label for="stageFeedbackInput_${question.key}">${question.text}</label>
+        <select id="stageFeedbackInput_${question.key}" data-feedback-key="${question.key}">
+          ${buildScaleOptions(value)}
+        </select>
+      </div>
+    `;
+  }).join("");
+  body.innerHTML = `
+    <div class="stage-feedback-tabs">${tabs}</div>
+    <form class="tour-demographic-form" id="stageFeedbackForm" onsubmit="return false;">
+      ${fields}
+    </form>
+  `;
+}
+
+function setStageFeedbackPhase(phase) {
+  persistStageFeedbackDraft();
+  activeStageFeedbackPhase = getStageFeedbackPhase(phase);
+  setStageFeedbackStatus("");
+  renderStageFeedbackForm();
+}
+
+function persistStageFeedbackDraft() {
+  const config = STAGE_FEEDBACK_CONFIG[activeStageFeedbackPhase];
+  if (!config) return;
+  const draft = {};
+  config.questions.forEach((question) => {
+    draft[question.key] = $(`stageFeedbackInput_${question.key}`)?.value || "";
+  });
+  stageFeedbackAnswers[activeStageFeedbackPhase] = draft;
+}
+
+function setStageFeedbackStatus(message) {
+  const status = $("stageFeedbackStatus");
+  if (status) status.textContent = message || "";
+}
+
+function setStageFeedbackToggleState(isExpanded, options = {}) {
+  const button = $("stageFeedbackToggleBtn");
+  if (!button) return;
+  button.classList.toggle("active", !!isExpanded);
+  button.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+  if (options.attention) {
+    button.classList.add("attention");
+    window.setTimeout(() => button.classList.remove("attention"), 1800);
+  }
+}
+
+function focusStageFeedbackPanel(options = {}) {
+  const panel = $("stageFeedbackPanel");
+  if (!panel) return;
+  panel.scrollIntoView({ behavior: options.smooth ? "smooth" : "auto", block: "nearest" });
+  if (options.attention) {
+    panel.classList.add("attention");
+    window.setTimeout(() => panel.classList.remove("attention"), 1800);
+  }
+}
+
+function expandStageFeedbackPanel(phase = null, options = {}) {
+  closeDownloadMenu();
+  if (stageFeedbackCollapseTimer) {
+    window.clearTimeout(stageFeedbackCollapseTimer);
+    stageFeedbackCollapseTimer = null;
+  }
+  activeStageFeedbackPhase = getStageFeedbackPhase(phase);
+  const desc = $("stageFeedbackDesc");
+  if (desc) {
+    desc.textContent = options.auto
+      ? "Optional quick feedback is available after your first message in this stage. You can revise these answers later."
+      : "Optional quick feedback helps us improve the experience. You can revise these answers any time.";
+  }
+  renderStageFeedbackForm();
+  const panel = $("stageFeedbackPanel");
+  if (panel) panel.hidden = false;
+  isStageFeedbackExpanded = true;
+  setStageFeedbackToggleState(true, { attention: !!options.auto });
+  if (options.auto) {
+    setStageFeedbackStatus("Optional feedback available.");
+  } else {
+    setStageFeedbackStatus("");
+  }
+  focusStageFeedbackPanel({ attention: !!options.auto, smooth: !!options.smooth });
+}
+
+function collapseStageFeedbackPanel() {
+  persistStageFeedbackDraft();
+  if (stageFeedbackCollapseTimer) {
+    window.clearTimeout(stageFeedbackCollapseTimer);
+    stageFeedbackCollapseTimer = null;
+  }
+  const panel = $("stageFeedbackPanel");
+  if (panel) panel.hidden = true;
+  isStageFeedbackExpanded = false;
+  setStageFeedbackToggleState(false);
+}
+
+function toggleStageFeedbackPanel() {
+  const panel = $("stageFeedbackPanel");
+  if (isStageFeedbackExpanded && panel && !panel.hidden) {
+    collapseStageFeedbackPanel();
+  } else {
+    expandStageFeedbackPanel(appState?.phase || activeStageFeedbackPhase || null, { smooth: true });
+  }
+}
+
+function openStageFeedbackModal(phase = null, options = {}) {
+  expandStageFeedbackPanel(phase, options);
+}
+
+function closeStageFeedbackModal() {
+  collapseStageFeedbackPanel();
+}
+
+function collectStageFeedbackAnswers() {
+  persistStageFeedbackDraft();
+  const config = STAGE_FEEDBACK_CONFIG[activeStageFeedbackPhase];
+  const answers = {};
+  if (!config) return answers;
+  config.questions.forEach((question) => {
+    answers[question.key] = stageFeedbackAnswers[activeStageFeedbackPhase]?.[question.key] || "";
+  });
+  return answers;
+}
+
+async function saveStageFeedback() {
+  if (!sessionId || isStageFeedbackSaving) return false;
+  const phase = getStageFeedbackPhase(activeStageFeedbackPhase);
+  const payload = {
+    session_id: sessionId,
+    phase,
+    answers: collectStageFeedbackAnswers(),
+  };
+  isStageFeedbackSaving = true;
+  setStageFeedbackStatus("Sending feedback...");
+  const button = $("sendStageFeedbackBtn");
+  if (button) button.disabled = true;
+  try {
+    const response = await fetch(`${API}/stage-feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || "Could not send feedback.");
+    }
+    stageFeedbackAnswers[phase] = normalizeStageFeedbackAnswers(phase, { [phase]: data.feedback });
+    if (appState) {
+      appState.stage_feedback = data.state?.stage_feedback || {
+        ...(appState.stage_feedback || {}),
+        [phase]: data.feedback,
+      };
+    }
+    setStageFeedbackStatus("Feedback received.");
+    return true;
+  } catch (error) {
+    appendConsoleLog("warn", error.message || "Could not send feedback.");
+    setStageFeedbackStatus("Could not send feedback.");
+    alert(error.message || "Could not send feedback.");
+    return false;
+  } finally {
+    isStageFeedbackSaving = false;
+    if (button) button.disabled = false;
+  }
+}
+
+async function sendStageFeedbackFromPanel() {
+  const saved = await saveStageFeedback();
+  if (saved) {
+    stageFeedbackCollapseTimer = window.setTimeout(() => {
+      collapseStageFeedbackPanel();
+    }, 700);
+  }
+}
+
+function maybeOpenStageFeedbackPrompt(phase) {
+  const promptPhase = getStageFeedbackPhase(phase);
+  if (!sessionId || !STAGE_FEEDBACK_CONFIG[promptPhase] || hasPromptedStageFeedback(promptPhase)) return;
+  markStageFeedbackPrompted(promptPhase);
+  window.setTimeout(() => {
+    if (isTourOpen()) return;
+    openStageFeedbackModal(promptPhase, { auto: true });
+  }, 500);
+}
+
 function hasSeenArtisticEditTutorial() {
   return localStorage.getItem(STORAGE_KEY_ARTISTIC_EDIT_TUTORIAL) === "true";
 }
@@ -6930,8 +7398,13 @@ function buildPreviewBridgeScript() {
   `;
 }
 
+function avoidP5AlphaShadowing(code) {
+  if (!code || !/\b(?:let|const|var)\s+alpha\b/.test(code)) return code || "";
+  return code.replace(/(?<![\w$.])alpha(?![\w$]|\s*\()/g, "alphaValue");
+}
+
 function buildPreviewDocument(code) {
-  const safeCode = (code || "").replace(/<\/script>/gi, "<\\/script>");
+  const safeCode = avoidP5AlphaShadowing(code || "").replace(/<\/script>/gi, "<\\/script>");
   const bodyContent = safeCode
     ? `
       <script>
@@ -7091,6 +7564,10 @@ function renderState(state) {
   appState = state;
   sessionId = state.session_id;
   demographicSurveyAnswers = normalizeDemographicSurveyAnswers(state.survey);
+  stageFeedbackAnswers = normalizeStageFeedbackState(state.stage_feedback);
+  if (!$("stageFeedbackForm")) {
+    activeStageFeedbackPhase = getStageFeedbackPhase(state.phase);
+  }
   syncArtisticPanelFromState(state);
   syncArtisticOptionSnapshot(state);
   if (nextPhase === "artistic_discovery" && previousPhase !== "artistic_discovery") {
@@ -7101,6 +7578,7 @@ function renderState(state) {
   updateComposerPanels(state);
   renderStageFlow(state);
   renderTemplateRow(state.phase, state.pending_artistic_decision);
+  renderStageFeedbackForm();
   renderArtisticStudio(state);
   updateChatPlaceholder(state);
   updateImplementCta(state);
@@ -7355,6 +7833,7 @@ async function refreshArtOptionsFromStudio() {
 
 async function sendChat(forcedText = null, options = {}) {
   if (isSending || isRecording) return;
+  const feedbackPhaseForTurn = getStageFeedbackPhase(appState && appState.phase);
   const usingComposerDraft = forcedText == null;
   const text = (usingComposerDraft ? $("chatInput").value : forcedText || "").trim();
   const activeMedia = usingComposerDraft ? pendingMedia : null;
@@ -7422,6 +7901,7 @@ async function sendChat(forcedText = null, options = {}) {
     if (isHistoryOpen) {
       await fetchHistory();
     }
+    maybeOpenStageFeedbackPrompt(feedbackPhaseForTurn);
   } catch (error) {
     pendingOutgoingMessage = null;
     pendingAssistantTyping = false;
@@ -7616,6 +8096,8 @@ async function startNewSession() {
   collabSurveyShownThisSession = false;
   demographicSurveyAnswers = null;
   isDemographicSurveySaving = false;
+  stageFeedbackAnswers = {};
+  isStageFeedbackSaving = false;
   const response = await fetch(`${API}/new-session`, { method: "POST" });
   const data = await response.json();
   if (!response.ok) {
@@ -7632,6 +8114,8 @@ async function resetSession() {
   collabSurveyShownThisSession = false;
   demographicSurveyAnswers = null;
   isDemographicSurveySaving = false;
+  stageFeedbackAnswers = {};
+  isStageFeedbackSaving = false;
   const response = await fetch(`${API}/reset`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -7860,6 +8344,7 @@ function initializeApp() {
   bindById("resetBtn", "click", resetSession);
   bindById("workingStyleBtn", "click", openWorkingStyleModal);
   bindById("demographicSurveyBtn", "click", openDemographicSurveyModal);
+  bindById("stageFeedbackToggleBtn", "click", toggleStageFeedbackPanel);
   bindById("helpBtn", "click", () => openTutorial("app"));
   bindById("tourNextBtn", "click", nextTourStep);
   bindById("tourBackBtn", "click", previousTourStep);
