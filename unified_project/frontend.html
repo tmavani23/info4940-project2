@@ -7233,6 +7233,9 @@ async function saveVersion() {
   });
   const data = await response.json();
   if (!response.ok) {
+    if (data.state) {
+      renderState(data.state);
+    }
     appendConsoleLog("error", data.error || "Could not save version.");
     alert(data.error || "Could not save version.");
     return;
@@ -7291,6 +7294,9 @@ async function savePartialVersion(kind) {
   });
   const data = await response.json();
   if (!response.ok) {
+    if (data.state) {
+      renderState(data.state);
+    }
     appendConsoleLog("error", data.error || "Could not save version.");
     alert(data.error || "Could not save version.");
     return;
