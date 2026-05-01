@@ -3058,6 +3058,71 @@ body.artistic-modal-active .artistic-studio {
   margin-top: 16px;
   width: 100%;
 }
+
+.app-notice-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+.app-notice-modal[hidden] { display: none; }
+.app-notice-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.54);
+}
+.app-notice-card {
+  position: relative;
+  z-index: 1;
+  width: min(430px, calc(100vw - 32px));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 24px 56px var(--shadow-strong);
+  padding: 20px;
+}
+.app-notice-card.warning {
+  border-color: rgba(197, 110, 115, 0.55);
+}
+.app-notice-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.app-notice-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.app-notice-close {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+}
+.app-notice-message {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.app-notice-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
 </style>
 </head>
 <body>
@@ -3097,6 +3162,21 @@ body.artistic-modal-active .artistic-studio {
       <p class="working-style-desc">Choose how you'd like the AI to collaborate with you. You can change this at any time.</p>
       <div id="workingStyleModalBody"></div>
       <button class="primary working-style-done" type="button" onclick="closeWorkingStyleModal()">Done</button>
+    </div>
+  </div>
+
+  <div id="appNoticeModal" class="app-notice-modal" role="dialog" aria-modal="true" aria-labelledby="appNoticeTitle" hidden>
+    <div class="app-notice-scrim" data-notice-close></div>
+    <div id="appNoticeCard" class="app-notice-card">
+      <div class="app-notice-head">
+        <h3 id="appNoticeTitle" class="app-notice-title">Notice</h3>
+        <button id="appNoticeCloseBtn" class="app-notice-close" type="button" aria-label="Close notice">×</button>
+      </div>
+      <div id="appNoticeMessage" class="app-notice-message"></div>
+      <div class="app-notice-actions">
+        <button id="appNoticeSecondaryBtn" class="ghost" type="button" hidden>Cancel</button>
+        <button id="appNoticeOkBtn" class="primary" type="button">OK</button>
+      </div>
     </div>
   </div>
 
@@ -3733,6 +3813,7 @@ let shouldRevealGeneratedArtOptions = false;
 let artisticStudioPage = 1;
 let hasHydratedInitialState = false;
 let lastRenderedPhase = "";
+let appNoticeSecondaryHandler = null;
 let activeDiffContext = {
   emotion: { baseline: "" },
   artistic: { baseline: "" },
@@ -3755,6 +3836,71 @@ function escapeHtml(text) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function isNoticeOpen() {
+  const modal = $("appNoticeModal");
+  return !!(modal && !modal.hidden);
+}
+
+function closeAppNotice() {
+  const modal = $("appNoticeModal");
+  if (!modal) return;
+  const secondaryBtn = $("appNoticeSecondaryBtn");
+  modal.hidden = true;
+  modal.setAttribute("aria-hidden", "true");
+  appNoticeSecondaryHandler = null;
+  if (secondaryBtn) {
+    secondaryBtn.hidden = true;
+  }
+}
+
+function handleAppNoticeSecondary() {
+  const handler = appNoticeSecondaryHandler;
+  closeAppNotice();
+  if (typeof handler === "function") {
+    handler();
+  }
+}
+
+function showAppNotice(message, options = {}) {
+  const modal = $("appNoticeModal");
+  const card = $("appNoticeCard");
+  const title = $("appNoticeTitle");
+  const body = $("appNoticeMessage");
+  const okBtn = $("appNoticeOkBtn");
+  const secondaryBtn = $("appNoticeSecondaryBtn");
+  if (!modal || !card || !title || !body) return;
+  title.textContent = options.title || "Notice";
+  body.textContent = message || "Something went wrong.";
+  if (okBtn) {
+    okBtn.textContent = options.okLabel || "OK";
+  }
+  if (secondaryBtn) {
+    if (options.secondaryLabel && typeof options.onSecondary === "function") {
+      secondaryBtn.hidden = false;
+      secondaryBtn.textContent = options.secondaryLabel;
+      appNoticeSecondaryHandler = options.onSecondary;
+    } else {
+      secondaryBtn.hidden = true;
+      appNoticeSecondaryHandler = null;
+    }
+  }
+  card.classList.toggle("warning", (options.tone || "warning") === "warning");
+  modal.hidden = false;
+  modal.setAttribute("aria-hidden", "false");
+  requestAnimationFrame(() => {
+    if (okBtn) okBtn.focus();
+  });
+}
+
+function showApiNotice(data, fallback) {
+  const message = (data && data.error) || fallback || "Something went wrong.";
+  const safety = data && data.safety;
+  showAppNotice(message, {
+    title: safety && safety.status === "blocked" ? "Safety Check" : "Notice",
+    tone: "warning",
+  });
 }
 
 function normalizeComparableText(text) {
@@ -3879,7 +4025,18 @@ function confirmDiscardUnsavedArtisticChanges() {
   if (!hasUnsavedArtisticDescriptionChanges()) {
     return true;
   }
-  return window.confirm("You have unsaved artistic description changes. Close anyway?");
+  showAppNotice("You have unsaved artistic description changes. Save them first so Coding uses the updated version.", {
+    title: "Unsaved Artistic Edits",
+    okLabel: "Keep Editing",
+    secondaryLabel: "Close Anyway",
+    onSecondary: () => {
+      artisticModalDismissed = true;
+      if (appState) {
+        renderArtisticStudio(appState);
+      }
+    },
+  });
+  return false;
 }
 
 function findMatchingArtisticOptionIndex(options, artisticProfile) {
@@ -5602,7 +5759,7 @@ async function downloadCodeFile() {
   closeDownloadMenu();
   const code = getCodeValue();
   if (!code || !code.trim()) {
-    alert("There is no code to download yet.");
+    showAppNotice("There is no code to download yet.", { title: "Download" });
     return;
   }
   downloadBlob(
@@ -5620,7 +5777,7 @@ async function downloadPreviewImage() {
     }
     downloadDataUrl(result.dataUrl, `${getDownloadBaseName()}.png`);
   } catch (error) {
-    alert(error.message || "Could not download the preview image.");
+    showAppNotice(error.message || "Could not download the preview image.", { title: "Download" });
   }
 }
 
@@ -5633,7 +5790,7 @@ async function downloadPreviewGif() {
     }
     downloadDataUrl(result.dataUrl, `${getDownloadBaseName()}.gif`);
   } catch (error) {
-    alert(error.message || "Could not download the preview GIF.");
+    showAppNotice(error.message || "Could not download the preview GIF.", { title: "Download" });
   }
 }
 
@@ -6473,7 +6630,7 @@ async function startRecording() {
         };
         showPendingMedia();
       } catch (error) {
-        alert("Audio processing failed. Please try recording again.");
+        showAppNotice("Audio processing failed. Please try recording again.", { title: "Audio" });
       } finally {
         recorder = null;
         isRecording = false;
@@ -6487,7 +6644,7 @@ async function startRecording() {
     isRecording = false;
     recorder = null;
     updateSendButtonState();
-    alert("Microphone access is required to record audio.");
+    showAppNotice("Microphone access is required to record audio.", { title: "Audio" });
   }
 }
 
@@ -7069,7 +7226,7 @@ async function setPhase(targetPhase, extraPayload = null) {
   const data = await response.json();
   if (!response.ok) {
     appendConsoleLog("warn", data.error || "Could not change phase.");
-    alert(data.error || "Could not change phase.");
+    showApiNotice(data, "Could not change phase.");
     return;
   }
   renderState(data.state);
@@ -7181,7 +7338,7 @@ async function sendChat(forcedText = null, options = {}) {
       }
       renderMessages(appState && Array.isArray(appState.messages) ? appState.messages : []);
       appendConsoleLog("error", data.error || "Chat request failed.");
-      alert(data.error || "Chat request failed.");
+      showApiNotice(data, "Chat request failed.");
       return;
     }
     captureLlmStatusFromChatResponse(data);
@@ -7193,6 +7350,11 @@ async function sendChat(forcedText = null, options = {}) {
     pendingOutgoingMessage = null;
     pendingAssistantTyping = false;
     renderState(data.state);
+    if (data.reply && data.reply.blocked_by_safety) {
+      showAppNotice(data.reply.message || "That request was blocked by the safety guardrails.", {
+        title: "Safety Check",
+      });
+    }
     if (isHistoryOpen) {
       await fetchHistory();
     }
@@ -7206,7 +7368,7 @@ async function sendChat(forcedText = null, options = {}) {
     }
     renderMessages(appState && Array.isArray(appState.messages) ? appState.messages : []);
     appendConsoleLog("error", `Network error: ${error.message}`);
-    alert(`Network error: ${error.message}`);
+    showAppNotice(`Network error: ${error.message}`, { title: "Network Error" });
   } finally {
     hideChatLoading();
     isSending = false;
@@ -7237,7 +7399,7 @@ async function saveVersion() {
       renderState(data.state);
     }
     appendConsoleLog("error", data.error || "Could not save version.");
-    alert(data.error || "Could not save version.");
+    showApiNotice(data, "Could not save version.");
     return;
   }
   renderState(data.state);
@@ -7298,7 +7460,7 @@ async function savePartialVersion(kind) {
       renderState(data.state);
     }
     appendConsoleLog("error", data.error || "Could not save version.");
-    alert(data.error || "Could not save version.");
+    showApiNotice(data, "Could not save version.");
     return;
   }
   renderState(data.state);
@@ -7329,7 +7491,7 @@ async function restoreSelectedVersion() {
   const data = await response.json();
   if (!response.ok) {
     appendConsoleLog("error", data.error || "Could not restore version.");
-    alert(data.error || "Could not restore version.");
+    showApiNotice(data, "Could not restore version.");
     return;
   }
   historyPreviewVersionId = null;
@@ -7342,7 +7504,7 @@ async function undoToPreviousVersion() {
   const response = await fetch(`${API}/history?session_id=${encodeURIComponent(sessionId)}`);
   const data = await response.json();
   if (!response.ok || !data.nodes || !data.nodes.length) {
-    alert("No version history found.");
+    showAppNotice("No version history found.", { title: "Version History" });
     return;
   }
   const sorted = [...data.nodes].sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
@@ -7350,7 +7512,7 @@ async function undoToPreviousVersion() {
   const currentIndex = currentId ? sorted.findIndex((v) => v.id === currentId) : sorted.length;
   const prevIndex = currentIndex > 0 ? currentIndex - 1 : -1;
   if (prevIndex < 0) {
-    alert("You are already at the earliest version.");
+    showAppNotice("You are already at the earliest version.", { title: "Version History" });
     return;
   }
   selectedHistoryVersionId = sorted[prevIndex].id;
@@ -7398,7 +7560,7 @@ async function startNewSession() {
   const data = await response.json();
   if (!response.ok) {
     appendConsoleLog("error", data.error || "Could not create a new session.");
-    alert(data.error || "Could not create a new session.");
+    showApiNotice(data, "Could not create a new session.");
     return;
   }
   historyPreviewVersionId = null;
@@ -7415,7 +7577,7 @@ async function resetSession() {
   const data = await response.json();
   if (!response.ok) {
     appendConsoleLog("error", data.error || "Could not reset session.");
-    alert(data.error || "Could not reset session.");
+    showApiNotice(data, "Could not reset session.");
     return;
   }
   historyPreviewVersionId = null;
@@ -7487,9 +7649,17 @@ function initializeApp() {
 
   bindById("fullscreenBackdrop", "click", closeFullscreenPane);
   bindById("artisticStudioBackdrop", "click", closeArtisticModal);
+  bindById("appNoticeCloseBtn", "click", closeAppNotice);
+  bindById("appNoticeOkBtn", "click", closeAppNotice);
+  bindById("appNoticeSecondaryBtn", "click", handleAppNoticeSecondary);
+  document.querySelector("[data-notice-close]")?.addEventListener("click", closeAppNotice);
 
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      if (isNoticeOpen()) {
+        closeAppNotice();
+        return;
+      }
       if (appState && appState.phase === "artistic_discovery" && !artisticModalDismissed) {
         closeArtisticModal();
         return;
@@ -7570,7 +7740,9 @@ function initializeApp() {
   bindById("refreshArtOptionsBtn", "click", refreshArtOptionsFromStudio);
   bindById("continueFromArtisticBtn", "click", async () => {
     if (hasBlockingArtisticDescriptionChanges()) {
-      alert("You have unsaved artistic description changes. Save them first so Coding uses the updated version.");
+      showAppNotice("You have unsaved artistic description changes. Save them first so Coding uses the updated version.", {
+        title: "Unsaved Artistic Edits",
+      });
       return;
     }
     await setPhase("code_generation", getDirectArtisticTransitionPayload("code_generation"));
