@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_file, send_from_directory
 from flask_cors import CORS
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -43,6 +43,7 @@ except Exception:
 
 BASE_DIR = Path(__file__).resolve().parent
 LOGS_DIR = BASE_DIR / "logs"
+SYNTHETIC_LOGS_DIR = BASE_DIR / "synthetic_logs"
 load_dotenv(BASE_DIR / ".env")
 
 MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
@@ -3444,6 +3445,548 @@ def serialize_state(session: SessionState) -> dict:
     }
 
 
+DASHBOARD_METRICS = {
+    "comfort_describing_emotions": {
+        "label": "Comfort describing emotions",
+        "scale_max": 10,
+        "risk_direction": "low",
+        "risk_threshold": 3,
+        "risk_label": "Low comfort describing emotions",
+    },
+    "ai_understands_emotional_tone": {
+        "label": "AI understands emotional tone",
+        "scale_max": 10,
+        "risk_direction": "low",
+        "risk_threshold": 3,
+        "risk_label": "AI may be missing emotional tone",
+    },
+    "confidence_describing_visual_style": {
+        "label": "Confidence describing visual style",
+        "scale_max": 10,
+        "risk_direction": "low",
+        "risk_threshold": 3,
+        "risk_label": "Low confidence describing visual style",
+    },
+    "familiarity_with_art_terms": {
+        "label": "Familiarity with art terms",
+        "scale_max": 10,
+        "risk_direction": "low",
+        "risk_threshold": 3,
+        "risk_label": "Low familiarity with art terms",
+    },
+    "knows_how_to_describe_look": {
+        "label": "Knows how to describe desired look",
+        "scale_max": 10,
+        "risk_direction": "low",
+        "risk_threshold": 3,
+        "risk_label": "May need help describing the desired look",
+    },
+    "output_makes_uncomfortable": {
+        "label": "Output makes user uncomfortable",
+        "scale_max": 10,
+        "risk_direction": "high",
+        "risk_threshold": 7,
+        "risk_label": "Output may be making users uncomfortable",
+    },
+    "satisfaction_with_output": {
+        "label": "Satisfaction with output",
+        "scale_max": 10,
+        "risk_direction": "low",
+        "risk_threshold": 3,
+        "risk_label": "Low satisfaction with output",
+    },
+    "output_represents_people_fairly": {
+        "label": "Output represents people fairly",
+        "scale_max": 10,
+        "risk_direction": "low",
+        "risk_threshold": 3,
+        "risk_label": "Output may not represent people fairly",
+    },
+    "needs_more_guidance_examples": {
+        "label": "Needs more guidance or examples",
+        "scale_max": 10,
+        "risk_direction": "high",
+        "risk_threshold": 7,
+        "risk_label": "Users may need more guidance or examples",
+    },
+    "evaluation_score": {
+        "label": "User message evaluation score",
+        "scale_max": 5,
+        "risk_direction": "low",
+        "risk_threshold": 2,
+        "risk_label": "Low user response evaluation score",
+    },
+    "iteration_count": {
+        "label": "Number of iterations",
+        "scale_max": None,
+        "risk_direction": "high",
+        "risk_threshold": 6,
+        "risk_label": "High number of iterations",
+    },
+}
+
+
+def _dev_dashboard_allowed() -> bool:
+    configured_key = os.getenv("DEV_DASHBOARD_KEY")
+    supplied_key = request.headers.get("X-Dev-Dashboard-Key") or request.args.get("key")
+    if configured_key:
+        return supplied_key == configured_key
+    remote_addr = request.remote_addr or ""
+    return remote_addr in {"127.0.0.1", "::1", "localhost"} or remote_addr.startswith("127.")
+
+
+def _dashboard_forbidden_response():
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Developer dashboard access denied"}), 403
+    return (
+        "Developer dashboard access denied. Set DEV_DASHBOARD_KEY or open from localhost.",
+        403,
+        {"Content-Type": "text/plain; charset=utf-8"},
+    )
+
+
+def _numeric_or_none(value: Any) -> Optional[float]:
+    if value in (None, ""):
+        return None
+    if isinstance(value, bool):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _short_log_text(value: Any, limit: int = 220) -> str:
+    text = _clean_text(value)
+    if len(text) <= limit:
+        return text
+    return f"{text[: limit - 1].rstrip()}…"
+
+
+def _safe_read_log(path: Path) -> Optional[dict[str, Any]]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _format_survey_group_value(survey: Optional[dict[str, Any]], field_name: str) -> str:
+    if not isinstance(survey, dict):
+        return "No survey"
+    skipped = survey.get("skipped") if isinstance(survey.get("skipped"), dict) else {}
+    value = survey.get(field_name)
+    if skipped.get(field_name) or value in (None, ""):
+        return "Skipped"
+    if field_name == "gender":
+        labels = {"male": "Male", "female": "Female", "other": "Other"}
+        return labels.get(str(value), str(value))
+    if field_name == "ai_experience":
+        return str(value)
+    return str(value)
+
+
+def _metric_is_flagged(metric_key: str, value: float) -> bool:
+    config = DASHBOARD_METRICS.get(metric_key, {})
+    threshold = _numeric_or_none(config.get("risk_threshold"))
+    if threshold is None:
+        return False
+    if config.get("risk_direction") == "high":
+        return value >= threshold
+    if config.get("risk_direction") == "low":
+        return value <= threshold
+    return False
+
+
+def _extract_latest_feedback(stage_feedback: Any) -> tuple[dict[str, Optional[float]], dict[str, bool], dict[str, str]]:
+    answers: dict[str, Optional[float]] = {}
+    skipped: dict[str, bool] = {}
+    phases: dict[str, str] = {}
+    if not isinstance(stage_feedback, dict):
+        return answers, skipped, phases
+
+    for phase, payload in stage_feedback.items():
+        if not isinstance(payload, dict):
+            continue
+        phase_answers = payload.get("answers")
+        phase_skipped = payload.get("skipped")
+        if not isinstance(phase_answers, dict):
+            continue
+        for key, raw_value in phase_answers.items():
+            if key not in DASHBOARD_METRICS:
+                continue
+            answers[key] = _numeric_or_none(raw_value)
+            skipped[key] = bool(phase_skipped.get(key)) if isinstance(phase_skipped, dict) else raw_value in (None, "")
+            phases[key] = str(phase)
+    return answers, skipped, phases
+
+
+SAFETY_CHECK_LABELS = {
+    "input_prompt": "User input",
+    "output_response": "AI response",
+    "output_emotion_profile": "Emotion profile",
+    "output_artistic_profile": "Artistic profile",
+    "output_artistic_options": "Artistic options",
+    "generated_code": "Generated code",
+    "generated_graph": "Generated graph",
+    "manual_save": "Manual save",
+}
+
+SAFETY_CATEGORY_LABELS = {
+    "abusive_extreme_language": "Abusive extreme language",
+    "extreme_emotion": "Extreme emotion wording",
+    "extreme_language": "Strong language",
+    "graphic_violence": "Graphic violence",
+    "hate_or_harassment": "Hate or harassment",
+    "inappropriate_sexual_content": "Explicit sexual content",
+    "pii": "PII or secret data",
+    "prompt_injection": "Prompt injection",
+    "self_harm": "Self-harm wording",
+    "violence_reference": "Violence reference",
+    "violent_element": "Violent element",
+    "violent_threat": "Violent threat",
+    "weapon_threat": "Weapon threat",
+    "unknown": "Unknown safety signal",
+}
+
+
+def _safety_label(mapping: dict[str, str], key: Any) -> str:
+    text = _clean_text(key) or "unknown"
+    return mapping.get(text, text.replace("_", " ").title())
+
+
+def _safety_source_for_check(check_key: str) -> str:
+    if check_key == "input_prompt":
+        return "input"
+    if check_key.startswith("output_") or check_key.startswith("generated_"):
+        return "output"
+    return "other"
+
+
+def _safety_signal_for_category(signals: Any, category: str) -> dict[str, Any]:
+    if not isinstance(signals, list):
+        return {}
+    for signal in signals:
+        if isinstance(signal, dict) and signal.get("category") == category:
+            return signal
+    for signal in signals:
+        if isinstance(signal, dict):
+            return signal
+    return {}
+
+
+def _dashboard_safety_event(
+    *,
+    turn: dict[str, Any],
+    check_key: str,
+    category: str,
+    severity: str,
+    check: dict[str, Any],
+    generated_output_blocked: bool,
+) -> dict[str, Any]:
+    signal = _safety_signal_for_category(check.get("signals"), category)
+    blocked = severity == "blocked" or bool(check.get("blocked")) or generated_output_blocked
+    return {
+        "turn_id": turn.get("turn_id"),
+        "timestamp": turn.get("timestamp"),
+        "phase": turn.get("phase"),
+        "source": _safety_source_for_check(check_key),
+        "check": check_key,
+        "check_label": _safety_label(SAFETY_CHECK_LABELS, check_key),
+        "category": category,
+        "category_label": _safety_label(SAFETY_CATEGORY_LABELS, category),
+        "severity": "blocked" if blocked else "flagged",
+        "blocked": blocked,
+        "flagged": bool(check.get("flagged")) or blocked,
+        "status": _clean_text(check.get("status")) or ("blocked" if blocked else "flagged"),
+        "reason": _short_log_text(signal.get("reason"), 140),
+        "excerpt": _short_log_text(signal.get("excerpt"), 160),
+    }
+
+
+def _extract_safety_events(turn: dict[str, Any]) -> list[dict[str, Any]]:
+    safety = turn.get("safety") if isinstance(turn.get("safety"), dict) else {}
+    if not safety:
+        return []
+
+    generated_output_blocked = bool(safety.get("generated_output_blocked"))
+    events: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for check_key, check in safety.items():
+        if not isinstance(check, dict) or "status" not in check:
+            continue
+        categories = check.get("categories") if isinstance(check.get("categories"), list) else []
+        if not categories and (check.get("flagged") or check.get("blocked")):
+            categories = ["unknown"]
+        if not categories:
+            continue
+        status = _clean_text(check.get("status"))
+        severity = "blocked" if check.get("blocked") or status == "blocked" else "flagged"
+        for raw_category in categories:
+            category = _clean_text(raw_category) or "unknown"
+            key = (check_key, category, severity)
+            if key in seen:
+                continue
+            seen.add(key)
+            events.append(
+                _dashboard_safety_event(
+                    turn=turn,
+                    check_key=check_key,
+                    category=category,
+                    severity=severity,
+                    check=check,
+                    generated_output_blocked=generated_output_blocked,
+                )
+            )
+
+    if not events and (safety.get("flagged") or safety.get("blocked")):
+        categories = safety.get("categories") if isinstance(safety.get("categories"), list) else ["unknown"]
+        for raw_category in categories or ["unknown"]:
+            category = _clean_text(raw_category) or "unknown"
+            events.append(
+                {
+                    "turn_id": turn.get("turn_id"),
+                    "timestamp": turn.get("timestamp"),
+                    "phase": turn.get("phase"),
+                    "source": "unknown",
+                    "check": "safety",
+                    "check_label": "Safety",
+                    "category": category,
+                    "category_label": _safety_label(SAFETY_CATEGORY_LABELS, category),
+                    "severity": "blocked" if safety.get("blocked") else "flagged",
+                    "blocked": bool(safety.get("blocked")),
+                    "flagged": bool(safety.get("flagged") or safety.get("blocked")),
+                    "status": _clean_text(safety.get("status")) or "flagged",
+                    "reason": "",
+                    "excerpt": "",
+                }
+            )
+    return events
+
+
+def _summarize_safety_events(events: list[dict[str, Any]]) -> dict[str, Any]:
+    categories: list[str] = []
+    category_counts: dict[str, int] = {}
+    checks: list[str] = []
+    blocked_count = 0
+    input_count = 0
+    output_count = 0
+    generated_output_blocked_count = 0
+    turns_with_signals: set[Any] = set()
+    for event in events:
+        category = _clean_text(event.get("category")) or "unknown"
+        check = _clean_text(event.get("check")) or "safety"
+        if category not in categories:
+            categories.append(category)
+        if check not in checks:
+            checks.append(check)
+        category_counts[category] = category_counts.get(category, 0) + 1
+        if event.get("blocked"):
+            blocked_count += 1
+        if event.get("source") == "input":
+            input_count += 1
+        if event.get("source") == "output":
+            output_count += 1
+        if event.get("blocked") and event.get("source") == "output":
+            generated_output_blocked_count += 1
+        if event.get("turn_id") is not None:
+            turns_with_signals.add(event.get("turn_id"))
+    return {
+        "status": "blocked" if blocked_count else "flagged" if events else "safe",
+        "flagged": bool(events),
+        "blocked": bool(blocked_count),
+        "event_count": len(events),
+        "blocked_event_count": blocked_count,
+        "flagged_event_count": len(events) - blocked_count,
+        "input_event_count": input_count,
+        "output_event_count": output_count,
+        "generated_output_blocked_count": generated_output_blocked_count,
+        "turns_with_signals": len(turns_with_signals),
+        "categories": categories,
+        "category_counts": category_counts,
+        "checks": checks,
+    }
+
+
+def _build_dashboard_session(path: Path, data: dict[str, Any], source: str = "real") -> dict[str, Any]:
+    turns_raw = data.get("turns") if isinstance(data.get("turns"), list) else []
+    turns: list[dict[str, Any]] = []
+    eval_scores: list[float] = []
+    safety_events: list[dict[str, Any]] = []
+    for turn in turns_raw:
+        if not isinstance(turn, dict):
+            continue
+        evaluation = turn.get("evaluation") if isinstance(turn.get("evaluation"), dict) else {}
+        score = _numeric_or_none(evaluation.get("score"))
+        if score is not None:
+            eval_scores.append(score)
+        turn_safety = turn.get("safety") if isinstance(turn.get("safety"), dict) else {}
+        turn_safety_events = _extract_safety_events(turn)
+        safety_events.extend(turn_safety_events)
+        turns.append(
+            {
+                "turn_id": turn.get("turn_id"),
+                "timestamp": turn.get("timestamp"),
+                "phase": turn.get("phase"),
+                "has_image": bool(turn.get("has_image")),
+                "has_audio": bool(turn.get("has_audio")),
+                "evaluation_score": score,
+                "evaluation_explanation": _short_log_text(evaluation.get("explanation"), 260),
+                "user_message": _short_log_text(turn.get("user_message"), 260),
+                "ai_response": _short_log_text(turn.get("ai_response"), 260),
+                "safety": {
+                    "status": _clean_text(turn_safety.get("status")) or "safe",
+                    "flagged": bool(turn_safety.get("flagged")),
+                    "blocked": bool(turn_safety.get("blocked")),
+                    "generated_output_blocked": bool(turn_safety.get("generated_output_blocked")),
+                    "categories": turn_safety.get("categories") if isinstance(turn_safety.get("categories"), list) else [],
+                },
+                "safety_events": turn_safety_events,
+            }
+        )
+
+    feedback_answers, feedback_skipped, feedback_phases = _extract_latest_feedback(data.get("stage_feedback"))
+    survey = data.get("survey") if isinstance(data.get("survey"), dict) else None
+    groups = {
+        "gender": _format_survey_group_value(survey, "gender"),
+        "age_range": _format_survey_group_value(survey, "age_range"),
+        "ai_experience": _format_survey_group_value(survey, "ai_experience"),
+    }
+
+    flags: list[dict[str, Any]] = []
+    for key, value in feedback_answers.items():
+        if value is not None and _metric_is_flagged(key, value):
+            flags.append(
+                {
+                    "metric": key,
+                    "label": DASHBOARD_METRICS[key]["risk_label"],
+                    "value": value,
+                    "phase": feedback_phases.get(key),
+                }
+            )
+    if eval_scores:
+        avg_eval = sum(eval_scores) / len(eval_scores)
+        if _metric_is_flagged("evaluation_score", avg_eval):
+            flags.append(
+                {
+                    "metric": "evaluation_score",
+                    "label": DASHBOARD_METRICS["evaluation_score"]["risk_label"],
+                    "value": avg_eval,
+                    "phase": "all",
+                }
+            )
+    else:
+        avg_eval = None
+
+    iteration_count = len(turns)
+    if _metric_is_flagged("iteration_count", float(iteration_count)):
+        flags.append(
+            {
+                "metric": "iteration_count",
+                "label": DASHBOARD_METRICS["iteration_count"]["risk_label"],
+                "value": iteration_count,
+                "phase": "all",
+            }
+        )
+
+    submitted_feedback_count = 0
+    if isinstance(data.get("stage_feedback"), dict):
+        submitted_feedback_count = len(data.get("stage_feedback") or {})
+    safety_summary = _summarize_safety_events(safety_events)
+
+    return {
+        "session_id": data.get("session_id") or path.stem,
+        "file_name": path.name,
+        "source": source,
+        "started_at": data.get("started_at"),
+        "modified_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat(),
+        "survey_submitted_at": survey.get("submitted_at") if survey else None,
+        "survey": {
+            "gender": survey.get("gender") if survey else None,
+            "age_range": survey.get("age_range") if survey else None,
+            "ai_experience": survey.get("ai_experience") if survey else None,
+            "skipped": survey.get("skipped") if survey and isinstance(survey.get("skipped"), dict) else {},
+        },
+        "groups": groups,
+        "iteration_count": iteration_count,
+        "evaluation_count": len(eval_scores),
+        "evaluation_avg": avg_eval,
+        "feedback_phase_count": submitted_feedback_count,
+        "feedback": feedback_answers,
+        "feedback_skipped": feedback_skipped,
+        "feedback_phases": feedback_phases,
+        "flags": flags,
+        "safety": safety_summary,
+        "safety_events": safety_events,
+        "turns": turns,
+    }
+
+
+def _dashboard_log_sources(dataset: str) -> list[tuple[str, Path]]:
+    if dataset == "synthetic":
+        return [("synthetic", SYNTHETIC_LOGS_DIR)]
+    if dataset == "both":
+        return [("real", LOGS_DIR), ("synthetic", SYNTHETIC_LOGS_DIR)]
+    return [("real", LOGS_DIR)]
+
+
+def _load_dashboard_logs(dataset: str = "real") -> dict[str, Any]:
+    dataset = dataset if dataset in {"real", "synthetic", "both"} else "real"
+    sessions_for_dashboard: list[dict[str, Any]] = []
+    unreadable_files: list[str] = []
+    source_dirs = _dashboard_log_sources(dataset)
+    for source, log_dir in source_dirs:
+        log_dir.mkdir(exist_ok=True)
+        for path in sorted(log_dir.glob("session_*.json"), key=lambda item: item.stat().st_mtime, reverse=True):
+            data = _safe_read_log(path)
+            if data is None:
+                unreadable_files.append(f"{source}:{path.name}")
+                continue
+            sessions_for_dashboard.append(_build_dashboard_session(path, data, source=source))
+
+    total_turns = sum(session["iteration_count"] for session in sessions_for_dashboard)
+    evaluated_turns = sum(session["evaluation_count"] for session in sessions_for_dashboard)
+    sessions_with_survey = sum(1 for session in sessions_for_dashboard if session.get("survey_submitted_at"))
+    sessions_with_feedback = sum(1 for session in sessions_for_dashboard if session.get("feedback_phase_count"))
+    flagged_sessions = sum(1 for session in sessions_for_dashboard if session.get("flags"))
+    safety_sessions = sum(1 for session in sessions_for_dashboard if (session.get("safety") or {}).get("flagged"))
+    safety_blocked_sessions = sum(1 for session in sessions_for_dashboard if (session.get("safety") or {}).get("blocked"))
+    safety_event_count = sum((session.get("safety") or {}).get("event_count", 0) for session in sessions_for_dashboard)
+    generated_output_blocked_sessions = sum(
+        1 for session in sessions_for_dashboard
+        if (session.get("safety") or {}).get("generated_output_blocked_count", 0) > 0
+    )
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "dataset": dataset,
+        "log_dir": ", ".join(f"{source}: {path}" for source, path in source_dirs),
+        "metrics": DASHBOARD_METRICS,
+        "safety_categories": SAFETY_CATEGORY_LABELS,
+        "safety_checks": SAFETY_CHECK_LABELS,
+        "group_fields": [
+            {"key": "gender", "label": "Gender"},
+            {"key": "age_range", "label": "Age range"},
+            {"key": "ai_experience", "label": "AI experience"},
+        ],
+        "overview": {
+            "session_count": len(sessions_for_dashboard),
+            "turn_count": total_turns,
+            "evaluated_turn_count": evaluated_turns,
+            "sessions_with_survey": sessions_with_survey,
+            "sessions_with_feedback": sessions_with_feedback,
+            "flagged_session_count": flagged_sessions,
+            "unreadable_file_count": len(unreadable_files),
+            "safety_session_count": safety_sessions,
+            "safety_blocked_session_count": safety_blocked_sessions,
+            "safety_event_count": safety_event_count,
+            "generated_output_blocked_session_count": generated_output_blocked_sessions,
+        },
+        "unreadable_files": unreadable_files,
+        "sessions": sessions_for_dashboard,
+    }
+
+
 app = Flask(__name__)
 CORS(app)
 
@@ -3456,6 +3999,28 @@ def index():
 @app.route("/debug", methods=["GET"])
 def debug_page():
     return send_from_directory(BASE_DIR, "debug.html")
+
+
+@app.route("/dev/logs", methods=["GET"])
+def dev_logs_page():
+    if not _dev_dashboard_allowed():
+        return _dashboard_forbidden_response()
+    return send_from_directory(BASE_DIR, "dev_dashboard.html")
+
+
+@app.route("/dev/vendor/plotly.min.js", methods=["GET"])
+def dev_plotly_js():
+    if not _dev_dashboard_allowed():
+        return _dashboard_forbidden_response()
+    try:
+        import plotly  # type: ignore
+
+        plotly_js = Path(plotly.__file__).resolve().parent / "package_data" / "plotly.min.js"
+    except Exception:
+        return "Plotly is not installed. Run pip install -r requirements.txt.", 404
+    if not plotly_js.exists():
+        return "Plotly JavaScript bundle was not found.", 404
+    return send_file(plotly_js, mimetype="application/javascript", max_age=86400)
 
 
 @app.route("/good_examples/<path:filename>", methods=["GET"])
@@ -3491,6 +4056,14 @@ def api_history():
             ),
         }
     )
+
+
+@app.route("/api/dev/logs", methods=["GET"])
+def api_dev_logs():
+    if not _dev_dashboard_allowed():
+        return _dashboard_forbidden_response()
+    dataset = _clean_text(request.args.get("dataset")) or "real"
+    return jsonify(_load_dashboard_logs(dataset=dataset))
 
 
 @app.route("/api/set-phase", methods=["POST"])
@@ -4653,7 +5226,9 @@ if __name__ == "__main__":
     print("\nUnified p5.js Emotional Chatbot API")
     print("=" * 48)
     print("GET  /                 -> Frontend")
+    print("GET  /dev/logs         -> Developer log dashboard")
     print("GET  /api/state        -> Current state")
+    print("GET  /api/dev/logs     -> Developer log dashboard data")
     print("POST /api/chat         -> Chat + LLM JSON parsing")
     print("POST /api/save-version -> Manual version save")
     print("POST /api/survey       -> Optional demographic survey")

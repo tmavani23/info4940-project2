@@ -21,3 +21,13 @@ python app.py
 ```
 
 Open: `http://localhost:5001`
+
+## Developer log dashboard
+
+Open `http://localhost:5001/dev/logs` from the local machine to review fairness and potential harm signals across saved session logs. The dashboard has Accumulative harms views for survey/outcome fairness and Detectable harms views for per-turn safety guardrail events such as harmful input, extreme wording, and held generated outputs. Set `DEV_DASHBOARD_KEY` in `.env` to require `?key=...` or the `X-Dev-Dashboard-Key` header for dashboard access.
+
+The dashboard can switch between real logs, synthetic logs, or both. Synthetic logs live in `synthetic_logs/` and can be regenerated with:
+
+```bash
+conda run -n info4940ai python scripts/generate_synthetic_logs.py
+```

@@ -1,0 +1,5215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Developer Log Dashboard</title>
+  <style>
+    :root {
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --ink: #18202a;
+      --muted: #647082;
+      --line: #d8dee8;
+      --blue: #2f6fbd;
+      --teal: #10806f;
+      --amber: #a66500;
+      --red: #b4232a;
+      --green: #357a38;
+      --shadow: 0 8px 28px rgba(24, 32, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 24px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .eyebrow {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 2px 0 0;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.3;
+    }
+
+    .header-actions,
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-actions {
+      align-items: flex-end;
+      justify-content: flex-end;
+    }
+
+    .nav-switch,
+    .section-tabs {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .nav-switch {
+      align-self: flex-end;
+    }
+
+    .nav-tab,
+    .section-tab {
+      min-height: 32px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      padding: 6px 10px;
+    }
+
+    .nav-tab[aria-selected="true"],
+    .section-tab[aria-selected="true"] {
+      background: #ffffff;
+      color: var(--blue);
+      box-shadow: 0 1px 6px rgba(24, 32, 42, 0.08);
+    }
+
+    .header-dataset {
+      min-width: 190px;
+    }
+
+    .panel-actions {
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .dashboard {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding: 18px 24px 28px;
+    }
+
+    .dashboard-view,
+    .tab-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .controls {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .global-controls {
+      border: 2px solid rgba(47, 111, 189, 0.32);
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      box-shadow: 0 12px 34px rgba(47, 111, 189, 0.14);
+    }
+
+    .controls-stack {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .global-controls-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+      padding: 2px 2px 8px;
+      border-bottom: 1px solid #dce8f7;
+    }
+
+    .global-controls-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 850;
+      line-height: 1.25;
+    }
+
+    .global-controls-note {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .scope-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      background: #e8f1ff;
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .global-controls .controls-row {
+      padding-top: 4px;
+    }
+
+    .session-controls {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(150px, 1fr));
+      gap: 10px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfe;
+    }
+
+    .session-controls .search {
+      grid-column: span 2;
+    }
+
+    .session-controls .button-control {
+      justify-content: end;
+    }
+
+    .alert-controls {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(150px, 1fr));
+      gap: 10px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfe;
+    }
+
+    .alerts-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .pagination-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 12px 16px;
+      border-top: 1px solid var(--line);
+      background: #fbfcfe;
+    }
+
+    .pagination-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pagination-info {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .alert-row {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) minmax(140px, 0.7fr) minmax(220px, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid #f2d5d8;
+      border-radius: 6px;
+      background: #fff8f8;
+    }
+
+    .alert-title {
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .alert-meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+      margin-top: 3px;
+    }
+
+    .alert-value {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: 850;
+      color: var(--red);
+    }
+
+    .control {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 170px;
+    }
+
+    .control.compact {
+      min-width: 110px;
+    }
+
+    .control.search {
+      flex: 1 1 260px;
+      min-width: 220px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    select,
+    input[type="search"],
+    input[type="number"] {
+      width: 100%;
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--ink);
+      padding: 7px 9px;
+    }
+
+    .check-control {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 650;
+      padding-top: 17px;
+    }
+
+    button {
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--ink);
+      padding: 7px 11px;
+      cursor: pointer;
+    }
+
+    button.primary {
+      border-color: var(--blue);
+      background: var(--blue);
+      color: #ffffff;
+    }
+
+    button:hover {
+      border-color: #9da9ba;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    dialog {
+      border: 0;
+      padding: 0;
+      background: transparent;
+    }
+
+    dialog::backdrop {
+      background: rgba(24, 32, 42, 0.38);
+    }
+
+    .modal-card {
+      width: min(920px, calc(100vw - 32px));
+      max-height: min(760px, calc(100vh - 32px));
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 24px 70px rgba(24, 32, 42, 0.28);
+      overflow: hidden;
+    }
+
+    .modal-head,
+    .modal-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+      flex-shrink: 0;
+      background: #ffffff;
+      position: relative;
+      z-index: 2;
+    }
+
+    .modal-actions {
+      border-top: 1px solid var(--line);
+      border-bottom: 0;
+    }
+
+    .modal-body {
+      flex: 1 1 auto;
+      padding: 16px;
+      overflow: auto;
+      min-height: 0;
+    }
+
+    .threshold-editor {
+      display: grid;
+      gap: 14px;
+    }
+
+    .threshold-section {
+      border: 1px solid #edf1f6;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .threshold-section-head {
+      padding: 10px 12px;
+      background: #f8fafc;
+      border-bottom: 1px solid #edf1f6;
+    }
+
+    .threshold-section-head h3 {
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .threshold-row {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) 148px;
+      gap: 14px;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid #edf1f6;
+    }
+
+    .threshold-row:last-child {
+      border-bottom: 0;
+    }
+
+    .threshold-row-title {
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .threshold-row-meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+      margin-top: 3px;
+    }
+
+    .threshold-row input {
+      width: 100%;
+      text-align: right;
+    }
+
+    .status {
+      min-height: 22px;
+      color: var(--muted);
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .error {
+      color: var(--red);
+      font-weight: 700;
+    }
+
+    .kpi-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .kpi-total-row,
+    .kpi-ring-row,
+    .kpi-rate-row {
+      display: grid;
+      gap: 12px;
+    }
+
+    .kpi-total-row {
+      grid-template-columns: repeat(2, minmax(180px, 1fr));
+    }
+
+    .kpi-ring-row,
+    .kpi-rate-row {
+      grid-template-columns: repeat(4, minmax(190px, 1fr));
+    }
+
+    .kpi,
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .kpi {
+      position: relative;
+      padding: 13px 14px;
+    }
+
+    .kpi-total {
+      min-height: 86px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .kpi-total-meta,
+    .kpi-ring-meta {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.35;
+      margin-top: 4px;
+    }
+
+    .kpi-ring-card {
+      display: grid;
+      grid-template-columns: 82px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      min-height: 112px;
+    }
+
+    .kpi-ring {
+      width: 82px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(var(--ring-color) var(--ring-value), #e8edf4 0);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .kpi-ring::after {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border-radius: inherit;
+      background: #ffffff;
+      box-shadow: inset 0 0 0 1px #edf1f6;
+    }
+
+    .kpi-ring span {
+      position: relative;
+      z-index: 1;
+      color: var(--ink);
+      font-size: 18px;
+      font-weight: 850;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-ring-copy {
+      min-width: 0;
+    }
+
+    .kpi-ring-copy .kpi-label {
+      margin-top: 0;
+    }
+
+    .kpi-ring-count {
+      margin-top: 5px;
+      color: var(--ink);
+      font-size: 16px;
+      font-weight: 850;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-ring-denom {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .kpi-ring-denom span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .kpi-ring-denom select {
+      min-height: 30px;
+      padding: 4px 7px;
+      font-size: 12px;
+    }
+
+    .kpi.has-popover {
+      cursor: help;
+    }
+
+    .kpi-popover {
+      position: absolute;
+      left: 0;
+      top: calc(100% + 8px);
+      z-index: 15;
+      width: min(360px, calc(100vw - 48px));
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      box-shadow: 0 16px 42px rgba(24, 32, 42, 0.18);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-4px);
+      transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+      pointer-events: none;
+    }
+
+    .kpi.has-popover:hover .kpi-popover,
+    .kpi.has-popover:focus-within .kpi-popover {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .popover-title {
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .popover-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      margin-bottom: 10px;
+    }
+
+    .mini-bars {
+      display: grid;
+      gap: 7px;
+    }
+
+    .mini-bar {
+      display: grid;
+      grid-template-columns: minmax(90px, 1fr) minmax(110px, 1.2fr) 34px;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    .mini-bar-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .mini-bar-track {
+      height: 8px;
+      border-radius: 999px;
+      background: #edf1f6;
+      overflow: hidden;
+    }
+
+    .mini-bar-fill {
+      height: 100%;
+      min-width: 2px;
+      border-radius: inherit;
+      background: var(--amber);
+    }
+
+    .mini-bar-value {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+    }
+
+    .kpi-value {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    .kpi-label {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .panel {
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .chart-head {
+      align-items: flex-start;
+    }
+
+    .chart-title-block {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .chart-pane-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 0 0 190px;
+    }
+
+    .chart-pane-controls .control {
+      min-width: 100%;
+    }
+
+    .chart-pane-controls button {
+      width: 100%;
+    }
+
+    .panel-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .panel-body {
+      padding: 14px 16px;
+    }
+
+    .bar-chart {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 380px;
+    }
+
+    .bar-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(120px, 190px) minmax(160px, 1fr) 92px;
+      align-items: center;
+      gap: 10px;
+      min-height: 34px;
+    }
+
+    .bar-label {
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bar-track {
+      height: 22px;
+      border-radius: 5px;
+      background: #eef2f6;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .distribution-track {
+      display: flex;
+      height: 22px;
+      border-radius: 5px;
+      background: #eef2f6;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .density-row {
+      min-height: 94px;
+      align-items: center;
+    }
+
+    .density-plot {
+      height: 82px;
+      border: 1px solid #dce3ee;
+      border-radius: 6px;
+      background: #fbfcfe;
+      overflow: hidden;
+    }
+
+    .density-plot svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .hist-bar {
+      fill: rgba(47, 111, 189, 0.5);
+    }
+
+    .hist-bar.bad {
+      fill: rgba(180, 35, 42, 0.58);
+    }
+
+    .hist-bar.priority {
+      fill: rgba(166, 101, 0, 0.68);
+    }
+
+    .density-area {
+      fill: rgba(47, 111, 189, 0.13);
+    }
+
+    .density-line {
+      fill: none;
+      stroke: var(--blue);
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .density-line.priority {
+      stroke: var(--amber);
+    }
+
+    .threshold-line {
+      stroke: var(--red);
+      stroke-width: 1.3;
+      stroke-dasharray: 4 3;
+    }
+
+    .density-axis {
+      stroke: #9ba7b7;
+      stroke-width: 1;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: var(--blue);
+    }
+
+    .bar-fill.priority {
+      background: var(--amber);
+    }
+
+    .risk-fill {
+      height: 100%;
+      background: rgba(180, 35, 42, 0.7);
+      position: absolute;
+      top: 0;
+      left: 0;
+      mix-blend-mode: multiply;
+    }
+
+    .dist-segment {
+      height: 100%;
+      min-width: 2px;
+      border-right: 1px solid rgba(255, 255, 255, 0.72);
+      background: var(--blue);
+    }
+
+    .dist-segment.bad {
+      background: var(--red);
+    }
+
+    .dist-segment.priority {
+      background: var(--amber);
+    }
+
+    .bar-value {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      font-size: 12px;
+      text-align: right;
+    }
+
+    .bar-row.special-group .bar-label {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .bar-row.special-group .bar-track {
+      background: repeating-linear-gradient(
+        135deg,
+        #f3f5f8 0,
+        #f3f5f8 7px,
+        #e5eaf1 7px,
+        #e5eaf1 14px
+      );
+      border: 1px dashed #b9c3d0;
+    }
+
+    .bar-row.special-group .distribution-track {
+      background: repeating-linear-gradient(
+        135deg,
+        #f3f5f8 0,
+        #f3f5f8 7px,
+        #e5eaf1 7px,
+        #e5eaf1 14px
+      );
+      border: 1px dashed #b9c3d0;
+    }
+
+    .bar-row.special-group .density-plot {
+      background: repeating-linear-gradient(
+        135deg,
+        #f9fafc 0,
+        #f9fafc 7px,
+        #eef2f6 7px,
+        #eef2f6 14px
+      );
+      border-style: dashed;
+    }
+
+    .bar-row.special-group .bar-fill {
+      background: #7f95af;
+      opacity: 0.7;
+    }
+
+    .bar-row.special-group .risk-fill {
+      background: rgba(166, 101, 0, 0.48);
+    }
+
+    .chart-axis {
+      display: grid;
+      grid-template-columns: minmax(120px, 190px) minmax(160px, 1fr) 92px;
+      gap: 10px;
+      align-items: start;
+      margin-top: 5px;
+    }
+
+    .axis-title {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-align: right;
+      padding-top: 11px;
+      text-transform: uppercase;
+    }
+
+    .axis-line {
+      position: relative;
+      height: 32px;
+      border-top: 1px solid #8d99aa;
+    }
+
+    .axis-tick {
+      position: absolute;
+      top: -4px;
+      width: 1px;
+      height: 8px;
+      background: #8d99aa;
+      transform: translateX(-0.5px);
+    }
+
+    .axis-tick span {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: var(--muted);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .group-special td {
+      background: #fbfcfe;
+      color: #596679;
+    }
+
+    .group-special td:first-child {
+      font-style: italic;
+      font-weight: 700;
+    }
+
+    .group-vulnerable td {
+      background: #fff8eb;
+    }
+
+    .group-vulnerable td:first-child {
+      border-left: 4px solid var(--amber);
+      font-weight: 800;
+    }
+
+    .group-summary td {
+      background: #f2f6fb;
+      border-top: 2px solid var(--line);
+      font-weight: 800;
+    }
+
+    .group-summary.total td {
+      background: #fbfcfe;
+      border-top: 1px solid var(--line);
+    }
+
+    .group-summary td:first-child {
+      border-left: 4px solid var(--blue);
+    }
+
+    .group-summary.total td:first-child {
+      border-left-color: var(--muted);
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 14px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .swatch {
+      width: 11px;
+      height: 11px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 800;
+      background: #eef2f6;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .badge.danger {
+      background: #ffe6e8;
+      color: var(--red);
+    }
+
+    .badge.priority {
+      background: #fff1d6;
+      color: var(--amber);
+    }
+
+    .badge.vulnerable {
+      background: #fff1d6;
+      color: var(--amber);
+    }
+
+    .badge.neutral {
+      background: #edf2f7;
+      color: #526173;
+    }
+
+    .badge.ok {
+      background: #e4f4ea;
+      color: var(--green);
+    }
+
+    .threshold-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(240px, 1fr));
+      gap: 10px;
+    }
+
+    .threshold-card {
+      border: 1px solid #edf1f6;
+      border-radius: 6px;
+      padding: 10px;
+      background: #fbfcfe;
+    }
+
+    .threshold-title {
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 5px;
+    }
+
+    .threshold-text {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .table-wrap {
+      overflow: auto;
+    }
+
+    .table-tools {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .inequality-summary {
+      border-top: 1px solid var(--line);
+      padding: 14px 16px 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .inequality-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: baseline;
+    }
+
+    .inequality-head h3 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .inequality-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .inequality-table {
+      min-width: 760px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1120px;
+    }
+
+    th,
+    td {
+      padding: 9px 10px;
+      border-bottom: 1px solid #edf1f6;
+      text-align: left;
+      vertical-align: top;
+      font-size: 13px;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #435063;
+      font-size: 12px;
+      font-weight: 800;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      white-space: nowrap;
+    }
+
+    th.sortable {
+      cursor: pointer;
+    }
+
+    td.numeric,
+    th.numeric {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .session-id {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .phase-list,
+    .flag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .details-row td {
+      background: #fbfcfe;
+      padding: 0;
+    }
+
+    .turns {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+    }
+
+    .turn {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #ffffff;
+      padding: 10px;
+    }
+
+    .turn-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 7px;
+    }
+
+    .snippet {
+      color: #2b3440;
+      font-size: 12px;
+      line-height: 1.45;
+      margin-top: 5px;
+    }
+
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 14px 0;
+    }
+
+    @media (max-width: 980px) {
+      .app-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .kpi-grid,
+      .grid,
+      .threshold-grid,
+      .kpi-total-row,
+      .kpi-ring-row,
+      .kpi-rate-row,
+      .session-controls,
+      .alert-controls,
+      .alert-row {
+        grid-template-columns: 1fr;
+      }
+
+      .session-controls .search {
+        grid-column: auto;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .dashboard,
+      .app-header {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+
+      .control,
+      .control.compact {
+        min-width: 100%;
+      }
+
+      .control.search {
+        flex-basis: 100%;
+        min-width: 100%;
+      }
+
+      .check-control {
+        padding-top: 0;
+        width: 100%;
+      }
+
+      .chart-head {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .chart-pane-controls {
+        flex-basis: auto;
+      }
+
+      .bar-row {
+        grid-template-columns: 1fr;
+        gap: 5px;
+      }
+
+      .chart-axis {
+        grid-template-columns: 1fr;
+      }
+
+      .axis-title {
+        text-align: left;
+        padding-top: 0;
+      }
+
+      .bar-value {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <div class="eyebrow">Developer only</div>
+      <h1>Log Dashboard</h1>
+    </div>
+    <div class="header-actions">
+      <div class="nav-switch" role="tablist" aria-label="Harm dashboard">
+        <button id="accumulativeDashboardBtn" class="nav-tab" type="button" role="tab" data-dashboard-view="accumulative" aria-selected="true">Accumulative harms</button>
+        <button id="detectableDashboardBtn" class="nav-tab" type="button" role="tab" data-dashboard-view="detectable" aria-selected="false">Detectable harms</button>
+      </div>
+      <div class="control header-dataset">
+        <label for="dataset">Dataset</label>
+        <select id="dataset">
+          <option value="real">Real logs</option>
+          <option value="synthetic">Synthetic logs</option>
+          <option value="both">Real + synthetic</option>
+        </select>
+      </div>
+      <button id="refreshBtn" class="primary" type="button">Refresh</button>
+    </div>
+  </header>
+
+  <main class="dashboard">
+    <div id="status" class="status">Loading logs...</div>
+
+    <section id="accumulativeDashboard" class="dashboard-view" aria-label="Accumulative harms dashboard">
+    <div class="section-tabs" role="tablist" aria-label="Accumulative harms sections">
+      <button id="accumulativeOverviewTabBtn" class="section-tab" type="button" role="tab" data-accumulative-tab="overview" aria-selected="true">Dashboard</button>
+      <button id="sessionLogsTabBtn" class="section-tab" type="button" role="tab" data-accumulative-tab="sessions" aria-selected="false">Session logs</button>
+    </div>
+
+    <section id="accumulativeOverviewPanel" class="tab-panel" aria-label="Accumulative harms dashboard overview">
+    <section class="controls controls-stack global-controls" aria-label="Global dashboard filters">
+      <div class="global-controls-head">
+        <div class="global-controls-title">
+          <span class="scope-badge">Global filters</span>
+          <span>Dashboard scope</span>
+        </div>
+        <div class="global-controls-note">Applies to metrics, alerts, graphs, and tables</div>
+      </div>
+      <div class="controls-row">
+        <div class="control">
+          <label for="lens">Lens</label>
+          <select id="lens">
+            <option value="vulnerability">Vulnerability cohorts</option>
+            <option value="demographic">Demographic cohorts</option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="groupBy">Group definition</label>
+          <select id="groupBy"></select>
+        </div>
+        <div id="vulnModeControl" class="control">
+          <label for="vulnMode">Vulnerability view</label>
+          <select id="vulnMode">
+            <option value="split">Low/high split</option>
+            <option value="raw">Raw scores</option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="outcome">Outcome metric</label>
+          <select id="outcome"></select>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Thresholds</h2>
+          <div class="panel-note">Demographic cohorts are never vulnerability flags.</div>
+        </div>
+        <button id="thresholdSettingsBtn" type="button">Adjust thresholds</button>
+      </div>
+      <div id="thresholds" class="panel-body threshold-grid"></div>
+    </section>
+
+    <section id="kpis" class="kpi-grid" aria-label="Overview"></section>
+
+    <section class="panel" aria-label="Inequality alerts">
+      <div class="panel-head">
+        <div>
+          <h2>Inequality alerts</h2>
+          <div id="alertsNote" class="panel-note">Flags group disparities above the selected threshold.</div>
+        </div>
+        <div class="panel-actions">
+          <div id="alertsCount" class="badge danger">0</div>
+          <button id="exportAlertsBtn" type="button">Export alerts CSV</button>
+        </div>
+      </div>
+      <div class="alert-controls">
+        <div class="control">
+          <label for="alertOutcomeMetric">Outcome metric</label>
+          <select id="alertOutcomeMetric"></select>
+        </div>
+        <div class="control">
+          <label for="alertPerformanceMetric">Performance metric</label>
+          <select id="alertPerformanceMetric"></select>
+        </div>
+        <div class="control">
+          <label for="alertInequalityMetric">Inequality metric</label>
+          <select id="alertInequalityMetric"></select>
+        </div>
+        <div class="control compact">
+          <label for="alertThreshold">Alert threshold</label>
+          <input id="alertThreshold" type="number" min="0" step="0.01" value="0.2" />
+        </div>
+        <div class="control compact">
+          <label for="alertLimit">Rows/page</label>
+          <select id="alertLimit">
+            <option value="5">5 rows</option>
+            <option value="10">10 rows</option>
+            <option value="25">25 rows</option>
+            <option value="all">All alerts</option>
+          </select>
+        </div>
+      </div>
+      <div id="alertsList" class="panel-body alerts-list"></div>
+      <div id="alertPagination" class="pagination-bar"></div>
+    </section>
+
+    <section class="grid">
+      <section class="panel">
+        <div class="panel-head chart-head">
+          <div class="chart-title-block">
+            <h2 id="chartTitle">Group comparison</h2>
+            <div id="chartNote" class="panel-note">Select a graph view to compare outcome distributions, fairness matrices, or rates.</div>
+          </div>
+          <div class="chart-pane-controls">
+            <div class="control">
+              <label for="chartMode">Graph</label>
+              <select id="chartMode">
+                <option value="distribution">Histogram</option>
+                <option value="confusion">Confusion matrix</option>
+                <option value="rates">Rate bars</option>
+              </select>
+            </div>
+            <div id="rateMetricControl" class="control" hidden>
+              <label for="rateMetric">Rate</label>
+              <select id="rateMetric">
+                <option value="badRate">Bad outcome rate</option>
+                <option value="tpr">TPR</option>
+                <option value="fpr">FPR</option>
+                <option value="tnr">TNR</option>
+                <option value="fnr">FNR</option>
+              </select>
+            </div>
+            <button id="exportChartBtn" type="button">Export graph CSV</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="chart" class="bar-chart"></div>
+          <div id="chartLegend" class="legend"></div>
+        </div>
+      </section>
+
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2 id="groupTableTitle">Cohort table</h2>
+          <div class="panel-note">Click a column header to sort.</div>
+        </div>
+        <div class="panel-actions">
+          <div class="control compact">
+            <label for="inequalityMetric">Inequality metric</label>
+            <select id="inequalityMetric">
+              <option value="range">Range</option>
+              <option value="ratio">Max/min ratio</option>
+              <option value="stddev">Standard deviation</option>
+              <option value="mad">Mean absolute gap</option>
+              <option value="maxGap">Max gap from average</option>
+            </select>
+          </div>
+          <button id="exportGroupTableBtn" type="button">Export cohort CSV</button>
+          <button id="exportInequalityTableBtn" type="button">Export inequality CSV</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="groupTable"></table>
+      </div>
+      <div id="inequalitySummary" class="inequality-summary"></div>
+    </section>
+
+    </section>
+
+    <section id="sessionLogsPanel" class="tab-panel" aria-label="Session logs tab" hidden>
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Session logs</h2>
+        <div class="panel-actions">
+          <div id="sessionCount" class="badge">0 sessions</div>
+          <button id="exportSessionTableBtn" type="button">Export session CSV</button>
+        </div>
+      </div>
+      <div class="session-controls" aria-label="Session log filters and sorting">
+        <div class="control search">
+          <label for="sessionTableSearch">Session search</label>
+          <input id="sessionTableSearch" type="search" placeholder="Session, message, evaluation, group" />
+        </div>
+        <div class="control compact">
+          <label for="sessionOutcomeFilter">Outcome</label>
+          <select id="sessionOutcomeFilter">
+            <option value="all">All outcomes</option>
+            <option value="bad">Bad</option>
+            <option value="ok">OK</option>
+            <option value="skipped">Skipped</option>
+            <option value="missing">Missing</option>
+          </select>
+        </div>
+        <div class="control compact">
+          <label for="sessionPriorityFilter">Priority</label>
+          <select id="sessionPriorityFilter">
+            <option value="all">All priority</option>
+            <option value="yes">Priority only</option>
+            <option value="no">No priority</option>
+          </select>
+        </div>
+        <div class="control compact">
+          <label for="sessionVulnerabilityFilter">Vulnerability</label>
+          <select id="sessionVulnerabilityFilter">
+            <option value="all">All vulnerability</option>
+            <option value="yes">Vulnerable</option>
+            <option value="no">Not vulnerable</option>
+            <option value="unknown">Unknown</option>
+          </select>
+        </div>
+        <div class="control compact">
+          <label for="sessionInputFilter">Input</label>
+          <select id="sessionInputFilter">
+            <option value="all">All input</option>
+            <option value="clear">Clear input</option>
+            <option value="vague">Vague input</option>
+            <option value="missing">No eval</option>
+          </select>
+        </div>
+        <div class="control compact">
+          <label for="sessionSourceFilter">Source</label>
+          <select id="sessionSourceFilter">
+            <option value="all">All sources</option>
+          </select>
+        </div>
+        <div class="control compact">
+          <label for="sessionSortBy">Sort by</label>
+          <select id="sessionSortBy">
+            <option value="started_at">Started</option>
+            <option value="outcome_value">Outcome value</option>
+            <option value="outcome_flag">Outcome flag</option>
+            <option value="priority_flag">Priority flag</option>
+            <option value="vulnerability">Vulnerability</option>
+            <option value="input_condition">Input condition</option>
+            <option value="iteration_count">Turns</option>
+            <option value="evaluation_avg">Eval avg</option>
+            <option value="session_id">Session</option>
+            <option value="source">Source</option>
+            <option value="gender">Gender</option>
+            <option value="age_range">Age</option>
+            <option value="ai_experience">AI exp.</option>
+          </select>
+        </div>
+        <div class="control compact">
+          <label for="sessionSortDir">Direction</label>
+          <select id="sessionSortDir">
+            <option value="desc">Descending</option>
+            <option value="asc">Ascending</option>
+          </select>
+        </div>
+        <div class="control compact">
+          <label for="sessionPageSize">Rows/page</label>
+          <select id="sessionPageSize">
+            <option value="25">25 rows</option>
+            <option value="50">50 rows</option>
+            <option value="100">100 rows</option>
+            <option value="all">All rows</option>
+          </select>
+        </div>
+        <div class="control compact button-control">
+          <label>&nbsp;</label>
+          <button id="sessionFilterReset" type="button">Reset session filters</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="sessionTable"></table>
+      </div>
+      <div id="sessionPagination" class="pagination-bar"></div>
+    </section>
+    </section>
+
+    </section>
+
+    <section id="detectableDashboard" class="dashboard-view" aria-label="Detectable harms dashboard" hidden>
+      <section class="controls controls-stack global-controls" aria-label="Detectable harm scope">
+        <div class="global-controls-head">
+          <div class="global-controls-title">
+            <span class="scope-badge">Detectable harms</span>
+            <span>Safety detection scope</span>
+          </div>
+          <div class="global-controls-note">Uses the new per-turn safety schema from harmful input and output guardrails</div>
+        </div>
+        <div class="controls-row">
+          <div class="control">
+            <label for="detectSource">Signal source</label>
+            <select id="detectSource">
+              <option value="all">All sources</option>
+              <option value="input">User input</option>
+              <option value="output">Model output</option>
+              <option value="other">Other safety checks</option>
+            </select>
+          </div>
+          <div class="control">
+            <label for="detectSeverity">Severity</label>
+            <select id="detectSeverity">
+              <option value="all">All severities</option>
+              <option value="blocked">Blocked</option>
+              <option value="flagged">Flagged only</option>
+            </select>
+          </div>
+          <div class="control">
+            <label for="detectCategory">Category</label>
+            <select id="detectCategory">
+              <option value="all">All categories</option>
+            </select>
+          </div>
+          <div class="control">
+            <label for="detectPhase">Phase</label>
+            <select id="detectPhase">
+              <option value="all">All phases</option>
+              <option value="emotional_discovery">Emotion</option>
+              <option value="artistic_discovery">Artistic</option>
+              <option value="code_generation">Code</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section id="detectableKpis" class="kpi-grid" aria-label="Detectable harm overview"></section>
+
+      <section class="panel">
+        <div class="panel-head chart-head">
+          <div class="chart-title-block">
+            <h2 id="detectChartTitle">Safety detections</h2>
+            <div id="detectChartNote" class="panel-note">Compare detected harmful-input and generated-output safety events.</div>
+          </div>
+          <div class="chart-pane-controls">
+            <div class="control">
+              <label for="detectChartMode">Graph</label>
+              <select id="detectChartMode">
+                <option value="category">Category counts</option>
+                <option value="source">Source split</option>
+                <option value="phase">Phase split</option>
+                <option value="timeline">Timeline</option>
+              </select>
+            </div>
+            <button id="exportDetectChartBtn" type="button">Export graph CSV</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="detectChart" class="bar-chart"></div>
+          <div id="detectChartLegend" class="legend"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Safety category summary</h2>
+            <div class="panel-note">Counts are event-level; one turn can contribute multiple categories.</div>
+          </div>
+          <button id="exportDetectCategoryTableBtn" type="button">Export category CSV</button>
+        </div>
+        <div class="table-wrap">
+          <table id="detectCategoryTable"></table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Detected safety events</h2>
+            <div class="panel-note">Per-turn safety signals from input and generated-output checks.</div>
+          </div>
+          <div class="panel-actions">
+            <div id="detectEventsCount" class="badge">0 events</div>
+            <div class="control compact">
+              <label for="detectEventsPageSize">Rows/page</label>
+              <select id="detectEventsPageSize">
+                <option value="25">25 rows</option>
+                <option value="50">50 rows</option>
+                <option value="100">100 rows</option>
+                <option value="all">All rows</option>
+              </select>
+            </div>
+            <button id="exportDetectEventsBtn" type="button">Export event CSV</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="detectEventsTable"></table>
+        </div>
+        <div id="detectEventsPagination" class="pagination-bar"></div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="thresholdDialog">
+    <form id="thresholdForm" class="modal-card">
+      <div class="modal-head">
+        <div>
+          <h2>Adjust thresholds</h2>
+          <div class="panel-note">Changes apply to this dashboard view until the page is reloaded.</div>
+        </div>
+        <button id="thresholdCloseBtn" type="button" aria-label="Close threshold settings">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="thresholdEditor" class="threshold-editor"></div>
+      </div>
+      <div class="modal-actions">
+        <button id="thresholdResetBtn" type="button">Reset defaults</button>
+        <div class="header-actions">
+          <button id="thresholdCancelBtn" type="button">Cancel</button>
+          <button class="primary" type="submit">Apply thresholds</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    (function loadPlotly() {
+      const params = new URLSearchParams(window.location.search);
+      const key = params.get("key");
+      const src = `/dev/vendor/plotly.min.js${key ? `?key=${encodeURIComponent(key)}` : ""}`;
+      document.write(`<script src="${src}"><\/script>`);
+    })();
+  </script>
+  <script>
+    if (!window.Plotly) {
+      document.write('<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"><\/script>');
+    }
+  </script>
+
+  <script>
+    const state = {
+      data: null,
+      filteredSessions: [],
+      groupRows: [],
+      detectableEvents: [],
+      detectableCategoryRows: [],
+      groupSort: { key: "badRate", dir: -1 },
+      sessionSort: { key: "started_at", dir: -1 },
+      expandedSessionId: null,
+      dashboardView: "accumulative",
+      accumulativeTab: "overview",
+      alertPage: 1,
+      sessionPage: 1,
+      detectEventsPage: 1,
+      kpiDenominators: {
+        vulnerable: "all_sessions",
+        bad: "answered_outcomes",
+        priority: "bad_outcomes",
+        vague: "evaluated_inputs"
+      }
+    };
+
+    const PHASE_LABELS = {
+      emotional_discovery: "Emotion",
+      artistic_discovery: "Artistic",
+      code_generation: "Code",
+      all: "All"
+    };
+
+    const VULNERABILITY_DIMENSIONS = [
+      { key: "any", label: "Any low-experience signal", short: "Any vulnerability" },
+      { key: "ai_experience", label: "Low AI experience", short: "AI exp.", threshold: 3, scale: 10 },
+      { key: "comfort_describing_emotions", label: "Low comfort describing emotions", short: "emotion comfort", threshold: 3, scale: 10 },
+      { key: "confidence_describing_visual_style", label: "Low confidence describing visual style", short: "visual confidence", threshold: 3, scale: 10 },
+      { key: "knows_how_to_describe_look", label: "Low ability to describe desired look", short: "describe look", threshold: 3, scale: 10 },
+      { key: "familiarity_with_art_terms", label: "Low familiarity with art terms", short: "art terms", threshold: 3, scale: 10 }
+    ];
+
+    const INPUT_CLARITY = {
+      threshold: 3,
+      scale: 5,
+      positiveLabel: "Clear input",
+      negativeLabel: "Vague input"
+    };
+
+    const DEMOGRAPHIC_GROUPS = [
+      { key: "gender", label: "Gender" },
+      { key: "age_range", label: "Age group" }
+    ];
+
+    const OUTCOME_METRICS = [
+      { key: "iteration_count", label: "Number of iterations", short: "iterations", stage: "All turns", direction: "high", threshold: 6, scale: null },
+      { key: "output_makes_uncomfortable", label: "Output makes user uncomfortable", short: "discomfort", stage: "Code generation", direction: "high", threshold: 7, scale: 10 },
+      { key: "satisfaction_with_output", label: "Satisfaction with output", short: "satisfaction", stage: "Code generation", direction: "low", threshold: 3, scale: 10 },
+      { key: "output_represents_people_fairly", label: "Output represents people fairly", short: "fairness", stage: "Code generation", direction: "low", threshold: 3, scale: 10 },
+      { key: "needs_more_guidance_examples", label: "Needs more guidance or examples", short: "guidance need", stage: "Code generation", direction: "high", threshold: 7, scale: 10 },
+      { key: "ai_understands_emotional_tone", label: "AI understands emotional tone", short: "tone", stage: "Emotion", direction: "low", threshold: 3, scale: 10 }
+    ];
+
+    const RATE_METRICS = [
+      { key: "badRate", label: "Bad outcome rate", short: "Bad rate", color: "#b4232a", countKey: "badCount", denominatorKey: "answeredCount", good: false },
+      { key: "tpr", label: "True positive rate", short: "TPR", color: "#2f6fbd", countKey: "tp", denominatorKey: "clearCount", good: true },
+      { key: "fpr", label: "False positive rate", short: "FPR", color: "#b4232a", countKey: "fp", denominatorKey: "clearCount", good: false },
+      { key: "tnr", label: "True negative rate", short: "TNR", color: "#2f6fbd", countKey: "tn", denominatorKey: "vagueCount", good: true },
+      { key: "fnr", label: "False negative rate", short: "FNR", color: "#b4232a", countKey: "fn", denominatorKey: "vagueCount", good: false }
+    ];
+
+    const INEQUALITY_METRICS = [
+      { key: "range", label: "Range", description: "Highest group rate minus lowest group rate." },
+      { key: "ratio", label: "Max/min ratio", description: "Highest group rate divided by lowest group rate." },
+      { key: "stddev", label: "Standard deviation", description: "Spread of group rates around the average across groups." },
+      { key: "mad", label: "Mean absolute gap", description: "Average absolute distance from the average across groups." },
+      { key: "maxGap", label: "Max gap from average", description: "Largest absolute distance from the average across groups." }
+    ];
+
+    const PERFORMANCE_METRICS = [
+      { key: "metricMean", label: "Average outcome value", short: "Avg value", type: "value" },
+      ...RATE_METRICS.map((item) => ({ ...item, type: "rate" }))
+    ];
+
+    const SAFETY_SOURCES = {
+      input: "User input",
+      output: "Model output",
+      other: "Other safety checks",
+      unknown: "Unknown"
+    };
+
+    const DETECTABLE_CHARTS = [
+      { key: "category", label: "Category counts" },
+      { key: "source", label: "Source split" },
+      { key: "phase", label: "Phase split" },
+      { key: "timeline", label: "Timeline" }
+    ];
+
+    const DEFAULT_THRESHOLDS = {
+      vulnerability: Object.fromEntries(VULNERABILITY_DIMENSIONS
+        .filter((item) => item.key !== "any")
+        .map((item) => [item.key, item.threshold])),
+      inputClarity: INPUT_CLARITY.threshold,
+      outcome: Object.fromEntries(OUTCOME_METRICS.map((item) => [item.key, item.threshold]))
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function apiUrl() {
+      const source = new URLSearchParams(window.location.search);
+      const params = new URLSearchParams();
+      if (source.get("key")) params.set("key", source.get("key"));
+      params.set("dataset", $("dataset")?.value || source.get("dataset") || "real");
+      const suffix = params.toString();
+      return `/api/dev/logs${suffix ? `?${suffix}` : ""}`;
+    }
+
+    function applyInitialUrlState() {
+      const params = new URLSearchParams(window.location.search);
+      const dataset = params.get("dataset");
+      if (dataset && ["real", "synthetic", "both"].includes(dataset)) {
+        $("dataset").value = dataset;
+      }
+      const dashboard = params.get("dashboard") || params.get("harm");
+      if (dashboard && ["accumulative", "detectable"].includes(dashboard)) {
+        state.dashboardView = dashboard;
+      }
+      const chart = params.get("chart") || params.get("graph");
+      if (chart && ["distribution", "confusion", "rates"].includes(chart)) {
+        $("chartMode").value = chart;
+      }
+      const rate = params.get("rate");
+      if (rate && RATE_METRICS.some((item) => item.key === rate)) {
+        $("rateMetric").value = rate;
+      }
+      const inequality = params.get("inequality");
+      if (inequality && INEQUALITY_METRICS.some((item) => item.key === inequality)) {
+        $("inequalityMetric").value = inequality;
+      }
+    }
+
+    function isNumber(value) {
+      return typeof value === "number" && Number.isFinite(value);
+    }
+
+    function numberOrNull(value) {
+      if (value === null || value === undefined || value === "" || typeof value === "boolean") return null;
+      const number = Number(value);
+      return isNumber(number) ? number : null;
+    }
+
+    function fmt(value, digits = 1) {
+      if (!isNumber(value)) return "-";
+      return value.toFixed(digits);
+    }
+
+    function pct(value) {
+      if (!isNumber(value)) return "-";
+      return `${Math.round(value * 100)}%`;
+    }
+
+    function average(values) {
+      if (!values.length) return null;
+      return values.reduce((sum, value) => sum + value, 0) / values.length;
+    }
+
+    function weightedAverage(points) {
+      let weightedSum = 0;
+      let totalWeight = 0;
+      for (const point of points) {
+        if (!isNumber(point.value) || !isNumber(point.weight) || point.weight <= 0) continue;
+        weightedSum += point.value * point.weight;
+        totalWeight += point.weight;
+      }
+      return totalWeight ? weightedSum / totalWeight : null;
+    }
+
+    function minimum(values) {
+      return values.length ? Math.min(...values) : null;
+    }
+
+    function maximum(values) {
+      return values.length ? Math.max(...values) : null;
+    }
+
+    function median(values) {
+      if (!values.length) return null;
+      const sorted = [...values].sort((a, b) => a - b);
+      const middle = Math.floor(sorted.length / 2);
+      return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+    }
+
+    function shortId(sessionId) {
+      return String(sessionId || "").slice(0, 8);
+    }
+
+    function vulnerabilityConfig(key) {
+      return VULNERABILITY_DIMENSIONS.find((item) => item.key === key);
+    }
+
+    function outcomeConfig(key) {
+      return OUTCOME_METRICS.find((item) => item.key === key) || OUTCOME_METRICS[0];
+    }
+
+    function rateConfig(key = $("rateMetric")?.value) {
+      return RATE_METRICS.find((item) => item.key === key) || RATE_METRICS[0];
+    }
+
+    function performanceConfig(key) {
+      return PERFORMANCE_METRICS.find((item) => item.key === key) || PERFORMANCE_METRICS[0];
+    }
+
+    function thresholdStep(item) {
+      return item.key === "iteration_count" ? 1 : 0.1;
+    }
+
+    function thresholdMax(item) {
+      return item.scale || 99;
+    }
+
+    function thresholdValue(value) {
+      if (!isNumber(value)) return "";
+      return String(Math.round(value * 100) / 100);
+    }
+
+    function openThresholdDialog() {
+      renderThresholdEditor();
+      const dialog = $("thresholdDialog");
+      if (dialog.showModal) dialog.showModal();
+      else dialog.hidden = false;
+    }
+
+    function closeThresholdDialog() {
+      const dialog = $("thresholdDialog");
+      if (dialog.close) dialog.close();
+      else dialog.hidden = true;
+    }
+
+    function renderThresholdEditor() {
+      const vulnerabilityRows = VULNERABILITY_DIMENSIONS
+        .filter((item) => item.key !== "any")
+        .map((item) => thresholdInputRow({
+          kind: "vulnerability",
+          key: item.key,
+          label: item.label,
+          value: item.threshold,
+          min: 0,
+          max: item.scale,
+          step: thresholdStep(item),
+          meta: `Vulnerable if score <= threshold. Scale: 0-${item.scale}.`
+        }))
+        .join("");
+      const inputRows = thresholdInputRow({
+        kind: "inputClarity",
+        key: "evaluation_avg",
+        label: "User message evaluation score",
+        value: INPUT_CLARITY.threshold,
+        min: 0,
+        max: INPUT_CLARITY.scale,
+        step: 0.1,
+        meta: `Positive input if evaluation average >= threshold. Scale: 0-${INPUT_CLARITY.scale}.`
+      });
+      const outcomeRows = OUTCOME_METRICS
+        .map((item) => thresholdInputRow({
+          kind: "outcome",
+          key: item.key,
+          label: item.label,
+          value: item.threshold,
+          min: 0,
+          max: thresholdMax(item),
+          step: thresholdStep(item),
+          meta: `Bad outcome if ${item.short} ${item.direction === "high" ? ">=" : "<="} threshold. ${item.scale ? `Scale: 0-${item.scale}.` : "Count threshold."}`
+        }))
+        .join("");
+
+      $("thresholdEditor").innerHTML = `
+        ${thresholdSection("Vulnerability thresholds", "Technology, emotional, and artistic support-needs cutoffs.", vulnerabilityRows)}
+        ${thresholdSection("Input condition threshold", "This controls the positive/negative split used by the confusion matrix.", inputRows)}
+        ${thresholdSection("Outcome flag thresholds", "These control whether each outcome is marked OK or Bad.", outcomeRows)}
+      `;
+    }
+
+    function thresholdSection(title, note, rows) {
+      return `
+        <section class="threshold-section">
+          <div class="threshold-section-head">
+            <h3>${escapeHtml(title)}</h3>
+            <div class="threshold-row-meta">${escapeHtml(note)}</div>
+          </div>
+          ${rows}
+        </section>
+      `;
+    }
+
+    function thresholdInputRow({ kind, key, label, value, min, max, step, meta }) {
+      const id = `threshold-${kind}-${key}`;
+      return `
+        <div class="threshold-row">
+          <label for="${escapeHtml(id)}">
+            <div class="threshold-row-title">${escapeHtml(label)}</div>
+            <div class="threshold-row-meta">${escapeHtml(meta)}</div>
+          </label>
+          <input
+            id="${escapeHtml(id)}"
+            type="number"
+            data-threshold-kind="${escapeHtml(kind)}"
+            data-threshold-key="${escapeHtml(key)}"
+            min="${min}"
+            max="${max}"
+            step="${step}"
+            value="${thresholdValue(value)}"
+          />
+        </div>
+      `;
+    }
+
+    function applyThresholdSettings() {
+      document.querySelectorAll("[data-threshold-kind]").forEach((input) => {
+        const value = readThresholdInput(input);
+        if (!isNumber(value)) return;
+        const kind = input.dataset.thresholdKind;
+        const key = input.dataset.thresholdKey;
+        if (kind === "vulnerability") {
+          const item = vulnerabilityConfig(key);
+          if (item) item.threshold = value;
+        } else if (kind === "inputClarity") {
+          INPUT_CLARITY.threshold = value;
+        } else if (kind === "outcome") {
+          const item = outcomeConfig(key);
+          if (item) item.threshold = value;
+        }
+      });
+      closeThresholdDialog();
+      renderAll();
+    }
+
+    function readThresholdInput(input) {
+      const raw = Number(input.value);
+      if (!Number.isFinite(raw)) return null;
+      const min = Number(input.min);
+      const max = Number(input.max);
+      const clamped = Math.max(min, Math.min(max, raw));
+      const value = input.step === "1" ? Math.round(clamped) : Math.round(clamped * 10) / 10;
+      input.value = thresholdValue(value);
+      return value;
+    }
+
+    function resetThresholdInputsToDefaults() {
+      document.querySelectorAll("[data-threshold-kind]").forEach((input) => {
+        const kind = input.dataset.thresholdKind;
+        const key = input.dataset.thresholdKey;
+        let value = null;
+        if (kind === "vulnerability") value = DEFAULT_THRESHOLDS.vulnerability[key];
+        else if (kind === "inputClarity") value = DEFAULT_THRESHOLDS.inputClarity;
+        else if (kind === "outcome") value = DEFAULT_THRESHOLDS.outcome[key];
+        if (isNumber(value)) input.value = thresholdValue(value);
+      });
+    }
+
+    function setStatus(message, isError = false) {
+      $("status").textContent = message;
+      $("status").classList.toggle("error", isError);
+    }
+
+    function populateControls() {
+      populateGroupControl();
+      populateOutcomeControl();
+      populateAlertControls();
+      populateSessionSourceControl();
+      populateDetectableControls();
+      updateVulnerabilityModeControl();
+    }
+
+    function populateGroupControl() {
+      const groupBy = $("groupBy");
+      const lens = $("lens").value;
+      const current = groupBy.value;
+      const options = lens === "vulnerability" ? VULNERABILITY_DIMENSIONS : DEMOGRAPHIC_GROUPS;
+      groupBy.innerHTML = "";
+      for (const item of options) {
+        const option = document.createElement("option");
+        option.value = item.key;
+        option.textContent = item.label;
+        groupBy.appendChild(option);
+      }
+      groupBy.value = options.some((item) => item.key === current) ? current : options[0].key;
+      updateVulnerabilityModeControl();
+    }
+
+    function updateVulnerabilityModeControl() {
+      $("vulnModeControl").hidden = $("lens").value !== "vulnerability";
+    }
+
+    function populateOutcomeControl() {
+      const outcome = $("outcome");
+      const current = outcome.value;
+      outcome.innerHTML = "";
+      for (const item of OUTCOME_METRICS) {
+        const option = document.createElement("option");
+        option.value = item.key;
+        option.textContent = `${item.label} (${item.stage})`;
+        outcome.appendChild(option);
+      }
+      outcome.value = OUTCOME_METRICS.some((item) => item.key === current) ? current : OUTCOME_METRICS[0].key;
+    }
+
+    function populateSessionSourceControl() {
+      const select = $("sessionSourceFilter");
+      const current = select.value || "all";
+      const sources = Array.from(new Set((state.data?.sessions || []).map((session) => session.source || "real")))
+        .sort((a, b) => String(a).localeCompare(String(b)));
+      select.innerHTML = `<option value="all">All sources</option>` +
+        sources.map((source) => `<option value="${escapeHtml(source)}">${escapeHtml(source)}</option>`).join("");
+      select.value = sources.includes(current) ? current : "all";
+    }
+
+    function populateDetectableControls() {
+      const select = $("detectCategory");
+      const current = select.value || "all";
+      const labels = state.data?.safety_categories || {};
+      const categories = Array.from(new Set(allSafetyEvents().map((event) => event.category || "unknown")))
+        .sort((a, b) => safetyCategoryLabel(a).localeCompare(safetyCategoryLabel(b)));
+      select.innerHTML = `<option value="all">All categories</option>` +
+        categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(labels[category] || safetyCategoryLabel(category))}</option>`).join("");
+      select.value = current === "all" || categories.includes(current) ? current : "all";
+    }
+
+    function populateAlertControls() {
+      populateAlertOutcomeControl();
+      populateAlertPerformanceControl();
+      populateAlertInequalityControl();
+    }
+
+    function populateAlertOutcomeControl() {
+      const select = $("alertOutcomeMetric");
+      const current = select.value || "selected";
+      select.innerHTML = `
+        <option value="selected">Selected outcome</option>
+        <option value="all">All outcome metrics</option>
+        ${OUTCOME_METRICS.map((item) => `<option value="${escapeHtml(item.key)}">${escapeHtml(item.label)}</option>`).join("")}
+      `;
+      select.value = current === "all" || current === "selected" || OUTCOME_METRICS.some((item) => item.key === current)
+        ? current
+        : "selected";
+    }
+
+    function populateAlertPerformanceControl() {
+      const select = $("alertPerformanceMetric");
+      const current = select.value || "all";
+      select.innerHTML = `
+        <option value="all">All performance metrics</option>
+        ${PERFORMANCE_METRICS.map((item) => `<option value="${escapeHtml(item.key)}">${escapeHtml(item.label)}</option>`).join("")}
+      `;
+      select.value = current === "all" || PERFORMANCE_METRICS.some((item) => item.key === current) ? current : "all";
+    }
+
+    function populateAlertInequalityControl() {
+      const select = $("alertInequalityMetric");
+      const current = select.value || "range";
+      select.innerHTML = INEQUALITY_METRICS
+        .map((item) => `<option value="${escapeHtml(item.key)}">${escapeHtml(item.label)}</option>`)
+        .join("");
+      select.value = INEQUALITY_METRICS.some((item) => item.key === current) ? current : "range";
+    }
+
+    function vulnerabilityValue(session, key) {
+      if (key === "ai_experience") return numberOrNull(session.survey?.ai_experience);
+      return numberOrNull((session.feedback || {})[key]);
+    }
+
+    function vulnerabilityResult(session, key) {
+      if (key === "any") return anyVulnerabilityResult(session);
+      const config = vulnerabilityConfig(key);
+      const value = vulnerabilityValue(session, key);
+      if (!config || !isNumber(value)) {
+        return { known: false, vulnerable: false, value: null, config };
+      }
+      return { known: true, vulnerable: value <= config.threshold, value, config };
+    }
+
+    function anyVulnerabilityResult(session) {
+      const dimensions = VULNERABILITY_DIMENSIONS.filter((item) => item.key !== "any");
+      const results = dimensions.map((item) => vulnerabilityResult(session, item.key));
+      const known = results.some((item) => item.known);
+      const vulnerableItems = results.filter((item) => item.vulnerable);
+      return {
+        known,
+        vulnerable: vulnerableItems.length > 0,
+        value: vulnerableItems.length,
+        config: vulnerabilityConfig("any"),
+        details: vulnerableItems.map((item) => item.config.short)
+      };
+    }
+
+    function isAnyVulnerable(session) {
+      return anyVulnerabilityResult(session).vulnerable;
+    }
+
+    function vulnerabilitySummary(session) {
+      const result = anyVulnerabilityResult(session);
+      if (!result.known) return { label: "Unknown", className: "neutral" };
+      if (!result.vulnerable) return { label: "No low signals", className: "ok" };
+      return { label: result.details.slice(0, 2).join(", ") + (result.details.length > 2 ? " +" : ""), className: "vulnerable" };
+    }
+
+    function groupForSession(session) {
+      const lens = $("lens").value;
+      const key = $("groupBy").value;
+      if (lens === "demographic") {
+        const value = (session.groups && session.groups[key]) || "Unknown";
+        return { value, vulnerable: false, special: isSpecialGroup(value), sortValue: value };
+      }
+
+      const result = vulnerabilityResult(session, key);
+      if ($("vulnMode").value === "raw") {
+        if (!result.known) {
+          const label = key === "any" ? "vulnerability data" : vulnerabilityConfig(key).short;
+          return { value: `Unknown: ${label}`, vulnerable: false, special: true, sortValue: 999 };
+        }
+        if (key === "any") {
+          return {
+            value: `Low-signal count ${result.value}`,
+            vulnerable: result.vulnerable,
+            special: false,
+            sortValue: result.value
+          };
+        }
+        const config = vulnerabilityConfig(key);
+        return {
+          value: `Score ${formatScore(result.value)}: ${config.short}`,
+          vulnerable: result.vulnerable,
+          special: false,
+          sortValue: result.value
+        };
+      }
+
+      if (key === "any") {
+        if (!result.known) return { value: "Unknown: no vulnerability data", vulnerable: false, special: true, sortValue: 2 };
+        if (result.vulnerable) return { value: "Vulnerable on one or more", vulnerable: true, special: false, sortValue: 0 };
+        return { value: "No low-experience signals", vulnerable: false, special: false, sortValue: 1 };
+      }
+
+      const config = vulnerabilityConfig(key);
+      if (!result.known) return { value: `Unknown: ${config.short}`, vulnerable: false, special: true, sortValue: 2 };
+      if (result.vulnerable) return { value: `Vulnerable: ${config.short}`, vulnerable: true, special: false, sortValue: 0 };
+      return { value: `Not vulnerable: ${config.short}`, vulnerable: false, special: false, sortValue: 1 };
+    }
+
+    function outcomeForSession(session, key = $("outcome").value) {
+      const config = outcomeConfig(key);
+      let value = null;
+      let skipped = false;
+      if (key === "iteration_count") {
+        value = numberOrNull(session.iteration_count) ?? 0;
+      } else {
+        value = numberOrNull((session.feedback || {})[key]);
+        skipped = Boolean((session.feedback_skipped || {})[key]);
+      }
+      const answered = isNumber(value);
+      const bad = answered && outcomeIsBad(config, value);
+      return { value: answered ? value : null, answered, skipped: !answered && skipped, missing: !answered && !skipped, bad, config };
+    }
+
+    function outcomeIsBad(config, value) {
+      if (!config || !isNumber(value)) return false;
+      return config.direction === "high" ? value >= config.threshold : value <= config.threshold;
+    }
+
+    function isPriorityFlag(session, outcomeKey = $("outcome").value) {
+      return outcomeForSession(session, outcomeKey).bad && isAnyVulnerable(session);
+    }
+
+    function inputCondition(session) {
+      const value = numberOrNull(session.evaluation_avg);
+      if (!isNumber(value)) return { known: false, positive: false, value: null, label: "No eval" };
+      const positive = value >= INPUT_CLARITY.threshold;
+      return {
+        known: true,
+        positive,
+        value,
+        label: positive ? INPUT_CLARITY.positiveLabel : INPUT_CLARITY.negativeLabel
+      };
+    }
+
+    function emptyConfusion() {
+      return {
+        tp: 0,
+        fp: 0,
+        tn: 0,
+        fn: 0,
+        unknownInput: 0,
+        missingOutcome: 0,
+        matrixCount: 0,
+        clearCount: 0,
+        vagueCount: 0,
+        clearSuccessRate: null,
+        vagueSuccessRate: null,
+        clearFailureRate: null,
+        vagueFailureRate: null,
+        tpr: null,
+        fpr: null,
+        tnr: null,
+        fnr: null,
+        eoGapFromOverall: null
+      };
+    }
+
+    function addToConfusion(confusion, session, outcome) {
+      const condition = inputCondition(session);
+      if (!condition.known) {
+        confusion.unknownInput += 1;
+        return;
+      }
+      if (!outcome.answered) {
+        confusion.missingOutcome += 1;
+        return;
+      }
+      const success = !outcome.bad;
+      if (condition.positive && success) confusion.tp += 1;
+      else if (condition.positive && !success) confusion.fp += 1;
+      else if (!condition.positive && success) confusion.tn += 1;
+      else confusion.fn += 1;
+    }
+
+    function matrixRates(confusion) {
+      const clearCount = confusion.tp + confusion.fp;
+      const vagueCount = confusion.tn + confusion.fn;
+      return {
+        ...confusion,
+        clearCount,
+        vagueCount,
+        matrixCount: clearCount + vagueCount,
+        clearSuccessRate: clearCount ? confusion.tp / clearCount : null,
+        clearFailureRate: clearCount ? confusion.fp / clearCount : null,
+        vagueSuccessRate: vagueCount ? confusion.tn / vagueCount : null,
+        vagueFailureRate: vagueCount ? confusion.fn / vagueCount : null,
+        tpr: clearCount ? confusion.tp / clearCount : null,
+        fpr: clearCount ? confusion.fp / clearCount : null,
+        tnr: vagueCount ? confusion.tn / vagueCount : null,
+        fnr: vagueCount ? confusion.fn / vagueCount : null
+      };
+    }
+
+    function addConfusions(items) {
+      const total = emptyConfusion();
+      for (const item of items) {
+        total.tp += item.tp || 0;
+        total.fp += item.fp || 0;
+        total.tn += item.tn || 0;
+        total.fn += item.fn || 0;
+        total.unknownInput += item.unknownInput || 0;
+        total.missingOutcome += item.missingOutcome || 0;
+      }
+      return matrixRates(total);
+    }
+
+    function equalizedOddsGap(rowRates, overallRates) {
+      const gaps = [];
+      for (const key of ["tpr", "fpr", "tnr", "fnr"]) {
+        if (isNumber(rowRates[key]) && isNumber(overallRates[key])) {
+          gaps.push(Math.abs(rowRates[key] - overallRates[key]));
+        }
+      }
+      return gaps.length ? Math.max(...gaps) : null;
+    }
+
+    function formatScore(value) {
+      if (!isNumber(value)) return "-";
+      return Math.abs(value - Math.round(value)) < 0.001 ? String(Math.round(value)) : value.toFixed(1);
+    }
+
+    function sessionSearchText(session) {
+      const vuln = vulnerabilitySummary(session).label;
+      const condition = inputCondition(session).label;
+      const parts = [
+        session.session_id,
+        session.file_name,
+        session.source,
+        session.groups?.gender,
+        session.groups?.age_range,
+        session.groups?.ai_experience,
+        vuln,
+        condition,
+        ...(session.safety_events || []).flatMap((event) => [event.category_label, event.check_label, event.severity, event.excerpt]),
+        ...(session.turns || []).flatMap((turn) => [turn.user_message, turn.evaluation_explanation])
+      ];
+      return parts.filter(Boolean).join(" ").toLowerCase();
+    }
+
+    function safetyCategoryLabel(category) {
+      const labels = state.data?.safety_categories || {};
+      const key = String(category || "unknown");
+      return labels[key] || key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+    }
+
+    function safetyCheckLabel(check) {
+      const labels = state.data?.safety_checks || {};
+      const key = String(check || "safety");
+      return labels[key] || key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+    }
+
+    function safetySourceLabel(source) {
+      return SAFETY_SOURCES[source] || SAFETY_SOURCES.unknown;
+    }
+
+    function allSafetyEvents() {
+      const events = [];
+      for (const session of state.data?.sessions || []) {
+        for (const event of session.safety_events || []) {
+          events.push({
+            ...event,
+            session_id: session.session_id,
+            session_source: session.source || "real",
+            started_at: session.started_at,
+            gender: session.groups?.gender || "Unknown",
+            age_range: session.groups?.age_range || "Unknown",
+            ai_experience: session.groups?.ai_experience || "Unknown"
+          });
+        }
+      }
+      return events;
+    }
+
+    function filteredSafetyEvents() {
+      const source = $("detectSource")?.value || "all";
+      const severity = $("detectSeverity")?.value || "all";
+      const category = $("detectCategory")?.value || "all";
+      const phase = $("detectPhase")?.value || "all";
+      return allSafetyEvents()
+        .filter((event) => source === "all" || event.source === source)
+        .filter((event) => severity === "all" || event.severity === severity)
+        .filter((event) => category === "all" || event.category === category)
+        .filter((event) => phase === "all" || event.phase === phase)
+        .sort((a, b) => compareValues(new Date(b.timestamp || b.started_at || 0).getTime(), new Date(a.timestamp || a.started_at || 0).getTime()));
+    }
+
+    function buildDetectableCategoryRows(events = state.detectableEvents) {
+      const rows = new Map();
+      for (const event of events) {
+        const category = event.category || "unknown";
+        if (!rows.has(category)) {
+          rows.set(category, {
+            category,
+            label: safetyCategoryLabel(category),
+            events: 0,
+            sessions: new Set(),
+            blocked: 0,
+            flagged: 0,
+            input: 0,
+            output: 0,
+            other: 0,
+            phases: new Map(),
+            checks: new Map(),
+            generatedHeld: 0,
+            latest: null
+          });
+        }
+        const row = rows.get(category);
+        row.events += 1;
+        row.sessions.add(event.session_id);
+        if (event.blocked || event.severity === "blocked") row.blocked += 1;
+        else row.flagged += 1;
+        const source = ["input", "output"].includes(event.source) ? event.source : "other";
+        row[source] += 1;
+        if (event.blocked && event.source === "output") row.generatedHeld += 1;
+        const phaseLabel = PHASE_LABELS[event.phase] || event.phase || "Unknown";
+        row.phases.set(phaseLabel, (row.phases.get(phaseLabel) || 0) + 1);
+        const checkLabel = event.check_label || safetyCheckLabel(event.check);
+        row.checks.set(checkLabel, (row.checks.get(checkLabel) || 0) + 1);
+        const time = new Date(event.timestamp || event.started_at || 0).getTime();
+        if (!row.latest || time > row.latest) row.latest = time;
+      }
+      return Array.from(rows.values())
+        .map((row) => ({
+          ...row,
+          sessionCount: row.sessions.size,
+          phaseSummary: summarizeMap(row.phases),
+          checkSummary: summarizeMap(row.checks),
+          blockedRate: row.events ? row.blocked / row.events : null
+        }))
+        .sort((a, b) => b.blocked - a.blocked || b.events - a.events || a.label.localeCompare(b.label));
+    }
+
+    function summarizeMap(map, limit = 2) {
+      const rows = Array.from(map.entries()).sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])));
+      const summary = rows.slice(0, limit).map(([label, count]) => `${label} ${count}`).join(", ");
+      const hidden = Math.max(0, rows.length - limit);
+      return summary + (hidden ? ` +${hidden}` : "");
+    }
+
+    function applySessionFilters() {
+      state.filteredSessions = state.data.sessions || [];
+    }
+
+    function specialGroupRank(value) {
+      if (String(value).startsWith("Unknown")) return 1;
+      if (value === "Skipped") return 2;
+      if (value === "No survey") return 3;
+      return 0;
+    }
+
+    function isSpecialGroup(value) {
+      return specialGroupRank(value) > 0;
+    }
+
+    function buildRowsForOutcome(outcomeKey) {
+      const rows = new Map();
+
+      for (const session of state.filteredSessions) {
+        const group = groupForSession(session);
+        if (!rows.has(group.value)) {
+          rows.set(group.value, {
+            value: group.value,
+            vulnerable: group.vulnerable,
+            special: group.special,
+            sortValue: group.sortValue,
+            sessions: [],
+            sessionCount: 0,
+            vulnerableCount: 0,
+            metricValues: [],
+            answeredCount: 0,
+            skippedCount: 0,
+            missingCount: 0,
+            badCount: 0,
+            vulnerableBadCount: 0,
+            totalIterations: 0,
+            confusion: emptyConfusion()
+          });
+        }
+        const row = rows.get(group.value);
+        const outcome = outcomeForSession(session, outcomeKey);
+        const anyVulnerable = isAnyVulnerable(session);
+        row.sessions.push(session);
+        row.sessionCount += 1;
+        row.totalIterations += Number(session.iteration_count || 0);
+        if (anyVulnerable) row.vulnerableCount += 1;
+        addToConfusion(row.confusion, session, outcome);
+        if (outcome.answered) {
+          row.metricValues.push(outcome.value);
+          row.answeredCount += 1;
+          if (outcome.bad) {
+            row.badCount += 1;
+            if (anyVulnerable) row.vulnerableBadCount += 1;
+          }
+        } else if (outcome.skipped) {
+          row.skippedCount += 1;
+        } else {
+          row.missingCount += 1;
+        }
+      }
+
+      const lens = $("lens").value;
+      const mappedRows = Array.from(rows.values()).map((row) => {
+        const badRate = row.answeredCount ? row.badCount / row.answeredCount : 0;
+        const priority = row.badCount > 0 && (lens === "vulnerability" ? row.vulnerable : row.vulnerableBadCount > 0);
+        const confusion = matrixRates(row.confusion);
+        return {
+          ...row,
+          confusion,
+          avgIterations: row.sessionCount ? row.totalIterations / row.sessionCount : null,
+          metricMean: average(row.metricValues),
+          metricMin: minimum(row.metricValues),
+          metricMax: maximum(row.metricValues),
+          metricMedian: median(row.metricValues),
+          distribution: buildDistribution(row.metricValues, outcomeConfig(outcomeKey), priority),
+          badRate,
+          priority,
+          priorityScore: (priority ? 2 : 0) + badRate
+        };
+      });
+      const overallConfusion = addConfusions(mappedRows.map((row) => row.confusion));
+      return mappedRows.map((row) => ({
+        ...row,
+        clearSuccessRate: row.confusion.clearSuccessRate,
+        vagueSuccessRate: row.confusion.vagueSuccessRate,
+        tpr: row.confusion.tpr,
+        fpr: row.confusion.fpr,
+        tnr: row.confusion.tnr,
+        fnr: row.confusion.fnr,
+        eoGapFromOverall: equalizedOddsGap(row.confusion, overallConfusion),
+        confusion: {
+          ...row.confusion,
+          eoGapFromOverall: equalizedOddsGap(row.confusion, overallConfusion)
+        }
+      }));
+    }
+
+    function buildGroupRows() {
+      state.groupRows = buildRowsForOutcome($("outcome").value);
+      sortGroupRows();
+    }
+
+    function sortGroupRows() {
+      const { key, dir } = state.groupSort;
+      state.groupRows.sort((a, b) => {
+        const specialDelta = specialGroupRank(a.value) - specialGroupRank(b.value);
+        if (specialDelta !== 0) return specialDelta;
+        if ($("lens").value === "vulnerability" && $("vulnMode").value === "raw" && key === "priorityScore") {
+          return compareValues(a.sortValue, b.sortValue);
+        }
+        return compareValues(a[key], b[key]) * dir;
+      });
+    }
+
+    function compareValues(a, b) {
+      const aMissing = a === null || a === undefined;
+      const bMissing = b === null || b === undefined;
+      if (aMissing && bMissing) return 0;
+      if (aMissing) return -1;
+      if (bMissing) return 1;
+      if (typeof a === "number" && typeof b === "number") return a - b;
+      if (typeof a === "boolean" && typeof b === "boolean") return Number(a) - Number(b);
+      return String(a).localeCompare(String(b), undefined, { numeric: true });
+    }
+
+    function buildDistribution(values, config, priority) {
+      const buckets = new Map();
+      for (const value of values) {
+        if (!isNumber(value)) continue;
+        const rounded = Math.round(value * 10) / 10;
+        const key = formatScore(rounded);
+        if (!buckets.has(key)) {
+          buckets.set(key, {
+            key,
+            value: rounded,
+            count: 0,
+            bad: outcomeIsBad(config, rounded),
+            priority
+          });
+        }
+        buckets.get(key).count += 1;
+      }
+      return Array.from(buckets.values()).sort((a, b) => a.value - b.value);
+    }
+
+    function renderKpis() {
+      const sessions = state.filteredSessions;
+      const outcomeKey = $("outcome").value;
+      const vulnerable = sessions.filter(isAnyVulnerable).length;
+      const vulnerabilityKnown = sessions.filter((session) => anyVulnerabilityResult(session).known).length;
+      const outcomes = sessions.map((session) => outcomeForSession(session, outcomeKey));
+      const answeredOutcomes = outcomes.filter((outcome) => outcome.answered).length;
+      const bad = outcomes.filter((outcome) => outcome.bad).length;
+      const vulnerableAnswered = sessions.filter((session, index) => isAnyVulnerable(session) && outcomes[index].answered).length;
+      const priority = sessions.filter((session) => isPriorityFlag(session, outcomeKey)).length;
+      const surveys = sessions.filter((session) => session.survey_submitted_at).length;
+      const inputConditions = sessions.map(inputCondition);
+      const inputKnown = inputConditions.filter((condition) => condition.known).length;
+      const vague = inputConditions.filter((condition) => condition.known && !condition.positive).length;
+      const overallConfusion = emptyConfusion();
+      sessions.forEach((session, index) => addToConfusion(overallConfusion, session, outcomes[index]));
+      const overallRates = matrixRates(overallConfusion);
+      const totals = [
+        { label: "Sessions", value: sessions.length, meta: "Current dataset" },
+        { label: "Survey responses", value: surveys, meta: `${surveys} / ${sessions.length} sessions` }
+      ];
+      const rings = [
+        ringKpiWithDenominator({
+          key: "vulnerable",
+          label: "Vulnerable sessions",
+          count: vulnerable,
+          color: "var(--amber)",
+          options: [
+            { key: "all_sessions", label: "All sessions", total: sessions.length, totalLabel: "sessions" },
+            { key: "known_vulnerability", label: "Known vulnerability", total: vulnerabilityKnown, totalLabel: "sessions with vulnerability data" }
+          ]
+        }),
+        ringKpiWithDenominator({
+          key: "bad",
+          label: "Bad outcomes",
+          count: bad,
+          color: "var(--red)",
+          options: [
+            { key: "answered_outcomes", label: "Answered outcomes", total: answeredOutcomes, totalLabel: "answered outcomes" },
+            { key: "all_sessions", label: "All sessions", total: sessions.length, totalLabel: "sessions" }
+          ]
+        }),
+        ringKpiWithDenominator({
+          key: "priority",
+          label: "Priority overlaps",
+          count: priority,
+          color: "#7a4a00",
+          popover: renderPriorityKpiPopover(priority),
+          options: [
+            { key: "bad_outcomes", label: "Bad outcomes", total: bad, totalLabel: "bad outcomes" },
+            { key: "answered_vulnerable", label: "Answered vulnerable", total: vulnerableAnswered, totalLabel: "answered vulnerable sessions" },
+            { key: "vulnerable_sessions", label: "Vulnerable sessions", total: vulnerable, totalLabel: "vulnerable sessions" },
+            { key: "all_sessions", label: "All sessions", total: sessions.length, totalLabel: "sessions" }
+          ]
+        }),
+        ringKpiWithDenominator({
+          key: "vague",
+          label: "Vague input",
+          count: vague,
+          color: "var(--teal)",
+          options: [
+            { key: "evaluated_inputs", label: "Evaluated inputs", total: inputKnown, totalLabel: "evaluated inputs" },
+            { key: "all_sessions", label: "All sessions", total: sessions.length, totalLabel: "sessions" }
+          ]
+        })
+      ];
+      const rateRings = [
+        { label: "Overall TPR", count: overallRates.tp, total: overallRates.clearCount, totalLabel: "clear inputs", color: "var(--blue)" },
+        { label: "Overall FPR", count: overallRates.fp, total: overallRates.clearCount, totalLabel: "clear inputs", color: "var(--red)" },
+        { label: "Overall TNR", count: overallRates.tn, total: overallRates.vagueCount, totalLabel: "vague inputs", color: "var(--blue)" },
+        { label: "Overall FNR", count: overallRates.fn, total: overallRates.vagueCount, totalLabel: "vague inputs", color: "var(--red)" }
+      ];
+      $("kpis").innerHTML = `
+        <div class="kpi-total-row">
+          ${totals.map(renderTotalKpi).join("")}
+        </div>
+        <div class="kpi-ring-row">
+          ${rings.map(renderRingKpi).join("")}
+        </div>
+        <div class="kpi-rate-row">
+          ${rateRings.map(renderRingKpi).join("")}
+        </div>
+      `;
+    }
+
+    function renderDetectableDashboard() {
+      state.detectableEvents = filteredSafetyEvents();
+      state.detectableCategoryRows = buildDetectableCategoryRows();
+      renderDetectableKpis();
+      renderDetectableChart();
+      renderDetectableCategoryTable();
+      renderDetectableEventsTable();
+    }
+
+    function renderDetectableKpis() {
+      const sessions = state.data?.sessions || [];
+      const events = state.detectableEvents;
+      const sessionsWithSignals = new Set(events.map((event) => event.session_id)).size;
+      const blockedSessions = new Set(events.filter((event) => event.blocked || event.severity === "blocked").map((event) => event.session_id)).size;
+      const inputEvents = events.filter((event) => event.source === "input").length;
+      const outputEvents = events.filter((event) => event.source === "output").length;
+      const generatedHeld = events.filter((event) => event.blocked && event.source === "output").length;
+      const blockedEvents = events.filter((event) => event.blocked || event.severity === "blocked").length;
+      const totals = [
+        { label: "Sessions with safety signals", value: sessionsWithSignals, meta: `${sessionsWithSignals} / ${sessions.length} sessions` },
+        { label: "Safety events", value: events.length, meta: `${blockedEvents} blocked, ${events.length - blockedEvents} flagged` }
+      ];
+      const rings = [
+        { label: "Blocked sessions", count: blockedSessions, total: sessionsWithSignals || sessions.length, totalLabel: sessionsWithSignals ? "signaled sessions" : "sessions", color: "var(--red)" },
+        { label: "Input signals", count: inputEvents, total: events.length, totalLabel: "safety events", color: "var(--amber)" },
+        { label: "Output signals", count: outputEvents, total: events.length, totalLabel: "safety events", color: "var(--blue)" },
+        { label: "Generated outputs held", count: generatedHeld, total: outputEvents || events.length, totalLabel: outputEvents ? "output signals" : "safety events", color: "var(--red)" }
+      ];
+      $("detectableKpis").innerHTML = `
+        <div class="kpi-total-row">
+          ${totals.map(renderTotalKpi).join("")}
+        </div>
+        <div class="kpi-ring-row">
+          ${rings.map(renderRingKpi).join("")}
+        </div>
+      `;
+    }
+
+    function ringKpiWithDenominator({ key, label, count, color, options, popover = "" }) {
+      const selected = options.find((option) => option.key === state.kpiDenominators[key]) || options[0];
+      state.kpiDenominators[key] = selected.key;
+      return {
+        key,
+        label,
+        count,
+        color,
+        popover,
+        total: selected.total,
+        totalLabel: selected.totalLabel,
+        denominatorKey: selected.key,
+        denominatorOptions: options
+      };
+    }
+
+    function renderTotalKpi(item) {
+      return `
+        <div class="kpi kpi-total">
+          <div class="kpi-value">${escapeHtml(item.value)}</div>
+          <div class="kpi-label">${escapeHtml(item.label)}</div>
+          <div class="kpi-total-meta">${escapeHtml(item.meta)}</div>
+        </div>
+      `;
+    }
+
+    function renderRingKpi(item) {
+      const ratio = item.total ? Math.max(0, Math.min(1, item.count / item.total)) : 0;
+      const degrees = Math.round(ratio * 360);
+      return `
+        <div class="kpi kpi-ring-card ${item.popover ? "has-popover" : ""}" ${item.popover ? 'tabindex="0"' : ""}>
+          <div class="kpi-ring" style="--ring-color: ${item.color}; --ring-value: ${degrees}deg;">
+            <span>${pct(ratio)}</span>
+          </div>
+          <div class="kpi-ring-copy">
+            <div class="kpi-label">${escapeHtml(item.label)}</div>
+            <div class="kpi-ring-count">${escapeHtml(item.count)} / ${escapeHtml(item.total)}</div>
+            <div class="kpi-ring-meta">${escapeHtml(item.totalLabel)}</div>
+            ${renderRingDenominatorControl(item)}
+          </div>
+          ${item.popover || ""}
+        </div>
+      `;
+    }
+
+    function renderRingDenominatorControl(item) {
+      if (!item.denominatorOptions?.length) return "";
+      return `
+        <label class="kpi-ring-denom">
+          <span>Denominator</span>
+          <select data-kpi-denominator="${escapeHtml(item.key)}">
+            ${item.denominatorOptions.map((option) => `
+              <option value="${escapeHtml(option.key)}" ${option.key === item.denominatorKey ? "selected" : ""}>${escapeHtml(option.label)}</option>
+            `).join("")}
+          </select>
+        </label>
+      `;
+    }
+
+    function renderPriorityKpiPopover(totalPriority) {
+      const rows = priorityBreakdownRows();
+      const groupLabel = $("groupBy").selectedOptions[0]?.textContent || "cohort";
+      if (!rows.length) {
+        return `
+          <div class="kpi-popover">
+            <div class="popover-title">Priority overlap breakdown</div>
+            <div class="popover-note">No priority overlaps in the current view.</div>
+          </div>
+        `;
+      }
+      const maxCount = Math.max(...rows.map((row) => row.priorityCount), 1);
+      const hiddenCount = Math.max(0, priorityBreakdownRows(false).length - rows.length);
+      return `
+        <div class="kpi-popover">
+          <div class="popover-title">Priority overlap breakdown</div>
+          <div class="popover-note">Bad outcomes intersecting vulnerable sessions by ${escapeHtml(groupLabel.toLowerCase())}.</div>
+          <div class="mini-bars">
+            ${rows.map((row) => `
+              <div class="mini-bar" title="${escapeHtml(row.value)}: ${row.priorityCount}/${totalPriority}">
+                <div class="mini-bar-label">${escapeHtml(row.value)}</div>
+                <div class="mini-bar-track"><div class="mini-bar-fill" style="width: ${(row.priorityCount / maxCount) * 100}%"></div></div>
+                <div class="mini-bar-value">${row.priorityCount}</div>
+              </div>
+            `).join("")}
+          </div>
+          ${hiddenCount ? `<div class="popover-note" style="margin: 9px 0 0;">+${hiddenCount} more group(s)</div>` : ""}
+        </div>
+      `;
+    }
+
+    function priorityBreakdownRows(limit = true) {
+      const rows = state.groupRows
+        .map((row) => ({ ...row, priorityCount: priorityCountForRow(row) }))
+        .filter((row) => row.priorityCount > 0)
+        .sort((a, b) => b.priorityCount - a.priorityCount || b.badRate - a.badRate || compareValues(a.value, b.value));
+      return limit ? rows.slice(0, 8) : rows;
+    }
+
+    function renderChart() {
+      const mode = $("chartMode").value;
+      updateRateMetricControl();
+      if (mode === "confusion") {
+        renderConfusionChart();
+      } else if (mode === "rates") {
+        renderRateBarsChart();
+      } else {
+        renderDistributionChart();
+      }
+    }
+
+    function updateRateMetricControl() {
+      $("rateMetricControl").hidden = $("chartMode").value !== "rates";
+    }
+
+    function renderDistributionChart() {
+      const outcome = outcomeConfig($("outcome").value);
+      const rows = state.groupRows;
+      const scaleMax = outcome.scale || niceAxisMax(Math.max(1, ...rows.flatMap((row) => row.metricValues)));
+      const groupLabel = $("groupBy").selectedOptions[0]?.textContent || "cohort";
+      $("chartTitle").textContent = `${outcome.label} distribution by ${groupLabel}`;
+
+      if (!rows.length) {
+        $("chart").innerHTML = `<div class="empty">No cohorts match the current view.</div>`;
+        return;
+      }
+
+      if (!window.Plotly) {
+        $("chart").innerHTML = `<div class="empty">Plotly could not load.</div>`;
+        return;
+      }
+
+      const chartRows = rows.filter((row) => row.metricValues.length);
+      const averageAcrossGroups = average(chartRows.map((row) => row.metricMean).filter(isNumber));
+      const weightedAverageAcrossGroups = weightedAverage(chartRows.map((row) => ({
+        value: row.metricMean,
+        weight: row.metricValues.length
+      })));
+      $("chartNote").textContent = ($("lens").value === "demographic"
+        ? "Each cohort uses discrete width-1 histogram bins; the red shaded region marks bad outcomes."
+        : "Each cohort uses discrete width-1 histogram bins; the red shaded region marks bad outcomes, with amber bars for vulnerable bad-outcome bins.") +
+        ` Dashed line is the Average Across Groups: ${fmt(averageAcrossGroups)}; dotted teal line is the Weighted Average Across Groups: ${fmt(weightedAverageAcrossGroups)}, weighted by group frequency.`;
+      renderChartLegend("distribution");
+      const axisMax = Math.max(1, Math.ceil(scaleMax));
+      const traces = [];
+      for (const [index, row] of chartRows.entries()) {
+        const bins = histogramBins(row.metricValues, axisMax, outcome);
+        traces.push({
+          type: "bar",
+          orientation: "v",
+          x: bins.map((bin) => bin.value),
+          y: bins.map((bin) => bin.count),
+          name: row.value,
+          legendgroup: row.value,
+          xaxis: "x",
+          yaxis: rowAxisName(index),
+          width: 0.84,
+          marker: {
+            color: bins.map((bin) => bin.bad ? (row.priority ? "#a66500" : "#b4232a") : "#2f6fbd"),
+            opacity: 0.78,
+            line: { color: "#ffffff", width: 1 },
+            pattern: { shape: row.special ? "/" : "" }
+          },
+          customdata: bins.map((bin) => [bin.bad ? "Bad outcome" : "Recorded value", row.answeredCount]),
+          hovertemplate: `${escapeHtml(row.value)}<br>Value: %{x}<br>Count: %{y}<br>%{customdata[0]}<extra></extra>`,
+          showlegend: false
+        });
+      }
+
+      if (!traces.length) {
+        $("chart").innerHTML = `<div class="empty">No metric values are available for the current cohorts.</div>`;
+        return;
+      }
+
+      Plotly.react("chart", traces, histogramLayout(chartRows, outcome, axisMax, averageAcrossGroups, weightedAverageAcrossGroups), plotlyConfig());
+    }
+
+    function histogramBins(values, axisMax, outcome) {
+      const bins = Array.from({ length: axisMax + 1 }, (_, value) => ({
+        value,
+        count: 0,
+        bad: outcomeIsBad(outcome, value)
+      }));
+      for (const value of values) {
+        if (!isNumber(value)) continue;
+        const bucket = Math.max(0, Math.min(axisMax, Math.round(value)));
+        bins[bucket].count += 1;
+      }
+      return bins;
+    }
+
+    function rowAxisName(index) {
+      return index === 0 ? "y" : `y${index + 1}`;
+    }
+
+    function histogramLayout(rows, outcome, axisMax, averageAcrossGroups, weightedAverageAcrossGroups) {
+      const rowHeight = 112;
+      const height = Math.max(420, rows.length * rowHeight + 165);
+      const layout = {
+        height,
+        margin: { l: 220, r: 28, t: 78, b: 62 },
+        paper_bgcolor: "rgba(0,0,0,0)",
+        plot_bgcolor: "#fbfcfe",
+        font: { family: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", color: "#18202a" },
+        hovermode: "closest",
+        barmode: "overlay",
+        bargap: 0.14,
+        showlegend: false,
+        annotations: [],
+        shapes: [],
+        xaxis: {
+          title: "Value",
+          anchor: rowAxisName(rows.length - 1),
+          range: [-0.5, axisMax + 0.5],
+          tick0: 0,
+          dtick: 1,
+          zeroline: false,
+          gridcolor: "#e4e9f1",
+          linecolor: "#8d99aa",
+          mirror: false
+        }
+      };
+
+      const gap = Math.min(0.018, 0.08 / Math.max(rows.length, 1));
+      const badRange = isNumber(outcome.threshold)
+        ? {
+            x0: outcome.direction === "high" ? outcome.threshold - 0.5 : -0.5,
+            x1: outcome.direction === "high" ? axisMax + 0.5 : outcome.threshold + 0.5
+          }
+        : null;
+      rows.forEach((row, index) => {
+        const top = 1 - index / rows.length;
+        const bottom = 1 - (index + 1) / rows.length;
+        const domain = [bottom + gap, top - gap];
+        const axisKey = index === 0 ? "yaxis" : `yaxis${index + 1}`;
+        layout[axisKey] = {
+          domain,
+          rangemode: "tozero",
+          zeroline: false,
+          showgrid: true,
+          gridcolor: "#edf1f6",
+          tickfont: { size: 10 },
+          automargin: false
+        };
+        layout.annotations.push({
+          xref: "paper",
+          yref: "paper",
+          x: -0.035,
+          y: (domain[0] + domain[1]) / 2,
+          text: escapeHtml(row.value),
+          showarrow: false,
+          xanchor: "right",
+          yanchor: "middle",
+          align: "right",
+          font: { size: 12, color: "#18202a" }
+        });
+        if (badRange) {
+          layout.shapes.push({
+            type: "rect",
+            xref: "x",
+            yref: "paper",
+            x0: badRange.x0,
+            x1: badRange.x1,
+            y0: domain[0],
+            y1: domain[1],
+            fillcolor: "rgba(180, 35, 42, 0.045)",
+            line: { width: 0 },
+            layer: "below"
+          });
+        }
+      });
+
+      if (badRange) {
+        const x0 = Math.max(-0.5, badRange.x0);
+        const x1 = Math.min(axisMax + 0.5, badRange.x1);
+        const labelX = (x0 + x1) / 2;
+        const y = 1.09;
+        layout.shapes.push(
+          {
+            type: "line",
+            xref: "x",
+            yref: "paper",
+            x0,
+            x1,
+            y0: y,
+            y1: y,
+            line: { color: "#b4232a", width: 2 }
+          },
+          {
+            type: "line",
+            xref: "x",
+            yref: "paper",
+            x0,
+            x1: x0,
+            y0: y - 0.018,
+            y1: y + 0.018,
+            line: { color: "#b4232a", width: 2 }
+          },
+          {
+            type: "line",
+            xref: "x",
+            yref: "paper",
+            x0: x1,
+            x1,
+            y0: y - 0.018,
+            y1: y + 0.018,
+            line: { color: "#b4232a", width: 2 }
+          }
+        );
+        layout.annotations.push({
+          xref: "x",
+          yref: "paper",
+          x: labelX,
+          y: y + 0.026,
+          text: "Bad outcome range",
+          showarrow: false,
+          xanchor: "center",
+          yanchor: "bottom",
+          font: { size: 11, color: "#8f1d24" },
+          bgcolor: "rgba(255, 255, 255, 0.82)",
+          bordercolor: "rgba(180, 35, 42, 0.18)",
+          borderpad: 3
+        });
+      }
+
+      addAverageReferenceLine(layout, averageAcrossGroups, "Average Across Groups", "#18202a", "dash", 1.015, formatScore);
+      addAverageReferenceLine(layout, weightedAverageAcrossGroups, "Weighted Average Across Groups", "#10806f", "dot", 1.045, formatScore);
+
+      return layout;
+    }
+
+    function renderConfusionChart() {
+      const outcome = outcomeConfig($("outcome").value);
+      const rows = state.groupRows
+        .filter((row) => row.confusion.matrixCount > 0);
+      const groupLabel = $("groupBy").selectedOptions[0]?.textContent || "cohort";
+      const ranges = equalizedOddsRanges(rows);
+      $("chartTitle").textContent = `${outcome.label} confusion matrix by ${groupLabel}`;
+      $("chartNote").textContent =
+        `Positive input = eval avg >= ${INPUT_CLARITY.threshold}/${INPUT_CLARITY.scale}; negative input = below that. ` +
+        `True means the selected outcome is not flagged. Blue cells are good rates, red cells are bad rates, and color intensity follows the rate. ` +
+        `Ranges: TPR ${pp(ranges.tpr)}, FPR ${pp(ranges.fpr)}, TNR ${pp(ranges.tnr)}, FNR ${pp(ranges.fnr)}.`;
+      renderChartLegend("confusion");
+
+      if (!rows.length) {
+        $("chart").innerHTML = `<div class="empty">No cohorts have both input evaluation and outcome data for the current view.</div>`;
+        return;
+      }
+
+      if (!window.Plotly) {
+        $("chart").innerHTML = `<div class="empty">Plotly could not load.</div>`;
+        return;
+      }
+
+      const x = ["True: aligned", "False: failed"];
+      const y = [];
+      const z = [];
+      const text = [];
+      const customdata = [];
+
+      for (const row of rows) {
+        const groupName = escapeHtml(row.value);
+        const c = row.confusion;
+        y.push(`${groupName} | ${INPUT_CLARITY.positiveLabel}`);
+        z.push([heatmapRate(c.tpr, true), heatmapRate(c.fpr, false)]);
+        text.push([
+          matrixCellText("TP", c.tp, c.tpr, "TPR"),
+          matrixCellText("FP", c.fp, c.fpr, "FPR")
+        ]);
+        customdata.push([
+          matrixCellData(row, "True positive", INPUT_CLARITY.positiveLabel, c.tp, c.clearCount, c.tpr, "TPR", "Clear input and aligned output"),
+          matrixCellData(row, "False positive", INPUT_CLARITY.positiveLabel, c.fp, c.clearCount, c.fpr, "FPR", "Clear input but failed output")
+        ]);
+
+        y.push(`${groupName} | ${INPUT_CLARITY.negativeLabel}`);
+        z.push([heatmapRate(c.tnr, true), heatmapRate(c.fnr, false)]);
+        text.push([
+          matrixCellText("TN", c.tn, c.tnr, "TNR"),
+          matrixCellText("FN", c.fn, c.fnr, "FNR")
+        ]);
+        customdata.push([
+          matrixCellData(row, "True negative", INPUT_CLARITY.negativeLabel, c.tn, c.vagueCount, c.tnr, "TNR", "Vague input and aligned output"),
+          matrixCellData(row, "False negative", INPUT_CLARITY.negativeLabel, c.fn, c.vagueCount, c.fnr, "FNR", "Vague input and failed output")
+        ]);
+      }
+
+      const trace = {
+        type: "heatmap",
+        x,
+        y,
+        z,
+        zmin: -1,
+        zmax: 1,
+        colorscale: confusionColorscale(),
+        showscale: true,
+        colorbar: {
+          title: "Rate",
+          tickvals: [-1, -0.5, 0, 0.5, 1],
+          ticktext: ["Bad 100%", "Bad 50%", "0", "Good 50%", "Good 100%"],
+          len: 0.78
+        },
+        text,
+        texttemplate: "%{text}",
+        textfont: { color: "#18202a", size: 12 },
+        customdata,
+        hovertemplate: "%{customdata[0]}<br>%{customdata[1]}<br>%{customdata[2]}<br>Count: %{customdata[3]}/%{customdata[4]}<br>%{customdata[5]}: %{customdata[6]}<extra></extra>"
+      };
+
+      Plotly.react("chart", [trace], confusionLayout(rows), plotlyConfig());
+    }
+
+    function heatmapRate(value, good) {
+      if (!isNumber(value)) return 0;
+      return good ? value : -value;
+    }
+
+    function renderRateBarsChart() {
+      const outcome = outcomeConfig($("outcome").value);
+      const spec = rateConfig();
+      const rows = state.groupRows
+        .filter((row) => rateDenominator(row, spec) > 0);
+      const groupLabel = $("groupBy").selectedOptions[0]?.textContent || "cohort";
+      const rateValues = rows.map((row) => rateValue(row, spec)).filter(isNumber);
+      const range = valueRange(rateValues);
+      const averageAcrossGroups = average(rateValues);
+      const weightedAverageAcrossGroups = weightedAverage(rows.map((row) => ({
+        value: rateValue(row, spec),
+        weight: rateDenominator(row, spec)
+      })));
+      $("chartTitle").textContent = `${outcome.label} ${spec.short} by ${groupLabel}`;
+      $("chartNote").textContent =
+        `${spec.label} compared across cohorts. Range: ${pp(range)}. Dashed line is the Average Across Groups: ${pct(averageAcrossGroups)}; dotted teal line is the Weighted Average Across Groups: ${pct(weightedAverageAcrossGroups)}, weighted by group frequency.` +
+        (spec.key === "badRate" ? " Bad outcome rate is based on the selected outcome flag." : " This rate uses the user-message clarity split from the confusion matrix.");
+      renderChartLegend("rates");
+
+      if (!rows.length) {
+        $("chart").innerHTML = `<div class="empty">No cohorts have enough data for the selected rate.</div>`;
+        return;
+      }
+
+      if (!window.Plotly) {
+        $("chart").innerHTML = `<div class="empty">Plotly could not load.</div>`;
+        return;
+      }
+
+      const y = rows.map((row) => row.value);
+      const trace = {
+        type: "bar",
+        orientation: "h",
+        name: spec.label,
+        x: rows.map((row) => rateValue(row, spec)),
+        y,
+        marker: {
+          color: spec.color,
+          opacity: 0.86,
+          pattern: { shape: rows.map((row) => row.special ? "/" : "") }
+        },
+        customdata: rows.map((row) => [
+          rateCount(row, spec),
+          rateDenominator(row, spec),
+          pp(row.confusion.eoGapFromOverall)
+        ]),
+        hovertemplate: `%{y}<br>${spec.label}: %{x:.0%}<br>Count: %{customdata[0]}/%{customdata[1]}<br>EO gap from overall: %{customdata[2]}<extra></extra>`
+      };
+
+      Plotly.react("chart", [trace], rateBarsLayout(rows, spec, averageAcrossGroups, weightedAverageAcrossGroups), plotlyConfig());
+    }
+
+    function rateValue(row, spec) {
+      return spec.key === "badRate" ? row.badRate : row.confusion[spec.key];
+    }
+
+    function rateCount(row, spec) {
+      return spec.key === "badRate" ? row.badCount : row.confusion[spec.countKey];
+    }
+
+    function rateDenominator(row, spec) {
+      return spec.key === "badRate" ? row.answeredCount : row.confusion[spec.denominatorKey];
+    }
+
+    function matrixCellText(label, count, rate, rateLabel) {
+      return `${label}<br>${count}<br>${rateLabel} ${pct(rate)}`;
+    }
+
+    function matrixCellData(row, cellLabel, conditionLabel, count, total, rate, rateLabel, explanation) {
+      return [
+        `${cellLabel}: ${escapeHtml(row.value)}`,
+        conditionLabel,
+        explanation,
+        count,
+        total,
+        rateLabel,
+        pct(rate)
+      ];
+    }
+
+    function confusionColorscale() {
+      return [
+        [0, "#b4232a"],
+        [0.5, "#ffffff"],
+        [1, "#2f6fbd"]
+      ];
+    }
+
+    function confusionLayout(rows) {
+      const rowCount = rows.length * 2;
+      return {
+        height: Math.max(420, rowCount * 50 + 130),
+        margin: { l: 260, r: 86, t: 24, b: 54 },
+        paper_bgcolor: "rgba(0,0,0,0)",
+        plot_bgcolor: "#fbfcfe",
+        font: { family: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", color: "#18202a" },
+        hovermode: "closest",
+        xaxis: {
+          side: "top",
+          tickfont: { size: 12 },
+          fixedrange: true,
+          linecolor: "#8d99aa"
+        },
+        yaxis: {
+          autorange: "reversed",
+          automargin: true,
+          tickfont: { size: 11 },
+          fixedrange: true
+        },
+        shapes: rows.slice(1).map((_, index) => ({
+          type: "line",
+          xref: "paper",
+          yref: "y",
+          x0: 0,
+          x1: 1,
+          y0: index * 2 + 1.5,
+          y1: index * 2 + 1.5,
+          line: { color: "#ffffff", width: 5 }
+        }))
+      };
+    }
+
+    function equalizedOddsRanges(rows) {
+      return {
+        tpr: valueRange(rows.map((row) => row.confusion.tpr).filter(isNumber)),
+        fpr: valueRange(rows.map((row) => row.confusion.fpr).filter(isNumber)),
+        tnr: valueRange(rows.map((row) => row.confusion.tnr).filter(isNumber)),
+        fnr: valueRange(rows.map((row) => row.confusion.fnr).filter(isNumber))
+      };
+    }
+
+    function valueRange(values) {
+      return values.length > 1 ? Math.max(...values) - Math.min(...values) : null;
+    }
+
+    function rateBarsLayout(rows, spec, averageAcrossGroups, weightedAverageAcrossGroups) {
+      const categories = rows.map((row) => row.value).reverse();
+      const layout = {
+        height: Math.max(380, rows.length * 86 + 130),
+        margin: { l: 230, r: 28, t: 24, b: 62 },
+        paper_bgcolor: "rgba(0,0,0,0)",
+        plot_bgcolor: "#fbfcfe",
+        font: { family: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", color: "#18202a" },
+        hovermode: "closest",
+        barmode: "group",
+        bargap: 0.18,
+        showlegend: false,
+        xaxis: {
+          title: spec.short,
+          range: [0, 1],
+          tickformat: ".0%",
+          dtick: 0.25,
+          zeroline: false,
+          gridcolor: "#e4e9f1",
+          linecolor: "#8d99aa"
+        },
+        yaxis: {
+          categoryorder: "array",
+          categoryarray: categories,
+          automargin: true,
+          tickfont: { size: 12 },
+          gridcolor: "#edf1f6"
+        },
+        shapes: [],
+        annotations: []
+      };
+      addAverageReferenceLine(layout, averageAcrossGroups, "Average Across Groups", "#18202a", "dash", 1.02, pct);
+      addAverageReferenceLine(layout, weightedAverageAcrossGroups, "Weighted Average Across Groups", "#10806f", "dot", 1.07, pct);
+      return layout;
+    }
+
+    function addAverageReferenceLine(layout, value, label, color, dash, annotationY, formatter) {
+      if (!isNumber(value)) return;
+      layout.shapes.push({
+        type: "line",
+        xref: "x",
+        yref: "paper",
+        x0: value,
+        x1: value,
+        y0: 0,
+        y1: 1,
+        line: { color, width: 2, dash }
+      });
+      layout.annotations.push({
+        xref: "x",
+        yref: "paper",
+        x: value,
+        y: annotationY,
+        text: `${label} ${formatter(value)}`,
+        showarrow: false,
+        xanchor: "left",
+        yanchor: "bottom",
+        font: { size: 11, color }
+      });
+    }
+    function pp(value) {
+      if (!isNumber(value)) return "-";
+      return `${Math.round(value * 100)} pp`;
+    }
+
+    function renderChartLegend(mode) {
+      if (mode === "distribution") {
+        $("chartLegend").innerHTML = `
+          <span class="legend-item"><span class="swatch" style="background: var(--blue)"></span>Count</span>
+          <span class="legend-item"><span class="swatch" style="background: var(--red)"></span>Bad-outcome bin</span>
+          <span class="legend-item"><span class="swatch" style="background: var(--amber)"></span>Priority bin</span>
+          <span class="legend-item"><span class="swatch" style="background: var(--ink)"></span>Average Across Groups</span>
+          <span class="legend-item"><span class="swatch" style="background: var(--teal)"></span>Weighted Average Across Groups</span>
+          <span class="legend-item"><span class="swatch" style="background: repeating-linear-gradient(135deg, #d6dde7 0 3px, #ffffff 3px 6px)"></span>Skipped/no survey</span>
+        `;
+      } else if (mode === "confusion") {
+        $("chartLegend").innerHTML = `
+          <span class="legend-item"><span class="swatch" style="background: var(--blue)"></span>Good rate: TP/TN</span>
+          <span class="legend-item"><span class="swatch" style="background: var(--red)"></span>Bad rate: FP/FN</span>
+          <span class="legend-item"><span class="swatch" style="background: linear-gradient(90deg, #ffffff, var(--blue))"></span>More color = larger rate</span>
+        `;
+      } else if (mode === "rates") {
+        const spec = rateConfig();
+        $("chartLegend").innerHTML = `
+          <span class="legend-item"><span class="swatch" style="background: ${spec.color}"></span>${escapeHtml(spec.short)}</span>
+          <span class="legend-item"><span class="swatch" style="background: var(--ink)"></span>Average Across Groups</span>
+          <span class="legend-item"><span class="swatch" style="background: var(--teal)"></span>Weighted Average Across Groups</span>
+          <span class="legend-item"><span class="swatch" style="background: repeating-linear-gradient(135deg, #d6dde7 0 3px, #ffffff 3px 6px)"></span>Skipped/no survey</span>
+        `;
+      } else {
+        $("chartLegend").innerHTML = "";
+      }
+    }
+
+    function plotlyConfig() {
+      return {
+        responsive: true,
+        displaylogo: false,
+        modeBarButtonsToRemove: ["select2d", "lasso2d", "autoScale2d"]
+      };
+    }
+
+    function renderDetectableChart() {
+      const mode = $("detectChartMode").value;
+      if (!window.Plotly) {
+        $("detectChart").innerHTML = `<div class="empty">Plotly could not load.</div>`;
+        return;
+      }
+      if (!state.detectableEvents.length) {
+        $("detectChartTitle").textContent = "Safety detections";
+        $("detectChartNote").textContent = "No safety events match the current detection scope.";
+        $("detectChart").innerHTML = `<div class="empty">No detectable harm events match the current scope.</div>`;
+        $("detectChartLegend").innerHTML = "";
+        return;
+      }
+      if (mode === "source") renderDetectableSourceChart();
+      else if (mode === "phase") renderDetectablePhaseChart();
+      else if (mode === "timeline") renderDetectableTimelineChart();
+      else renderDetectableCategoryChart();
+    }
+
+    function renderDetectableCategoryChart() {
+      const rows = state.detectableCategoryRows.slice(0, 16);
+      $("detectChartTitle").textContent = "Safety detections by category";
+      $("detectChartNote").textContent = "Stacked bars separate blocked events from flagged-only events. Counts are events, not unique sessions.";
+      renderDetectableLegend();
+      const y = rows.map((row) => row.label).reverse();
+      const blocked = rows.map((row) => row.blocked).reverse();
+      const flagged = rows.map((row) => row.flagged).reverse();
+      Plotly.react("detectChart", [
+        detectableBarTrace("Flagged only", flagged, y, "#a66500"),
+        detectableBarTrace("Blocked", blocked, y, "#b4232a")
+      ], detectableBarLayout({
+        xTitle: "Events",
+        y,
+        height: Math.max(380, rows.length * 42 + 120),
+        barmode: "stack"
+      }), plotlyConfig());
+    }
+
+    function renderDetectableSourceChart() {
+      const rows = ["input", "output", "other"].map((source) => {
+        const sourceEvents = state.detectableEvents.filter((event) => (event.source || "other") === source);
+        return {
+          source,
+          label: safetySourceLabel(source),
+          blocked: sourceEvents.filter((event) => event.blocked || event.severity === "blocked").length,
+          flagged: sourceEvents.filter((event) => !(event.blocked || event.severity === "blocked")).length
+        };
+      }).filter((row) => row.blocked || row.flagged);
+      $("detectChartTitle").textContent = "Safety detections by source";
+      $("detectChartNote").textContent = "Input means user-submitted content; output means generated response, profiles, options, code, or graph checks.";
+      renderDetectableLegend();
+      const y = rows.map((row) => row.label).reverse();
+      Plotly.react("detectChart", [
+        detectableBarTrace("Flagged only", rows.map((row) => row.flagged).reverse(), y, "#a66500"),
+        detectableBarTrace("Blocked", rows.map((row) => row.blocked).reverse(), y, "#b4232a")
+      ], detectableBarLayout({
+        xTitle: "Events",
+        y,
+        height: Math.max(360, rows.length * 86 + 110),
+        barmode: "stack"
+      }), plotlyConfig());
+    }
+
+    function renderDetectablePhaseChart() {
+      const phaseKeys = ["emotional_discovery", "artistic_discovery", "code_generation"];
+      const rows = phaseKeys.map((phase) => {
+        const phaseEvents = state.detectableEvents.filter((event) => event.phase === phase);
+        return {
+          phase,
+          label: PHASE_LABELS[phase] || phase,
+          blocked: phaseEvents.filter((event) => event.blocked || event.severity === "blocked").length,
+          flagged: phaseEvents.filter((event) => !(event.blocked || event.severity === "blocked")).length
+        };
+      }).filter((row) => row.blocked || row.flagged);
+      $("detectChartTitle").textContent = "Safety detections by phase";
+      $("detectChartNote").textContent = "Shows where harmful input, extreme wording, and held generated outputs are appearing in the workflow.";
+      renderDetectableLegend();
+      const x = rows.map((row) => row.label);
+      Plotly.react("detectChart", [
+        {
+          type: "bar",
+          name: "Flagged only",
+          x,
+          y: rows.map((row) => row.flagged),
+          marker: { color: "#a66500", opacity: 0.86 },
+          hovertemplate: "%{x}<br>Flagged only: %{y}<extra></extra>"
+        },
+        {
+          type: "bar",
+          name: "Blocked",
+          x,
+          y: rows.map((row) => row.blocked),
+          marker: { color: "#b4232a", opacity: 0.86 },
+          hovertemplate: "%{x}<br>Blocked: %{y}<extra></extra>"
+        }
+      ], detectableColumnLayout("Phase", "Events", "group"), plotlyConfig());
+    }
+
+    function renderDetectableTimelineChart() {
+      const days = new Map();
+      for (const event of state.detectableEvents) {
+        const date = new Date(event.timestamp || event.started_at || 0);
+        if (Number.isNaN(date.getTime())) continue;
+        const key = date.toISOString().slice(0, 10);
+        if (!days.has(key)) days.set(key, { day: key, blocked: 0, flagged: 0 });
+        const row = days.get(key);
+        if (event.blocked || event.severity === "blocked") row.blocked += 1;
+        else row.flagged += 1;
+      }
+      const rows = Array.from(days.values()).sort((a, b) => a.day.localeCompare(b.day));
+      $("detectChartTitle").textContent = "Safety detections over time";
+      $("detectChartNote").textContent = "Daily counts use turn timestamps when available, otherwise the session start time.";
+      renderDetectableLegend();
+      Plotly.react("detectChart", [
+        {
+          type: "scatter",
+          mode: "lines+markers",
+          name: "Flagged only",
+          x: rows.map((row) => row.day),
+          y: rows.map((row) => row.flagged),
+          line: { color: "#a66500", width: 3 },
+          marker: { size: 7 },
+          hovertemplate: "%{x}<br>Flagged only: %{y}<extra></extra>"
+        },
+        {
+          type: "scatter",
+          mode: "lines+markers",
+          name: "Blocked",
+          x: rows.map((row) => row.day),
+          y: rows.map((row) => row.blocked),
+          line: { color: "#b4232a", width: 3 },
+          marker: { size: 7 },
+          hovertemplate: "%{x}<br>Blocked: %{y}<extra></extra>"
+        }
+      ], detectableColumnLayout("Date", "Events", "group"), plotlyConfig());
+    }
+
+    function detectableBarTrace(name, x, y, color) {
+      return {
+        type: "bar",
+        orientation: "h",
+        name,
+        x,
+        y,
+        marker: { color, opacity: 0.86 },
+        hovertemplate: `%{y}<br>${name}: %{x}<extra></extra>`
+      };
+    }
+
+    function detectableBarLayout({ xTitle, y, height, barmode }) {
+      return {
+        height,
+        margin: { l: 230, r: 28, t: 20, b: 58 },
+        paper_bgcolor: "rgba(0,0,0,0)",
+        plot_bgcolor: "#fbfcfe",
+        font: { family: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", color: "#18202a" },
+        hovermode: "closest",
+        barmode,
+        xaxis: {
+          title: xTitle,
+          rangemode: "tozero",
+          dtick: 1,
+          zeroline: false,
+          gridcolor: "#e4e9f1",
+          linecolor: "#8d99aa"
+        },
+        yaxis: {
+          categoryorder: "array",
+          categoryarray: y,
+          automargin: true,
+          gridcolor: "#edf1f6"
+        },
+        legend: { orientation: "h", y: -0.18 }
+      };
+    }
+
+    function detectableColumnLayout(xTitle, yTitle, barmode) {
+      return {
+        height: 390,
+        margin: { l: 64, r: 28, t: 20, b: 70 },
+        paper_bgcolor: "rgba(0,0,0,0)",
+        plot_bgcolor: "#fbfcfe",
+        font: { family: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", color: "#18202a" },
+        hovermode: "closest",
+        barmode,
+        xaxis: { title: xTitle, linecolor: "#8d99aa", gridcolor: "#edf1f6" },
+        yaxis: { title: yTitle, rangemode: "tozero", dtick: 1, zeroline: false, gridcolor: "#e4e9f1", linecolor: "#8d99aa" },
+        legend: { orientation: "h", y: -0.22 }
+      };
+    }
+
+    function renderDetectableLegend() {
+      $("detectChartLegend").innerHTML = `
+        <span class="legend-item"><span class="swatch" style="background: var(--amber)"></span>Flagged only</span>
+        <span class="legend-item"><span class="swatch" style="background: var(--red)"></span>Blocked or held</span>
+      `;
+    }
+
+    function niceStep(max) {
+      if (!Number.isFinite(max) || max <= 0) return 1;
+      const target = max / 5;
+      const magnitude = Math.pow(10, Math.floor(Math.log10(target)));
+      const normalized = target / magnitude;
+      let step = 10;
+      if (normalized <= 1) step = 1;
+      else if (normalized <= 2) step = 2;
+      else if (normalized <= 5) step = 5;
+      return step * magnitude;
+    }
+
+    function niceAxisMax(max) {
+      const step = niceStep(max);
+      return Math.max(step, Math.ceil(max / step) * step);
+    }
+
+    function axisLabel(value) {
+      if (Math.abs(value - Math.round(value)) < 0.001) return String(Math.round(value));
+      return value.toFixed(1).replace(/\.0$/, "");
+    }
+
+    function renderAxis(scaleMax) {
+      const step = niceStep(scaleMax);
+      const ticks = [];
+      for (let value = 0; value <= scaleMax + step * 0.25; value += step) {
+        const clamped = Math.min(value, scaleMax);
+        ticks.push({ value: clamped, pct: (clamped / scaleMax) * 100 });
+        if (clamped === scaleMax) break;
+      }
+      if (ticks[ticks.length - 1]?.value !== scaleMax) ticks.push({ value: scaleMax, pct: 100 });
+      return `
+        <div class="chart-axis" aria-hidden="true">
+          <div class="axis-title">Value</div>
+          <div class="axis-line">
+            ${ticks.map((tick) => `<div class="axis-tick" style="left: ${tick.pct}%"><span>${axisLabel(tick.value)}</span></div>`).join("")}
+          </div>
+          <div></div>
+        </div>
+      `;
+    }
+
+    function renderShareAxis() {
+      const ticks = [0, 25, 50, 75, 100];
+      return `
+        <div class="chart-axis" aria-hidden="true">
+          <div class="axis-title">Share</div>
+          <div class="axis-line">
+            ${ticks.map((tick) => `<div class="axis-tick" style="left: ${tick}%"><span>${tick}%</span></div>`).join("")}
+          </div>
+          <div></div>
+        </div>
+      `;
+    }
+
+    function priorityCountForRow(row) {
+      return $("lens").value === "vulnerability" && row.vulnerable ? row.badCount : row.vulnerableBadCount;
+    }
+
+    function inequalityConfig(key = $("inequalityMetric")?.value) {
+      return INEQUALITY_METRICS.find((item) => item.key === key) || INEQUALITY_METRICS[0];
+    }
+
+    function renderInequalitySummary(rows, groupLabel) {
+      const config = inequalityConfig();
+      const items = RATE_METRICS.map((spec) => inequalityForRate(rows, spec, config.key));
+      $("inequalitySummary").innerHTML = `
+        <div class="inequality-head">
+          <div>
+            <h3>Rate inequality across groups</h3>
+            <div class="inequality-note">
+              ${escapeHtml(config.description)}
+              Computed for ${escapeHtml(groupLabel.toLowerCase())}.
+              Rates exclude cohorts without the needed denominator.
+            </div>
+          </div>
+          <span class="badge neutral">${escapeHtml(config.label)}</span>
+        </div>
+        <div class="table-wrap">
+          <table class="inequality-table">
+            <thead>
+              <tr>
+                <th>Rate</th>
+                <th class="numeric">${escapeHtml(config.label)}</th>
+                <th class="numeric">Average across groups</th>
+                <th>Lowest group</th>
+                <th>Highest group</th>
+                <th class="numeric">Groups used</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map((item) => `
+                <tr>
+                  <td>${escapeHtml(item.spec.label)}</td>
+                  <td class="numeric">${formatInequalityValue(item.value, config.key)}</td>
+                  <td class="numeric">${pct(item.average)}</td>
+                  <td>${formatInequalityPoint(item.lowest)}</td>
+                  <td>${formatInequalityPoint(item.highest)}</td>
+                  <td class="numeric">${item.points.length}/${rows.length}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function inequalityForRate(rows, spec, metricKey) {
+      const points = rows
+        .map((row) => ({
+          row,
+          value: rateValue(row, spec),
+          denominator: rateDenominator(row, spec)
+        }))
+        .filter((point) => point.denominator > 0 && isNumber(point.value));
+      const values = points.map((point) => point.value);
+      const sorted = [...points].sort((a, b) => a.value - b.value);
+      return {
+        spec,
+        points,
+        value: inequalityMetricValue(values, metricKey),
+        average: average(values),
+        lowest: sorted[0] || null,
+        highest: sorted[sorted.length - 1] || null
+      };
+    }
+
+    function inequalityMetricValue(values, metricKey) {
+      if (values.length < 2) return null;
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const mean = average(values);
+      if (metricKey === "range") return max - min;
+      if (metricKey === "ratio") {
+        if (min === 0) return max === 0 ? 1 : Infinity;
+        return max / min;
+      }
+      if (metricKey === "stddev") {
+        return Math.sqrt(average(values.map((value) => Math.pow(value - mean, 2))));
+      }
+      if (metricKey === "mad") {
+        return average(values.map((value) => Math.abs(value - mean)));
+      }
+      if (metricKey === "maxGap") {
+        return Math.max(...values.map((value) => Math.abs(value - mean)));
+      }
+      return null;
+    }
+
+    function formatInequalityValue(value, metricKey) {
+      if (value === Infinity) return "∞";
+      if (!isNumber(value)) return "-";
+      return metricKey === "ratio" ? `${fmt(value, 2)}x` : pp(value);
+    }
+
+    function formatInequalityPoint(point) {
+      if (!point) return "-";
+      return `${escapeHtml(point.row.value)} (${pct(point.value)})`;
+    }
+
+    function alertInequalityConfig() {
+      return INEQUALITY_METRICS.find((item) => item.key === $("alertInequalityMetric").value) || INEQUALITY_METRICS[0];
+    }
+
+    function selectedAlertOutcomes() {
+      const value = $("alertOutcomeMetric").value;
+      if (value === "all") return OUTCOME_METRICS;
+      if (value === "selected") return [outcomeConfig($("outcome").value)];
+      return [outcomeConfig(value)];
+    }
+
+    function selectedAlertPerformanceMetrics() {
+      const value = $("alertPerformanceMetric").value;
+      return value === "all" ? PERFORMANCE_METRICS : [performanceConfig(value)];
+    }
+
+    function currentAlerts() {
+      const inequality = alertInequalityConfig();
+      const threshold = numberOrNull($("alertThreshold").value) ?? defaultAlertThreshold(inequality.key);
+      const groupLabel = $("groupBy").selectedOptions[0]?.textContent || "cohort";
+      const selectedPerformances = selectedAlertPerformanceMetrics();
+      const alerts = [];
+
+      for (const outcome of selectedAlertOutcomes()) {
+        const rows = buildRowsForOutcome(outcome.key);
+        for (const performance of selectedPerformances) {
+          const item = inequalityForPerformance(rows, performance, inequality.key);
+          if (item.points.length < 2 || !inequalityExceeds(item.value, threshold)) continue;
+          alerts.push({ outcome, performance, inequality, threshold, rows, ...item });
+        }
+      }
+
+      alerts.sort((a, b) => alertSortValue(b) - alertSortValue(a));
+      return { alerts, inequality, threshold, groupLabel, selectedPerformances };
+    }
+
+    function renderAlerts() {
+      const { alerts, inequality, threshold, groupLabel, selectedPerformances } = currentAlerts();
+      const limitValue = $("alertLimit").value;
+      const pageInfo = paginationWindow(alerts.length, limitValue, "alertPage");
+      const visibleAlerts = alerts.slice(pageInfo.startIndex, pageInfo.endIndex);
+      $("alertsCount").textContent = String(alerts.length);
+      $("alertsCount").className = `badge ${alerts.length ? "danger" : "ok"}`;
+      $("alertsNote").textContent =
+        `${inequality.label} alerts across ${groupLabel.toLowerCase()} for the current view. ` +
+        `Threshold: ${formatAlertThresholdSummary(threshold, inequality.key, selectedPerformances)}.`;
+
+      if (!alerts.length) {
+        $("alertsList").innerHTML = `<div class="empty">No inequality alerts exceed the selected threshold.</div>`;
+        renderPaginationBar("alertPagination", "alertPage", pageInfo, "alerts", renderAlerts);
+        return;
+      }
+
+      $("alertsList").innerHTML = visibleAlerts.map((alert) => `
+        <div class="alert-row">
+          <div>
+            <div class="alert-title">${escapeHtml(alert.outcome.label)}</div>
+            <div class="alert-meta">${escapeHtml(alert.performance.label)} across ${escapeHtml(groupLabel.toLowerCase())}</div>
+          </div>
+          <div>
+            <div class="alert-value">${formatAlertInequality(alert.value, alert.inequality.key, alert.performance)}</div>
+            <div class="alert-meta">${escapeHtml(alert.inequality.label)} &gt; ${formatAlertInequality(alert.threshold, alert.inequality.key, alert.performance)}</div>
+          </div>
+          <div class="alert-meta">
+            Lowest: ${formatPerformancePoint(alert.lowest, alert.performance)}<br>
+            Highest: ${formatPerformancePoint(alert.highest, alert.performance)}
+          </div>
+          <span class="badge danger">Alert</span>
+        </div>
+      `).join("");
+      renderPaginationBar("alertPagination", "alertPage", pageInfo, "alerts", renderAlerts);
+    }
+
+    function paginationWindow(total, pageSizeValue, stateKey) {
+      const allRows = pageSizeValue === "all";
+      const pageSize = allRows ? Math.max(total, 1) : Math.max(1, Number(pageSizeValue) || 10);
+      const pageCount = Math.max(1, Math.ceil(total / pageSize));
+      const page = Math.min(Math.max(1, state[stateKey] || 1), pageCount);
+      state[stateKey] = page;
+      return {
+        page,
+        pageCount,
+        pageSize,
+        total,
+        allRows,
+        startIndex: total ? (page - 1) * pageSize : 0,
+        endIndex: total ? Math.min(total, page * pageSize) : 0
+      };
+    }
+
+    function renderPaginationBar(targetId, stateKey, pageInfo, itemLabel, renderFn) {
+      const firstItem = pageInfo.total ? pageInfo.startIndex + 1 : 0;
+      const lastItem = pageInfo.endIndex;
+      const disabledPrevious = pageInfo.page <= 1 || pageInfo.allRows;
+      const disabledNext = pageInfo.page >= pageInfo.pageCount || pageInfo.allRows;
+      $(targetId).innerHTML = `
+        <div class="pagination-info">
+          ${firstItem}-${lastItem} of ${pageInfo.total} ${escapeHtml(itemLabel)}
+          ${pageInfo.allRows ? "" : ` · Page ${pageInfo.page} of ${pageInfo.pageCount}`}
+        </div>
+        <div class="pagination-actions">
+          <button type="button" data-page-action="first" ${disabledPrevious ? "disabled" : ""}>First</button>
+          <button type="button" data-page-action="previous" ${disabledPrevious ? "disabled" : ""}>Previous</button>
+          <button type="button" data-page-action="next" ${disabledNext ? "disabled" : ""}>Next</button>
+          <button type="button" data-page-action="last" ${disabledNext ? "disabled" : ""}>Last</button>
+        </div>
+      `;
+      document.querySelectorAll(`#${targetId} [data-page-action]`).forEach((button) => {
+        button.addEventListener("click", () => {
+          const action = button.dataset.pageAction;
+          if (action === "first") state[stateKey] = 1;
+          if (action === "previous") state[stateKey] = Math.max(1, pageInfo.page - 1);
+          if (action === "next") state[stateKey] = Math.min(pageInfo.pageCount, pageInfo.page + 1);
+          if (action === "last") state[stateKey] = pageInfo.pageCount;
+          renderFn();
+        });
+      });
+    }
+
+    function inequalityForPerformance(rows, performance, metricKey) {
+      const points = rows
+        .map((row) => performancePoint(row, performance))
+        .filter((point) => point.denominator > 0 && isNumber(point.value));
+      const values = points.map((point) => point.value);
+      const sorted = [...points].sort((a, b) => a.value - b.value);
+      return {
+        points,
+        value: inequalityMetricValue(values, metricKey),
+        average: average(values),
+        lowest: sorted[0] || null,
+        highest: sorted[sorted.length - 1] || null
+      };
+    }
+
+    function performancePoint(row, performance) {
+      if (performance.key === "metricMean") {
+        return { row, value: row.metricMean, denominator: row.metricValues.length };
+      }
+      const spec = rateConfig(performance.key);
+      return { row, value: rateValue(row, spec), denominator: rateDenominator(row, spec) };
+    }
+
+    function inequalityExceeds(value, threshold) {
+      if (value === Infinity) return true;
+      return isNumber(value) && isNumber(threshold) && value > threshold;
+    }
+
+    function alertSortValue(alert) {
+      if (alert.value === Infinity) return Number.MAX_SAFE_INTEGER;
+      if (!isNumber(alert.value)) return -1;
+      if (alert.inequality.key === "ratio") return alert.value;
+      return isNumber(alert.threshold) && alert.threshold > 0 ? alert.value / alert.threshold : alert.value;
+    }
+
+    function defaultAlertThreshold(metricKey) {
+      return metricKey === "ratio" ? 1.5 : 0.2;
+    }
+
+    function normalizeAlertThreshold() {
+      const key = $("alertInequalityMetric").value;
+      const current = numberOrNull($("alertThreshold").value);
+      if (key === "ratio" && (!isNumber(current) || current < 1)) $("alertThreshold").value = "1.5";
+      if (key !== "ratio" && (!isNumber(current) || current > 1)) $("alertThreshold").value = "0.2";
+    }
+
+    function formatAlertInequality(value, metricKey, performance) {
+      if (value === Infinity) return "∞";
+      if (!isNumber(value)) return "-";
+      if (metricKey === "ratio") return `${fmt(value, 2)}x`;
+      return performance?.type === "value" ? fmt(value, 2) : pp(value);
+    }
+
+    function formatAlertThresholdSummary(value, metricKey, performances) {
+      if (value === Infinity) return "∞";
+      if (!isNumber(value)) return "-";
+      if (metricKey === "ratio") return `${fmt(value, 2)}x`;
+      const hasValueMetric = performances.some((item) => item.type === "value");
+      const hasRateMetric = performances.some((item) => item.type === "rate");
+      if (hasValueMetric && hasRateMetric) return `${fmt(value, 2)} outcome units / ${pp(value)} for rates`;
+      return hasValueMetric ? `${fmt(value, 2)} outcome units` : pp(value);
+    }
+
+    function formatPerformancePoint(point, performance) {
+      if (!point) return "-";
+      return `${escapeHtml(point.row.value)} (${formatPerformanceValue(point.value, performance)})`;
+    }
+
+    function formatPerformanceValue(value, performance) {
+      if (!isNumber(value)) return "-";
+      return performance.type === "value" ? fmt(value, 1) : pct(value);
+    }
+
+    function renderDetectableCategoryTable() {
+      const rows = state.detectableCategoryRows;
+      $("detectCategoryTable").innerHTML = `
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th class="numeric">Events</th>
+            <th class="numeric">Sessions</th>
+            <th class="numeric">Blocked</th>
+            <th class="numeric">Flagged only</th>
+            <th class="numeric">Blocked rate</th>
+            <th class="numeric">Input</th>
+            <th class="numeric">Output</th>
+            <th>Top phases</th>
+            <th>Top checks</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <td>${escapeHtml(row.label)}</td>
+              <td class="numeric">${row.events}</td>
+              <td class="numeric">${row.sessionCount}</td>
+              <td class="numeric">${row.blocked}</td>
+              <td class="numeric">${row.flagged}</td>
+              <td class="numeric">${pct(row.blockedRate)}</td>
+              <td class="numeric">${row.input}</td>
+              <td class="numeric">${row.output}</td>
+              <td>${escapeHtml(row.phaseSummary || "-")}</td>
+              <td>${escapeHtml(row.checkSummary || "-")}</td>
+            </tr>
+          `).join("") || `<tr><td colspan="10" class="empty">No safety categories match the current scope.</td></tr>`}
+        </tbody>
+      `;
+    }
+
+    function renderDetectableEventsTable() {
+      const events = state.detectableEvents;
+      const pageInfo = paginationWindow(events.length, $("detectEventsPageSize").value, "detectEventsPage");
+      const visible = events.slice(pageInfo.startIndex, pageInfo.endIndex);
+      $("detectEventsCount").textContent = `${events.length} events`;
+      $("detectEventsCount").className = `badge ${events.length ? "danger" : "ok"}`;
+      $("detectEventsTable").innerHTML = `
+        <thead>
+          <tr>
+            <th>Session</th>
+            <th>Dataset</th>
+            <th>Time</th>
+            <th>Phase</th>
+            <th>Source</th>
+            <th>Check</th>
+            <th>Category</th>
+            <th>Severity</th>
+            <th>Excerpt</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${visible.map((event) => `
+            <tr>
+              <td><span class="session-id">${escapeHtml(shortId(event.session_id))}</span></td>
+              <td><span class="badge neutral">${escapeHtml(event.session_source || "real")}</span></td>
+              <td>${escapeHtml(formatDate(event.timestamp || event.started_at))}</td>
+              <td>${escapeHtml(PHASE_LABELS[event.phase] || event.phase || "Unknown")}</td>
+              <td>${escapeHtml(safetySourceLabel(event.source))}</td>
+              <td>${escapeHtml(event.check_label || safetyCheckLabel(event.check))}</td>
+              <td>${escapeHtml(event.category_label || safetyCategoryLabel(event.category))}</td>
+              <td>${safetySeverityBadge(event)}</td>
+              <td>
+                <div class="snippet">${escapeHtml(event.excerpt || event.reason || "-")}</div>
+              </td>
+            </tr>
+          `).join("") || `<tr><td colspan="9" class="empty">No detected safety events match the current scope.</td></tr>`}
+        </tbody>
+      `;
+      renderPaginationBar("detectEventsPagination", "detectEventsPage", pageInfo, "events", renderDetectableEventsTable);
+    }
+
+    function safetySeverityBadge(event) {
+      const blocked = event.blocked || event.severity === "blocked";
+      return blocked
+        ? `<span class="badge danger">Blocked</span>`
+        : `<span class="badge priority">Flagged</span>`;
+    }
+
+    function renderGroupTable() {
+      const outcome = outcomeConfig($("outcome").value);
+      const rows = state.groupRows;
+      const groupLabel = $("groupBy").selectedOptions[0]?.textContent || "Cohort";
+      const summary = groupTableSummary(rows);
+      $("groupTableTitle").textContent = `${groupLabel} comparison for ${outcome.label}`;
+      $("groupTable").innerHTML = `
+        <thead>
+          <tr>
+            ${groupHeader("value", "Cohort")}
+            ${groupHeader("sessionCount", "Sessions", true)}
+            ${groupHeader("metricMean", "Avg", true)}
+            ${groupHeader("metricMin", "Min", true)}
+            ${groupHeader("metricMedian", "Median", true)}
+            ${groupHeader("metricMax", "Max", true)}
+            ${groupHeader("skippedCount", "Skipped", true)}
+            ${groupHeader("missingCount", "Missing", true)}
+            ${groupHeader("badCount", "Bad outcome", true)}
+            ${groupHeader("badRate", "Bad rate", true)}
+            ${groupHeader("tpr", "TPR", true)}
+            ${groupHeader("fpr", "FPR", true)}
+            ${groupHeader("tnr", "TNR", true)}
+            ${groupHeader("fnr", "FNR", true)}
+            ${groupHeader("eoGapFromOverall", "EO gap", true)}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.length ? renderGroupSummaryRows(summary) : ""}
+          ${rows.map((row) => `
+            <tr class="${[row.special ? "group-special" : "", row.vulnerable ? "group-vulnerable" : ""].filter(Boolean).join(" ")}">
+              <td>${escapeHtml(row.value)} ${row.vulnerable ? `<span class="badge vulnerable">Vulnerable</span>` : ""}</td>
+              <td class="numeric">${row.sessionCount}</td>
+              <td class="numeric">${fmt(row.metricMean)}</td>
+              <td class="numeric">${fmt(row.metricMin)}</td>
+              <td class="numeric">${fmt(row.metricMedian)}</td>
+              <td class="numeric">${fmt(row.metricMax)}</td>
+              <td class="numeric">${row.skippedCount}</td>
+              <td class="numeric">${row.missingCount}</td>
+              <td class="numeric">${row.badCount}</td>
+              <td class="numeric">${pct(row.badRate)}</td>
+              <td class="numeric">${pct(row.tpr)}</td>
+              <td class="numeric">${pct(row.fpr)}</td>
+              <td class="numeric">${pct(row.tnr)}</td>
+              <td class="numeric">${pct(row.fnr)}</td>
+              <td class="numeric">${pp(row.eoGapFromOverall)}</td>
+            </tr>
+          `).join("") || `<tr><td colspan="15" class="empty">No cohort rows match the current view.</td></tr>`}
+        </tbody>
+      `;
+      renderInequalitySummary(rows, groupLabel);
+      document.querySelectorAll("#groupTable th.sortable").forEach((th) => {
+        th.addEventListener("click", () => {
+          const key = th.dataset.key;
+          state.groupSort = {
+            key,
+            dir: state.groupSort.key === key ? state.groupSort.dir * -1 : -1
+          };
+          buildGroupRows();
+          renderKpis();
+          renderGroupTable();
+          renderChart();
+        });
+      });
+    }
+
+    function groupTableSummary(rows) {
+      const metricValues = rows.flatMap((row) => row.metricValues).filter(isNumber);
+      const answeredCount = sumRows(rows, "answeredCount");
+      const badCount = sumRows(rows, "badCount");
+      const confusion = addConfusions(rows.map((row) => row.confusion));
+      return {
+        sessionCount: sumRows(rows, "sessionCount"),
+        answeredCount,
+        skippedCount: sumRows(rows, "skippedCount"),
+        missingCount: sumRows(rows, "missingCount"),
+        badCount,
+        metricMean: average(metricValues),
+        metricMin: minimum(metricValues),
+        metricMedian: median(metricValues),
+        metricMax: maximum(metricValues),
+        badRate: answeredCount ? badCount / answeredCount : null,
+        tpr: confusion.tpr,
+        fpr: confusion.fpr,
+        tnr: confusion.tnr,
+        fnr: confusion.fnr
+      };
+    }
+
+    function sumRows(rows, key) {
+      return rows.reduce((sum, row) => sum + (numberOrNull(row[key]) || 0), 0);
+    }
+
+    function renderGroupSummaryRows(summary) {
+      return `
+        <tr class="group-summary overall">
+          <td>Overall</td>
+          <td class="numeric">-</td>
+          <td class="numeric">${fmt(summary.metricMean)}</td>
+          <td class="numeric">${fmt(summary.metricMin)}</td>
+          <td class="numeric">${fmt(summary.metricMedian)}</td>
+          <td class="numeric">${fmt(summary.metricMax)}</td>
+          <td class="numeric">-</td>
+          <td class="numeric">-</td>
+          <td class="numeric">-</td>
+          <td class="numeric">${pct(summary.badRate)}</td>
+          <td class="numeric">${pct(summary.tpr)}</td>
+          <td class="numeric">${pct(summary.fpr)}</td>
+          <td class="numeric">${pct(summary.tnr)}</td>
+          <td class="numeric">${pct(summary.fnr)}</td>
+          <td class="numeric">-</td>
+        </tr>
+        <tr class="group-summary total">
+          <td>Total</td>
+          <td class="numeric">${summary.sessionCount}</td>
+          <td class="numeric">-</td>
+          <td class="numeric">-</td>
+          <td class="numeric">-</td>
+          <td class="numeric">-</td>
+          <td class="numeric">${summary.skippedCount}</td>
+          <td class="numeric">${summary.missingCount}</td>
+          <td class="numeric">${summary.badCount}</td>
+          <td class="numeric">-</td>
+          <td class="numeric">-</td>
+          <td class="numeric">-</td>
+          <td class="numeric">-</td>
+          <td class="numeric">-</td>
+          <td class="numeric">-</td>
+        </tr>
+      `;
+    }
+
+    function groupHeader(key, label, numeric = false) {
+      return `<th class="sortable ${numeric ? "numeric" : ""}" data-key="${key}">${label}</th>`;
+    }
+
+    function renderThresholds() {
+      const vulnText = VULNERABILITY_DIMENSIONS
+        .filter((item) => item.key !== "any")
+        .map((item) => `${item.short} <= ${item.threshold}/${item.scale}`)
+        .join("; ");
+      const outcomeText = OUTCOME_METRICS
+        .map((item) => `${item.short} ${item.direction === "high" ? ">=" : "<="} ${item.threshold}${item.scale ? `/${item.scale}` : ""}`)
+        .join("; ");
+      $("thresholds").innerHTML = `
+        <div class="threshold-card">
+          <div class="threshold-title">Vulnerability cohorts</div>
+          <div class="threshold-text">${escapeHtml(vulnText)}. These are based on technology, emotional, and artistic support needs.</div>
+        </div>
+        <div class="threshold-card">
+          <div class="threshold-title">Input condition</div>
+          <div class="threshold-text">Positive means clear emotional input: user-message evaluation average >= ${INPUT_CLARITY.threshold}/${INPUT_CLARITY.scale}. Negative means the average is below ${INPUT_CLARITY.threshold}/${INPUT_CLARITY.scale}. TPR = TP/(TP+FP), FPR = FP/(TP+FP), TNR = TN/(TN+FN), and FNR = FN/(TN+FN).</div>
+        </div>
+        <div class="threshold-card">
+          <div class="threshold-title">Outcome flags</div>
+          <div class="threshold-text">${escapeHtml(outcomeText)}. In the confusion matrix, true means the selected outcome is not flagged and false means it is flagged.</div>
+        </div>
+        <div class="threshold-card">
+          <div class="threshold-title">Priority overlaps</div>
+          <div class="threshold-text">Priority overlap means the selected outcome is bad and the session is in a vulnerable cohort. Outcome flag stays only OK or Bad.</div>
+        </div>
+      `;
+    }
+
+    function sessionFilterValues() {
+      return {
+        query: $("sessionTableSearch").value.trim().toLowerCase(),
+        outcome: $("sessionOutcomeFilter").value,
+        priority: $("sessionPriorityFilter").value,
+        vulnerability: $("sessionVulnerabilityFilter").value,
+        input: $("sessionInputFilter").value,
+        source: $("sessionSourceFilter").value
+      };
+    }
+
+    function sessionsForTable(outcomeKey) {
+      const filters = sessionFilterValues();
+      return state.filteredSessions.filter((session) => {
+        if (filters.query && !sessionSearchText(session).includes(filters.query)) return false;
+        const outcome = outcomeForSession(session, outcomeKey);
+        if (filters.outcome !== "all" && !sessionMatchesOutcomeFilter(outcome, filters.outcome)) return false;
+        const priority = outcome.bad && isAnyVulnerable(session);
+        if (filters.priority === "yes" && !priority) return false;
+        if (filters.priority === "no" && priority) return false;
+        const vulnerability = anyVulnerabilityResult(session);
+        if (filters.vulnerability === "yes" && !vulnerability.vulnerable) return false;
+        if (filters.vulnerability === "no" && (!vulnerability.known || vulnerability.vulnerable)) return false;
+        if (filters.vulnerability === "unknown" && vulnerability.known) return false;
+        const condition = inputCondition(session);
+        if (filters.input === "clear" && (!condition.known || !condition.positive)) return false;
+        if (filters.input === "vague" && (!condition.known || condition.positive)) return false;
+        if (filters.input === "missing" && condition.known) return false;
+        const source = session.source || "real";
+        if (filters.source !== "all" && source !== filters.source) return false;
+        return true;
+      });
+    }
+
+    function sessionMatchesOutcomeFilter(outcome, filter) {
+      if (filter === "bad") return outcome.bad;
+      if (filter === "ok") return outcome.answered && !outcome.bad;
+      if (filter === "skipped") return outcome.skipped;
+      if (filter === "missing") return outcome.missing;
+      return true;
+    }
+
+    function sessionSortValue(session, key, outcomeKey) {
+      const outcome = outcomeForSession(session, outcomeKey);
+      const condition = inputCondition(session);
+      const vulnerability = anyVulnerabilityResult(session);
+      if (key === "started_at") {
+        const time = Date.parse(session.started_at || "");
+        return Number.isNaN(time) ? null : time;
+      }
+      if (key === "outcome_value") return outcome.value;
+      if (key === "outcome_flag") return outcome.bad ? 1 : 0;
+      if (key === "priority_flag") return outcome.bad && vulnerability.vulnerable ? 1 : 0;
+      if (key === "vulnerability") return vulnerability.known ? (vulnerability.vulnerable ? 1 : 0) : null;
+      if (key === "input_condition") return condition.known ? (condition.positive ? 1 : 0) : null;
+      if (key === "source") return session.source || "real";
+      if (key === "gender") return session.groups?.gender || "Unknown";
+      if (key === "age_range") return session.groups?.age_range || "Unknown";
+      if (key === "ai_experience") return numberOrNull(session.groups?.ai_experience) ?? session.groups?.ai_experience ?? "Unknown";
+      if (key === "iteration_count") return numberOrNull(session.iteration_count) ?? 0;
+      if (key === "evaluation_avg") return numberOrNull(session.evaluation_avg);
+      return session[key];
+    }
+
+    function syncSessionSortControls() {
+      const sortBy = $("sessionSortBy");
+      if (Array.from(sortBy.options).some((option) => option.value === state.sessionSort.key)) {
+        sortBy.value = state.sessionSort.key;
+      }
+      $("sessionSortDir").value = state.sessionSort.dir === 1 ? "asc" : "desc";
+    }
+
+    function resetSessionFilters() {
+      $("sessionTableSearch").value = "";
+      $("sessionOutcomeFilter").value = "all";
+      $("sessionPriorityFilter").value = "all";
+      $("sessionVulnerabilityFilter").value = "all";
+      $("sessionInputFilter").value = "all";
+      $("sessionSourceFilter").value = "all";
+      state.sessionSort = { key: "started_at", dir: -1 };
+      state.sessionPage = 1;
+      syncSessionSortControls();
+      renderSessionTable();
+    }
+
+    function sortedSessionsForTable(outcomeKey = $("outcome").value) {
+      return sessionsForTable(outcomeKey)
+        .sort((a, b) => compareValues(
+          sessionSortValue(a, state.sessionSort.key, outcomeKey),
+          sessionSortValue(b, state.sessionSort.key, outcomeKey)
+        ) * state.sessionSort.dir);
+    }
+
+    function renderSessionTable() {
+      const outcomeKey = $("outcome").value;
+      const sessions = sortedSessionsForTable(outcomeKey);
+      const pageInfo = paginationWindow(sessions.length, $("sessionPageSize").value, "sessionPage");
+      const visibleSessions = sessions.slice(pageInfo.startIndex, pageInfo.endIndex);
+      syncSessionSortControls();
+      $("sessionCount").textContent = sessions.length === state.filteredSessions.length
+        ? `${sessions.length} sessions`
+        : `${sessions.length}/${state.filteredSessions.length} sessions`;
+      $("sessionTable").innerHTML = `
+        <thead>
+          <tr>
+            ${sessionHeader("session_id", "Session")}
+            ${sessionHeader("source", "Source")}
+            ${sessionHeader("started_at", "Started")}
+            ${sessionHeader("gender", "Gender")}
+            ${sessionHeader("age_range", "Age")}
+            ${sessionHeader("ai_experience", "AI exp.")}
+            ${sessionHeader("vulnerability", "Vulnerability")}
+            ${sessionHeader("outcome_value", "Outcome", true)}
+            ${sessionHeader("outcome_flag", "Outcome flag")}
+            ${sessionHeader("priority_flag", "Priority flag")}
+            ${sessionHeader("iteration_count", "Turns", true)}
+            ${sessionHeader("evaluation_avg", "Eval avg", true)}
+            ${sessionHeader("input_condition", "Input")}
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${visibleSessions.map((session) => sessionRow(session, outcomeKey)).join("") || `<tr><td colspan="14" class="empty">No sessions match the current filters.</td></tr>`}
+        </tbody>
+      `;
+      renderPaginationBar("sessionPagination", "sessionPage", pageInfo, "sessions", renderSessionTable);
+      document.querySelectorAll("#sessionTable th.sortable").forEach((th) => {
+        th.addEventListener("click", () => {
+          const key = th.dataset.key;
+          state.sessionSort = {
+            key,
+            dir: state.sessionSort.key === key ? state.sessionSort.dir * -1 : -1
+          };
+          state.sessionPage = 1;
+          syncSessionSortControls();
+          renderSessionTable();
+        });
+      });
+      document.querySelectorAll("[data-expand-session]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const id = button.dataset.expandSession;
+          state.expandedSessionId = state.expandedSessionId === id ? null : id;
+          renderSessionTable();
+        });
+      });
+    }
+
+    function sessionHeader(key, label, numeric = false) {
+      return `<th class="sortable ${numeric ? "numeric" : ""}" data-key="${key}">${label}</th>`;
+    }
+
+    function sessionRow(session, outcomeKey) {
+      const expanded = state.expandedSessionId === session.session_id;
+      const vuln = vulnerabilitySummary(session);
+      const outcome = outcomeForSession(session, outcomeKey);
+      const condition = inputCondition(session);
+      const priority = outcome.bad && isAnyVulnerable(session);
+      const outcomeLabel = outcome.answered ? fmt(outcome.value) : (outcome.skipped ? "Skipped" : "Missing");
+      const flagBadge = outcome.bad
+        ? `<span class="badge danger">Bad</span>`
+        : `<span class="badge ok">OK</span>`;
+      const priorityBadge = priority
+        ? `<span class="badge priority">Yes</span>`
+        : `<span class="badge neutral">No</span>`;
+      const inputBadge = condition.known
+        ? `<span class="badge ${condition.positive ? "ok" : "neutral"}">${escapeHtml(condition.label)}</span>`
+        : `<span class="badge neutral">No eval</span>`;
+      return `
+        <tr>
+          <td><span class="session-id">${escapeHtml(shortId(session.session_id))}</span></td>
+          <td><span class="badge neutral">${escapeHtml(session.source || "real")}</span></td>
+          <td>${escapeHtml(formatDate(session.started_at))}</td>
+          <td>${escapeHtml(session.groups?.gender || "Unknown")}</td>
+          <td>${escapeHtml(session.groups?.age_range || "Unknown")}</td>
+          <td>${escapeHtml(session.groups?.ai_experience || "Unknown")}</td>
+          <td><span class="badge ${vuln.className}">${escapeHtml(vuln.label)}</span></td>
+          <td>${escapeHtml(outcomeLabel)}</td>
+          <td>${flagBadge}</td>
+          <td>${priorityBadge}</td>
+          <td class="numeric">${session.iteration_count || 0}</td>
+          <td class="numeric">${fmt(session.evaluation_avg)}</td>
+          <td>${inputBadge}</td>
+          <td><button type="button" data-expand-session="${escapeHtml(session.session_id)}">${expanded ? "Hide" : "View"}</button></td>
+        </tr>
+        ${expanded ? expandedSessionRow(session) : ""}
+      `;
+    }
+
+    function expandedSessionRow(session) {
+      return `
+        <tr class="details-row">
+          <td colspan="14">
+            <div class="turns">
+              ${(session.turns || []).map((turn) => `
+                <div class="turn">
+	                  <div class="turn-head">
+	                    <span>Turn ${escapeHtml(turn.turn_id || "")}</span>
+	                    <span>${escapeHtml(PHASE_LABELS[turn.phase] || turn.phase || "Unknown")}</span>
+	                    <span>score ${fmt(turn.evaluation_score)}</span>
+	                    ${turn.safety?.blocked ? `<span class="badge danger">Safety blocked</span>` : turn.safety?.flagged ? `<span class="badge priority">Safety flagged</span>` : ""}
+	                    ${turn.has_image ? `<span class="badge">Image</span>` : ""}
+	                    ${turn.has_audio ? `<span class="badge">Audio</span>` : ""}
+	                  </div>
+	                  <div class="snippet"><strong>User:</strong> ${escapeHtml(turn.user_message || "")}</div>
+	                  ${(turn.safety_events || []).map((event) => `
+	                    <div class="snippet"><strong>Safety:</strong> ${escapeHtml(event.category_label || safetyCategoryLabel(event.category))} · ${escapeHtml(event.check_label || safetyCheckLabel(event.check))} · ${escapeHtml(event.severity || "")}</div>
+	                  `).join("")}
+	                  ${turn.evaluation_explanation ? `<div class="snippet"><strong>Evaluation:</strong> ${escapeHtml(turn.evaluation_explanation)}</div>` : ""}
+	                </div>
+              `).join("") || `<div class="empty">No turns recorded for this session.</div>`}
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    function formatDate(value) {
+      if (!value) return "-";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function visibleGroupRows() {
+      return state.groupRows;
+    }
+
+    function currentGroupLabel() {
+      return $("groupBy").selectedOptions[0]?.textContent || "Cohort";
+    }
+
+    function exportGroupTableCsv() {
+      const outcome = outcomeConfig($("outcome").value);
+      const groupLabel = currentGroupLabel();
+      const headers = [
+        "group_definition",
+        "cohort",
+        "vulnerable",
+        "outcome",
+        "sessions",
+        "mean",
+        "min",
+        "median",
+        "max",
+        "answered",
+        "skipped",
+        "missing",
+        "bad_count",
+        "bad_rate",
+        "tp",
+        "fp",
+        "tn",
+        "fn",
+        "tpr",
+        "fpr",
+        "tnr",
+        "fnr",
+        "equalized_odds_gap_from_overall"
+      ];
+      const groupRows = visibleGroupRows();
+      const summary = groupTableSummary(groupRows);
+      const summaryRows = groupRows.length ? [
+        [
+          groupLabel,
+          "Overall",
+          "",
+          outcome.label,
+          "",
+          csvNumber(summary.metricMean),
+          csvNumber(summary.metricMin),
+          csvNumber(summary.metricMedian),
+          csvNumber(summary.metricMax),
+          "",
+          "",
+          "",
+          "",
+          csvNumber(summary.badRate),
+          "",
+          "",
+          "",
+          "",
+          csvNumber(summary.tpr),
+          csvNumber(summary.fpr),
+          csvNumber(summary.tnr),
+          csvNumber(summary.fnr),
+          ""
+        ],
+        [
+          groupLabel,
+          "Total",
+          "",
+          outcome.label,
+          summary.sessionCount,
+          "",
+          "",
+          "",
+          "",
+          summary.answeredCount,
+          summary.skippedCount,
+          summary.missingCount,
+          summary.badCount,
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      ] : [];
+      const rows = groupRows.map((row) => [
+        groupLabel,
+        row.value,
+        row.vulnerable ? "yes" : "no",
+        outcome.label,
+        row.sessionCount,
+        csvNumber(row.metricMean),
+        csvNumber(row.metricMin),
+        csvNumber(row.metricMedian),
+        csvNumber(row.metricMax),
+        row.answeredCount,
+        row.skippedCount,
+        row.missingCount,
+        row.badCount,
+        csvNumber(row.badRate),
+        row.confusion.tp,
+        row.confusion.fp,
+        row.confusion.tn,
+        row.confusion.fn,
+        csvNumber(row.tpr),
+        csvNumber(row.fpr),
+        csvNumber(row.tnr),
+        csvNumber(row.fnr),
+        csvNumber(row.eoGapFromOverall)
+      ]);
+      downloadCsv(exportFileName("cohort_table", [outcome.key]), [headers, ...summaryRows, ...rows]);
+    }
+
+    function exportInequalityTableCsv() {
+      const config = inequalityConfig();
+      const groupLabel = currentGroupLabel();
+      const rows = visibleGroupRows();
+      const headers = [
+        "group_definition",
+        "inequality_metric",
+        "rate",
+        "value",
+        "average_across_groups",
+        "lowest_group",
+        "lowest_value",
+        "highest_group",
+        "highest_value",
+        "groups_used",
+        "groups_total"
+      ];
+      const data = RATE_METRICS.map((spec) => {
+        const item = inequalityForRate(rows, spec, config.key);
+        return [
+          groupLabel,
+          config.label,
+          spec.label,
+          csvNumber(item.value),
+          csvNumber(item.average),
+          item.lowest?.row.value || "",
+          csvNumber(item.lowest?.value),
+          item.highest?.row.value || "",
+          csvNumber(item.highest?.value),
+          item.points.length,
+          rows.length
+        ];
+      });
+      downloadCsv(exportFileName("inequality_table", [config.key]), [headers, ...data]);
+    }
+
+    function exportAlertsCsv() {
+      const { alerts, inequality, threshold, groupLabel } = currentAlerts();
+      const headers = [
+        "group_definition",
+        "outcome",
+        "performance_metric",
+        "inequality_metric",
+        "inequality_value",
+        "threshold",
+        "lowest_group",
+        "lowest_value",
+        "highest_group",
+        "highest_value",
+        "groups_used"
+      ];
+      const rows = alerts.map((alert) => [
+        groupLabel,
+        alert.outcome.label,
+        alert.performance.label,
+        inequality.label,
+        csvNumber(alert.value),
+        csvNumber(threshold),
+        alert.lowest?.row.value || "",
+        csvNumber(alert.lowest?.value),
+        alert.highest?.row.value || "",
+        csvNumber(alert.highest?.value),
+        alert.points.length
+      ]);
+      downloadCsv(exportFileName("alerts", [inequality.key]), [headers, ...rows]);
+    }
+
+    function exportChartCsv() {
+      const mode = $("chartMode").value;
+      const rows = mode === "confusion"
+        ? confusionGraphCsvRows()
+        : mode === "rates"
+          ? rateGraphCsvRows()
+          : distributionGraphCsvRows();
+      const extra = mode === "rates" ? [$("outcome").value, $("rateMetric").value] : [$("outcome").value];
+      downloadCsv(exportFileName(`graph_${mode}`, extra), rows);
+    }
+
+    function distributionGraphCsvRows() {
+      const outcome = outcomeConfig($("outcome").value);
+      const rows = visibleGroupRows();
+      const scaleMax = outcome.scale || niceAxisMax(Math.max(1, ...rows.flatMap((row) => row.metricValues)));
+      const axisMax = Math.max(1, Math.ceil(scaleMax));
+      const chartRows = rows.filter((row) => row.metricValues.length);
+      const averageAcrossGroups = average(chartRows.map((row) => row.metricMean).filter(isNumber));
+      const weightedAverageAcrossGroups = weightedAverage(chartRows.map((row) => ({
+        value: row.metricMean,
+        weight: row.metricValues.length
+      })));
+      const headers = [
+        "graph",
+        "group_definition",
+        "cohort",
+        "outcome",
+        "value_bin",
+        "count",
+        "bad_outcome_bin",
+        "priority_bin",
+        "special_group_style",
+        "average_across_groups",
+        "weighted_average_across_groups"
+      ];
+      const data = chartRows.flatMap((row) => histogramBins(row.metricValues, axisMax, outcome).map((bin) => [
+        "Histogram",
+        currentGroupLabel(),
+        row.value,
+        outcome.label,
+        bin.value,
+        bin.count,
+        bin.bad ? "yes" : "no",
+        bin.bad && row.priority ? "yes" : "no",
+        row.special ? "yes" : "no",
+        csvNumber(averageAcrossGroups),
+        csvNumber(weightedAverageAcrossGroups)
+      ]));
+      return [headers, ...data];
+    }
+
+    function confusionGraphCsvRows() {
+      const outcome = outcomeConfig($("outcome").value);
+      const rows = visibleGroupRows().filter((row) => row.confusion.matrixCount > 0);
+      const headers = [
+        "graph",
+        "group_definition",
+        "cohort",
+        "outcome",
+        "input_condition",
+        "model_side",
+        "cell",
+        "rate_metric",
+        "count",
+        "denominator",
+        "rate"
+      ];
+      const data = [];
+      for (const row of rows) {
+        const c = row.confusion;
+        [
+          [INPUT_CLARITY.positiveLabel, "True aligned", "TP", "TPR", c.tp, c.clearCount, c.tpr],
+          [INPUT_CLARITY.positiveLabel, "False failed", "FP", "FPR", c.fp, c.clearCount, c.fpr],
+          [INPUT_CLARITY.negativeLabel, "True aligned", "TN", "TNR", c.tn, c.vagueCount, c.tnr],
+          [INPUT_CLARITY.negativeLabel, "False failed", "FN", "FNR", c.fn, c.vagueCount, c.fnr]
+        ].forEach(([input, modelSide, cell, rateMetric, count, denominator, rate]) => {
+          data.push([
+            "Confusion matrix",
+            currentGroupLabel(),
+            row.value,
+            outcome.label,
+            input,
+            modelSide,
+            cell,
+            rateMetric,
+            count,
+            denominator,
+            csvNumber(rate)
+          ]);
+        });
+      }
+      return [headers, ...data];
+    }
+
+    function rateGraphCsvRows() {
+      const outcome = outcomeConfig($("outcome").value);
+      const spec = rateConfig();
+      const rows = visibleGroupRows().filter((row) => rateDenominator(row, spec) > 0);
+      const rateValues = rows.map((row) => rateValue(row, spec)).filter(isNumber);
+      const averageAcrossGroups = average(rateValues);
+      const weightedAverageAcrossGroups = weightedAverage(rows.map((row) => ({
+        value: rateValue(row, spec),
+        weight: rateDenominator(row, spec)
+      })));
+      const headers = [
+        "graph",
+        "group_definition",
+        "cohort",
+        "outcome",
+        "rate_metric",
+        "rate",
+        "count",
+        "denominator",
+        "average_across_groups",
+        "weighted_average_across_groups",
+        "equalized_odds_gap_from_overall"
+      ];
+      const data = rows.map((row) => [
+        "Rate bars",
+        currentGroupLabel(),
+        row.value,
+        outcome.label,
+        spec.label,
+        csvNumber(rateValue(row, spec)),
+        rateCount(row, spec),
+        rateDenominator(row, spec),
+        csvNumber(averageAcrossGroups),
+        csvNumber(weightedAverageAcrossGroups),
+        csvNumber(row.eoGapFromOverall)
+      ]);
+      return [headers, ...data];
+    }
+
+    function exportSessionTableCsv() {
+      const outcome = outcomeConfig($("outcome").value);
+      const sessions = sortedSessionsForTable(outcome.key);
+      const headers = [
+        "session_id",
+        "source",
+        "started_at",
+        "gender",
+        "age_range",
+        "ai_experience",
+        "vulnerability",
+        "vulnerability_known",
+        "outcome_metric",
+        "outcome_value",
+        "outcome_state",
+        "outcome_bad",
+        "priority_overlap",
+        "iteration_count",
+        "evaluation_avg",
+        "input_condition",
+        "input_condition_known",
+        "turn_count"
+      ];
+      const rows = sessions.map((session) => {
+        const vulnerability = anyVulnerabilityResult(session);
+        const vuln = vulnerabilitySummary(session);
+        const outcomeResult = outcomeForSession(session, outcome.key);
+        const condition = inputCondition(session);
+        const priority = outcomeResult.bad && isAnyVulnerable(session);
+        return [
+          session.session_id,
+          session.source || "real",
+          session.started_at || "",
+          session.groups?.gender || "Unknown",
+          session.groups?.age_range || "Unknown",
+          session.groups?.ai_experience || "Unknown",
+          vuln.label,
+          vulnerability.known ? "yes" : "no",
+          outcome.label,
+          csvNumber(outcomeResult.value),
+          outcomeStateLabel(outcomeResult),
+          outcomeResult.bad ? "yes" : "no",
+          priority ? "yes" : "no",
+          session.iteration_count || 0,
+          csvNumber(session.evaluation_avg),
+          condition.known ? condition.label : "No eval",
+          condition.known ? "yes" : "no",
+          (session.turns || []).length
+        ];
+      });
+      downloadCsv(exportFileName("session_table", [outcome.key]), [headers, ...rows]);
+    }
+
+    function exportDetectCategoryTableCsv() {
+      const headers = [
+        "category",
+        "category_label",
+        "events",
+        "sessions",
+        "blocked",
+        "flagged_only",
+        "blocked_rate",
+        "input_events",
+        "output_events",
+        "other_events",
+        "top_phases",
+        "top_checks"
+      ];
+      const rows = state.detectableCategoryRows.map((row) => [
+        row.category,
+        row.label,
+        row.events,
+        row.sessionCount,
+        row.blocked,
+        row.flagged,
+        csvNumber(row.blockedRate),
+        row.input,
+        row.output,
+        row.other,
+        row.phaseSummary,
+        row.checkSummary
+      ]);
+      downloadCsv(exportDetectableFileName("category_table"), [headers, ...rows]);
+    }
+
+    function exportDetectEventsCsv() {
+      const headers = [
+        "session_id",
+        "dataset",
+        "started_at",
+        "timestamp",
+        "turn_id",
+        "phase",
+        "source",
+        "check",
+        "category",
+        "severity",
+        "blocked",
+        "reason",
+        "excerpt",
+        "gender",
+        "age_range",
+        "ai_experience"
+      ];
+      const rows = state.detectableEvents.map((event) => [
+        event.session_id,
+        event.session_source,
+        event.started_at || "",
+        event.timestamp || "",
+        event.turn_id || "",
+        event.phase || "",
+        event.source || "",
+        event.check || "",
+        event.category || "",
+        event.severity || "",
+        event.blocked ? "yes" : "no",
+        event.reason || "",
+        event.excerpt || "",
+        event.gender || "",
+        event.age_range || "",
+        event.ai_experience || ""
+      ]);
+      downloadCsv(exportDetectableFileName("events"), [headers, ...rows]);
+    }
+
+    function exportDetectChartCsv() {
+      const rows = detectableChartCsvRows();
+      downloadCsv(exportDetectableFileName(`graph_${$("detectChartMode").value}`), rows);
+    }
+
+    function detectableChartCsvRows() {
+      const mode = $("detectChartMode").value;
+      if (mode === "source") {
+        return [
+          ["graph", "source", "severity", "events"],
+          ...["input", "output", "other"].flatMap((source) => {
+            const events = state.detectableEvents.filter((event) => (event.source || "other") === source);
+            return [
+              ["Source split", safetySourceLabel(source), "flagged_only", events.filter((event) => !(event.blocked || event.severity === "blocked")).length],
+              ["Source split", safetySourceLabel(source), "blocked", events.filter((event) => event.blocked || event.severity === "blocked").length]
+            ];
+          })
+        ];
+      }
+      if (mode === "phase") {
+        return [
+          ["graph", "phase", "severity", "events"],
+          ...["emotional_discovery", "artistic_discovery", "code_generation"].flatMap((phase) => {
+            const events = state.detectableEvents.filter((event) => event.phase === phase);
+            return [
+              ["Phase split", PHASE_LABELS[phase] || phase, "flagged_only", events.filter((event) => !(event.blocked || event.severity === "blocked")).length],
+              ["Phase split", PHASE_LABELS[phase] || phase, "blocked", events.filter((event) => event.blocked || event.severity === "blocked").length]
+            ];
+          })
+        ];
+      }
+      if (mode === "timeline") {
+        const days = new Map();
+        for (const event of state.detectableEvents) {
+          const date = new Date(event.timestamp || event.started_at || 0);
+          if (Number.isNaN(date.getTime())) continue;
+          const day = date.toISOString().slice(0, 10);
+          if (!days.has(day)) days.set(day, { day, blocked: 0, flagged: 0 });
+          const row = days.get(day);
+          if (event.blocked || event.severity === "blocked") row.blocked += 1;
+          else row.flagged += 1;
+        }
+        return [
+          ["graph", "date", "flagged_only", "blocked"],
+          ...Array.from(days.values()).sort((a, b) => a.day.localeCompare(b.day)).map((row) => ["Timeline", row.day, row.flagged, row.blocked])
+        ];
+      }
+      return [
+        ["graph", "category", "severity", "events", "sessions"],
+        ...state.detectableCategoryRows.flatMap((row) => [
+          ["Category counts", row.label, "flagged_only", row.flagged, row.sessionCount],
+          ["Category counts", row.label, "blocked", row.blocked, row.sessionCount]
+        ])
+      ];
+    }
+
+    function outcomeStateLabel(outcome) {
+      if (outcome.answered) return outcome.bad ? "Bad" : "OK";
+      if (outcome.skipped) return "Skipped";
+      if (outcome.missing) return "Missing";
+      return "Unknown";
+    }
+
+    function downloadCsv(filename, rows) {
+      const lines = rows.map((row) => row.map(csvCell).join(","));
+      const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function exportFileName(kind, extras = []) {
+      const parts = [
+        "log_dashboard",
+        $("dataset").value,
+        kind,
+        $("lens").value,
+        $("groupBy").value,
+        ...extras
+      ].map(safeFilePart).filter(Boolean);
+      return `${parts.join("_")}.csv`;
+    }
+
+    function exportDetectableFileName(kind, extras = []) {
+      const parts = [
+        "log_dashboard",
+        $("dataset").value,
+        "detectable_harms",
+        kind,
+        $("detectSource").value,
+        $("detectSeverity").value,
+        $("detectCategory").value,
+        $("detectPhase").value,
+        ...extras
+      ].map(safeFilePart).filter(Boolean);
+      return `${parts.join("_")}.csv`;
+    }
+
+    function safeFilePart(value) {
+      return String(value ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+    }
+
+    function csvNumber(value, digits = 4) {
+      if (value === Infinity) return "Infinity";
+      if (value === -Infinity) return "-Infinity";
+      return isNumber(value) ? Number(value.toFixed(digits)) : "";
+    }
+
+    function csvCell(value) {
+      const text = String(value ?? "");
+      return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    }
+
+    function resetPagination(scope = "all") {
+      if (scope === "all" || scope === "alerts") state.alertPage = 1;
+      if (scope === "all" || scope === "sessions") state.sessionPage = 1;
+      if (scope === "all" || scope === "detectable") state.detectEventsPage = 1;
+    }
+
+    function renderNavigation() {
+      const accumulativeActive = state.dashboardView === "accumulative";
+      $("accumulativeDashboard").hidden = !accumulativeActive;
+      $("detectableDashboard").hidden = accumulativeActive;
+      document.querySelectorAll("[data-dashboard-view]").forEach((button) => {
+        const selected = button.dataset.dashboardView === state.dashboardView;
+        button.setAttribute("aria-selected", selected ? "true" : "false");
+      });
+
+      const overviewActive = state.accumulativeTab === "overview";
+      $("accumulativeOverviewPanel").hidden = !overviewActive;
+      $("sessionLogsPanel").hidden = overviewActive;
+      document.querySelectorAll("[data-accumulative-tab]").forEach((button) => {
+        const selected = button.dataset.accumulativeTab === state.accumulativeTab;
+        button.setAttribute("aria-selected", selected ? "true" : "false");
+      });
+    }
+
+    function renderAll() {
+      applySessionFilters();
+      buildGroupRows();
+      renderNavigation();
+      renderKpis();
+      renderAlerts();
+      renderChart();
+      renderGroupTable();
+      renderThresholds();
+      renderSessionTable();
+      renderDetectableDashboard();
+    }
+
+    async function loadData() {
+      setStatus("Loading logs...");
+      try {
+        const response = await fetch(apiUrl(), { headers: { "Accept": "application/json" } });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || `Request failed with ${response.status}`);
+        state.data = payload;
+        populateControls();
+        resetPagination();
+        renderAll();
+        const overview = payload.overview || {};
+        const warning = overview.unreadable_file_count ? ` ${overview.unreadable_file_count} unreadable log file(s).` : "";
+        setStatus(`Loaded ${overview.session_count || 0} sessions from ${payload.log_dir}.${warning}`);
+      } catch (error) {
+        setStatus(error.message || "Could not load logs.", true);
+      }
+    }
+
+    document.querySelectorAll("[data-dashboard-view]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.dashboardView = button.dataset.dashboardView;
+        renderNavigation();
+        if (state.dashboardView === "detectable") renderDetectableDashboard();
+      });
+    });
+    document.querySelectorAll("[data-accumulative-tab]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.accumulativeTab = button.dataset.accumulativeTab;
+        renderNavigation();
+        if (state.accumulativeTab === "sessions") renderSessionTable();
+      });
+    });
+
+    $("lens").addEventListener("change", () => {
+      populateGroupControl();
+      updateVulnerabilityModeControl();
+      state.groupSort = { key: "badRate", dir: -1 };
+      resetPagination();
+      renderAll();
+    });
+    $("dataset").addEventListener("change", loadData);
+    ["groupBy", "vulnMode", "outcome", "chartMode", "rateMetric", "inequalityMetric"].forEach((id) => {
+      $(id).addEventListener("change", () => {
+        resetPagination();
+        renderAll();
+      });
+    });
+    ["alertOutcomeMetric", "alertPerformanceMetric", "alertThreshold", "alertLimit"].forEach((id) => {
+      $(id).addEventListener(id === "alertThreshold" ? "input" : "change", () => {
+        resetPagination("alerts");
+        renderAlerts();
+      });
+    });
+    $("alertInequalityMetric").addEventListener("change", () => {
+      normalizeAlertThreshold();
+      resetPagination("alerts");
+      renderAlerts();
+    });
+    $("kpis").addEventListener("change", (event) => {
+      const key = event.target.dataset.kpiDenominator;
+      if (!key) return;
+      state.kpiDenominators[key] = event.target.value;
+      renderKpis();
+    });
+    ["sessionTableSearch", "sessionOutcomeFilter", "sessionPriorityFilter", "sessionVulnerabilityFilter", "sessionInputFilter", "sessionSourceFilter", "sessionPageSize"].forEach((id) => {
+      $(id).addEventListener(id === "sessionTableSearch" ? "input" : "change", () => {
+        resetPagination("sessions");
+        renderSessionTable();
+      });
+    });
+    $("sessionSortBy").addEventListener("change", () => {
+      state.sessionSort.key = $("sessionSortBy").value;
+      resetPagination("sessions");
+      renderSessionTable();
+    });
+    $("sessionSortDir").addEventListener("change", () => {
+      state.sessionSort.dir = $("sessionSortDir").value === "asc" ? 1 : -1;
+      resetPagination("sessions");
+      renderSessionTable();
+    });
+    $("sessionFilterReset").addEventListener("click", resetSessionFilters);
+    ["detectSource", "detectSeverity", "detectCategory", "detectPhase", "detectChartMode", "detectEventsPageSize"].forEach((id) => {
+      $(id).addEventListener("change", () => {
+        resetPagination("detectable");
+        renderDetectableDashboard();
+      });
+    });
+    $("refreshBtn").addEventListener("click", loadData);
+    $("exportAlertsBtn").addEventListener("click", exportAlertsCsv);
+    $("exportChartBtn").addEventListener("click", exportChartCsv);
+    $("exportGroupTableBtn").addEventListener("click", exportGroupTableCsv);
+    $("exportInequalityTableBtn").addEventListener("click", exportInequalityTableCsv);
+    $("exportSessionTableBtn").addEventListener("click", exportSessionTableCsv);
+    $("exportDetectChartBtn").addEventListener("click", exportDetectChartCsv);
+    $("exportDetectCategoryTableBtn").addEventListener("click", exportDetectCategoryTableCsv);
+    $("exportDetectEventsBtn").addEventListener("click", exportDetectEventsCsv);
+    $("thresholdSettingsBtn").addEventListener("click", openThresholdDialog);
+    $("thresholdCloseBtn").addEventListener("click", closeThresholdDialog);
+    $("thresholdCancelBtn").addEventListener("click", closeThresholdDialog);
+    $("thresholdResetBtn").addEventListener("click", resetThresholdInputsToDefaults);
+    $("thresholdForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      applyThresholdSettings();
+    });
+    $("thresholdDialog").addEventListener("click", (event) => {
+      if (event.target === $("thresholdDialog")) closeThresholdDialog();
+    });
+
+    applyInitialUrlState();
+    loadData();
+  </script>
+</body>
+</html>
