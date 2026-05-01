@@ -31,6 +31,14 @@ from flask_cors import CORS
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
+try:
+    from langchain.agents.middleware import AgentMiddleware as LangChainAgentMiddleware
+except Exception:
+    # Keep imports tolerant for older local envs that have not reinstalled
+    # requirements yet; the project requirements include full langchain.
+    class LangChainAgentMiddleware:
+        pass
+
 
 BASE_DIR = Path(__file__).resolve().parent
 LOGS_DIR = BASE_DIR / "logs"
@@ -1415,24 +1423,31 @@ class SessionLogger:
         ai_context: str = "",
         has_image: bool = False,
         has_audio: bool = False,
+        safety_checks: Optional[dict[str, Any]] = None,
     ) -> None:
+        logged_user_message = _redact_pii_for_logs(user_message or "")
+        logged_ai_response = _redact_pii_for_logs(ai_response or "")
+        logged_ai_context = _redact_pii_for_logs(ai_context or "")
         turn = {
             "turn_id": len(self._data["turns"]) + 1,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "phase": phase,
-            "user_message": user_message,
+            "user_message": logged_user_message,
             "has_image": has_image,
             "has_audio": has_audio,
-            "ai_response": ai_response,
+            "ai_response": logged_ai_response,
+            "safety": safety_checks or {},
             "evaluation": None,
         }
         with self._lock:
             self._data["turns"].append(turn)
             turn_index = len(self._data["turns"]) - 1
             self._write()
+        if (safety_checks or {}).get("blocked") or (safety_checks or {}).get("skip_evaluation"):
+            return
         threading.Thread(
             target=self._evaluate_and_update,
-            args=(turn_index, user_message, phase, ai_context),
+            args=(turn_index, logged_user_message, phase, logged_ai_context),
             daemon=True,
         ).start()
 
@@ -1623,6 +1638,526 @@ def _default_artistic_alternatives(base_profile: str) -> list[str]:
 
 def _contains_any(text: str, needles: list[str]) -> bool:
     return any(needle in text for needle in needles)
+
+
+SAFETY_SCAN_VERSION = "local_keyword_v1"
+SAFETY_BLOCK_MESSAGE = (
+    "I can help work with difficult feelings, but I cannot continue with threats, graphic harm, "
+    "or abusive extreme language. Please rephrase the idea in safer, non-violent terms so we can "
+    "keep making the sketch."
+)
+SAFETY_OUTPUT_BLOCK_MESSAGE = (
+    "I held back that generated result because it included unsafe visual content. "
+    "Please try a safer artistic direction."
+)
+UNSAFE_GENERATED_CONTENT_CATEGORIES = {
+    "abusive_extreme_language",
+    "graphic_violence",
+    "hate_or_harassment",
+    "inappropriate_sexual_content",
+    "pii",
+    "prompt_injection",
+    "self_harm",
+    "violent_element",
+    "violent_threat",
+    "weapon_threat",
+}
+
+SAFETY_BLOCK_PATTERNS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    (
+        "pii",
+        "personally identifiable or secret data",
+        (
+            r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
+            r"\b\d{3}-\d{2}-\d{4}\b",
+            r"\b(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}\b",
+            r"\b(?:\d[ -]*?){13,16}\b",
+            r"-----BEGIN\s+(?:RSA\s+)?PRIVATE\s+KEY-----",
+            r"\b(?:api[_-]?key|secret|token|password)\s*[:=]\s*['\"]?[A-Za-z0-9_\-]{12,}",
+        ),
+    ),
+    (
+        "prompt_injection",
+        "prompt injection or instruction override",
+        (
+            r"\bignore\s+(?:all\s+)?(?:previous|prior|above|system|developer)\s+instructions?\b",
+            r"\bdisregard\s+(?:all\s+)?(?:previous|prior|above|system|developer)\s+instructions?\b",
+            r"\b(?:reveal|show|print|dump|leak)\s+(?:the\s+)?(?:system|developer|hidden)\s+(?:prompt|instructions?)\b",
+            r"\b(?:bypass|disable|turn\s+off)\s+(?:the\s+)?(?:safety|guardrails?|filters?|policy)\b",
+            r"\b(?:jailbreak|DAN mode|do anything now)\b",
+            r"\byou\s+are\s+now\s+(?:unrestricted|uncensored|developer mode)\b",
+        ),
+    ),
+    (
+        "self_harm",
+        "self-harm wording",
+        (
+            r"\bkill\s+myself\b",
+            r"\bend\s+my\s+life\b",
+            r"\btake\s+my\s+own\s+life\b",
+            r"\bsuicid(?:e|al)\b",
+            r"\bself[-\s]?harm\b",
+            r"\bhurt\s+myself\b",
+            r"\bcut\s+myself\b",
+        ),
+    ),
+    (
+        "violent_threat",
+        "violent threat or intent",
+        (
+            r"\b(?:i|we)\s+(?:will|would|am\s+going\s+to|are\s+going\s+to|gonna|want\s+to|need\s+to|plan\s+to|should)\s+(?:kill|murder|stab|shoot|strangle|attack|beat)\b",
+            r"\b(?:i|we)\s+(?:will|would|am\s+going\s+to|are\s+going\s+to|gonna|want\s+to|need\s+to|plan\s+to|should)\s+(?:hurt|harm)\s+(?:myself|you|him|her|them|someone|people|classmates?|teachers?|friends?|family)\b",
+            r"\b(?:kill|killing|murder|murdering|stab|stabbing|shoot|shooting|strangle|strangling|attack|attacking|beat|beating|hurt|hurting|harm|harming)\s+(?:you|him|her|them|someone|people|classmates?|teachers?|friends?|family)\b",
+            r"\b(?:make|draw|show|depict|visualize|animate|code|generate|create)\b.{0,80}\b(?:kill|killing|murder|murdering|stab|stabbing|shoot|shooting|strangle|strangling|attack|attacking|beat|beating|hurt|hurting|harm|harming)\s+(?:you|him|her|them|someone|people|classmates?|teachers?|friends?|family)\b",
+            r"\bshoot\s+up\s+(?:a\s+)?(?:school|class|campus|room|building)\b",
+        ),
+    ),
+    (
+        "violent_element",
+        "violent element or weapon imagery",
+        (
+            r"\b(?:add|include|put|place|draw|show|depict|visualize|animate|code|generate|create|make|use)\b.{0,80}\b(?:bomb|explosive|explosion|grenade|gun|firearm|rifle|pistol|knife|blade|weapon|blood|gore)\b",
+            r"\b(?:bomb|explosive|grenade|gun|firearm|rifle|pistol|knife|blade|weapon|gore)\b",
+            r"\bblood\s+(?:splatter|spray|pool|drip|drips|dripping|everywhere)\b",
+        ),
+    ),
+    (
+        "weapon_threat",
+        "weapon threat",
+        (
+            r"\b(?:bring|use|carry|hide|get)\s+(?:a\s+)?(?:gun|knife|bomb|weapon)\b",
+            r"\bmake\s+(?:a\s+)?(?:bomb|explosive)\b",
+        ),
+    ),
+    (
+        "graphic_violence",
+        "graphic violence",
+        (
+            r"\bblood\s+everywhere\b",
+            r"\bgore\b",
+            r"\bdismember(?:ed|ment)?\b",
+            r"\bdecapitat(?:e|ed|ion)\b",
+            r"\btortur(?:e|ed|ing)\b",
+        ),
+    ),
+    (
+        "hate_or_harassment",
+        "hate or harassment",
+        (
+            r"\b(?:kill|attack|hurt|harm)\s+all\s+(?:women|men|immigrants|muslims|jews|christians|asians|black\s+people|white\s+people|gay\s+people|trans\s+people)\b",
+            r"\b(?:women|men|immigrants|muslims|jews|christians|asians|black\s+people|white\s+people|gay\s+people|trans\s+people)\s+(?:are|should\s+be)\s+(?:inferior|exterminated|eradicated)\b",
+        ),
+    ),
+    (
+        "inappropriate_sexual_content",
+        "explicit sexual content",
+        (
+            r"\b(?:porn|pornographic|explicit\s+sex|sexual\s+assault|rape|raping)\b",
+            r"\b(?:nude|naked)\s+(?:child|minor|student|classmate)\b",
+        ),
+    ),
+    (
+        "abusive_extreme_language",
+        "abusive extreme language",
+        (
+            r"\bfuck\s+you\b",
+            r"\bshut\s+the\s+fuck\s+up\b",
+            r"\b(?:you\s+are|you're)\s+(?:a\s+)?(?:bitch|asshole)\b",
+        ),
+    ),
+)
+
+SAFETY_FLAG_PATTERNS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    (
+        "violence_reference",
+        "violent reference",
+        (
+            r"\bkill(?:ed|ing)?\b",
+            r"\bmurder(?:ed|ing)?\b",
+            r"\bstab(?:bed|bing)?\b",
+            r"\bshoot(?:ing|er|ings)?\b",
+            r"\battack(?:ed|ing)?\b",
+            r"\bblood\b",
+            r"\bweapon\b",
+            r"\bgun\b",
+            r"\bknife\b",
+            r"\bbomb\b",
+            r"\bgrenade\b",
+            r"\bexplosive\b",
+            r"\bfirearm\b",
+            r"\brifle\b",
+            r"\bpistol\b",
+            r"\bblade\b",
+            r"\bgore\b",
+        ),
+    ),
+    (
+        "extreme_emotion",
+        "extreme emotion wording",
+        (
+            r"\brage\b",
+            r"\bfurious\b",
+            r"\bterrified\b",
+            r"\bpanic(?:ked|king)?\b",
+            r"\bpanic\s+attack\b",
+            r"\bhysterical\b",
+            r"\bdevastated\b",
+            r"\bdespair\b",
+            r"\bhopeless\b",
+            r"\bunbearable\b",
+            r"\bmeltdown\b",
+            r"\bnumb\b",
+            r"\bhatred\b",
+        ),
+    ),
+    (
+        "extreme_language",
+        "strong language",
+        (
+            r"\bfuck(?:ing)?\b",
+            r"\bshit\b",
+            r"\bbitch\b",
+            r"\basshole\b",
+        ),
+    ),
+)
+
+
+PII_REDACTION_PATTERNS: tuple[tuple[str, str], ...] = (
+    (r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", "[redacted-email]"),
+    (r"\b\d{3}-\d{2}-\d{4}\b", "[redacted-ssn]"),
+    (r"\b(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}\b", "[redacted-phone]"),
+    (r"\b(?:\d[ -]*?){13,16}\b", "[redacted-card]"),
+    (r"-----BEGIN\s+(?:RSA\s+)?PRIVATE\s+KEY-----[\s\S]*?-----END\s+(?:RSA\s+)?PRIVATE\s+KEY-----", "[redacted-private-key]"),
+    (r"\b(?:api[_-]?key|secret|token|password)\s*[:=]\s*['\"]?[A-Za-z0-9_\-]{12,}", "[redacted-secret]"),
+)
+
+
+def _redact_pii_for_logs(text: str) -> str:
+    redacted = text
+    for pattern, replacement in PII_REDACTION_PATTERNS:
+        redacted = re.sub(pattern, replacement, redacted, flags=re.IGNORECASE)
+    return redacted
+
+
+def _safety_excerpt(text: str, start: int, end: int, radius: int = 28) -> str:
+    left = max(0, start - radius)
+    right = min(len(text), end + radius)
+    excerpt = _redact_pii_for_logs(text[left:right]).replace("\n", " ")
+    excerpt = re.sub(r"\s+", " ", excerpt).strip()
+    if left > 0:
+        excerpt = f"...{excerpt}"
+    if right < len(text):
+        excerpt = f"{excerpt}..."
+    return excerpt[:96]
+
+
+def _scan_patterns(
+    text: str,
+    pattern_groups: tuple[tuple[str, str, tuple[str, ...]], ...],
+    *,
+    severity: str,
+) -> tuple[list[str], list[dict[str, str]]]:
+    categories: list[str] = []
+    signals: list[dict[str, str]] = []
+    seen_categories: set[str] = set()
+    for category, reason, patterns in pattern_groups:
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if not match:
+                continue
+            if category not in seen_categories:
+                categories.append(category)
+                seen_categories.add(category)
+            if len(signals) < 8:
+                signals.append(
+                    {
+                        "category": category,
+                        "severity": severity,
+                        "reason": reason,
+                        "excerpt": _safety_excerpt(text, match.start(), match.end()),
+                    }
+                )
+            break
+    return categories, signals
+
+
+def _text_for_safety(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, dict):
+        parts = [_text_for_safety(v) for v in value.values()]
+        return "\n".join(part for part in parts if part)
+    if isinstance(value, list):
+        parts = [_text_for_safety(v) for v in value]
+        return "\n".join(part for part in parts if part)
+    return str(value).strip()
+
+
+def _moderate_text(label: str, text: Any, *, block_user_input: bool = False) -> dict[str, Any]:
+    value = _text_for_safety(text)
+    result: dict[str, Any] = {
+        "label": label,
+        "scanner": SAFETY_SCAN_VERSION,
+        "status": "safe",
+        "flagged": False,
+        "blocked": False,
+        "categories": [],
+        "signals": [],
+    }
+    if not value:
+        return result
+
+    blocked_categories, blocked_signals = _scan_patterns(
+        value,
+        SAFETY_BLOCK_PATTERNS,
+        severity="blocked",
+    )
+    flagged_categories, flagged_signals = _scan_patterns(
+        value,
+        SAFETY_FLAG_PATTERNS,
+        severity="flagged",
+    )
+
+    categories = []
+    for category in blocked_categories + flagged_categories:
+        if category not in categories:
+            categories.append(category)
+    signals = blocked_signals + flagged_signals
+    if categories:
+        result["status"] = "blocked" if blocked_categories and block_user_input else "flagged"
+        result["flagged"] = True
+        result["blocked"] = bool(blocked_categories and block_user_input)
+        result["categories"] = categories
+        result["signals"] = signals[:8]
+    return result
+
+
+def _moderate_generated_output(label: str, text: Any) -> dict[str, Any]:
+    result = _moderate_text(label, text, block_user_input=True)
+    if result["blocked"]:
+        result["status"] = "flagged"
+        result["blocked"] = False
+    return result
+
+
+def _merge_safety_checks(checks: dict[str, Any]) -> dict[str, Any]:
+    items = [value for value in checks.values() if isinstance(value, dict)]
+    blocked = any(bool(item.get("blocked")) for item in items)
+    flagged = any(bool(item.get("flagged")) for item in items)
+    categories: list[str] = []
+    for item in items:
+        for category in item.get("categories", []):
+            if category not in categories:
+                categories.append(category)
+    checks["blocked"] = blocked
+    checks["flagged"] = flagged
+    checks["categories"] = categories
+    checks["status"] = "blocked" if blocked else "flagged" if flagged else "safe"
+    return checks
+
+
+def _version_graph_text_for_safety(session: "SessionState") -> str:
+    chunks = []
+    for vid in session.version_order:
+        version = session.versions.get(vid)
+        if not version:
+            continue
+        chunks.append(
+            "\n".join(
+                [
+                    version.summary,
+                    version.emotion_profile,
+                    version.artistic_profile,
+                    version.code,
+                ]
+            )
+        )
+    return "\n\n".join(chunks)
+
+
+def _build_turn_safety_checks(
+    session: "SessionState",
+    *,
+    user_prompt: str,
+    reply_payload: dict,
+    input_safety: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    checks: dict[str, Any] = {
+        "input_prompt": input_safety
+        or _moderate_text("input_prompt", user_prompt, block_user_input=True),
+        "output_response": _moderate_generated_output(
+            "output_response",
+            reply_payload.get("message", ""),
+        ),
+        "output_emotion_profile": _moderate_generated_output(
+            "output_emotion_profile",
+            reply_payload.get("emotion_profile", ""),
+        ),
+        "output_artistic_profile": _moderate_generated_output(
+            "output_artistic_profile",
+            reply_payload.get("artistic_profile", ""),
+        ),
+        "output_artistic_options": _moderate_generated_output(
+            "output_artistic_options",
+            reply_payload.get("artistic_options", []),
+        ),
+        "generated_code": _moderate_generated_output(
+            "generated_code",
+            reply_payload.get("code", ""),
+        ),
+        "generated_graph": _moderate_generated_output(
+            "generated_graph",
+            _version_graph_text_for_safety(session),
+        ),
+    }
+    return _merge_safety_checks(checks)
+
+
+def _generated_content_should_be_held(safety_checks: dict[str, Any]) -> bool:
+    output_labels = {
+        "generated_code",
+        "output_artistic_options",
+        "output_artistic_profile",
+        "output_emotion_profile",
+        "output_response",
+    }
+    for label in output_labels:
+        check = safety_checks.get(label)
+        if not isinstance(check, dict):
+            continue
+        if any(category in UNSAFE_GENERATED_CONTENT_CATEGORIES for category in check.get("categories", [])):
+            return True
+    return False
+
+
+class AppGuardrailMiddleware(LangChainAgentMiddleware):
+    """LangChain-style guardrails with before_agent and after_agent hooks."""
+
+    name = "AppGuardrailMiddleware"
+
+    def before_agent(
+        self,
+        *,
+        session: "SessionState",
+        user_prompt: str,
+        label: str = "input_prompt",
+    ) -> dict[str, Any]:
+        input_safety = _moderate_text(label, user_prompt, block_user_input=True)
+        blocked_reply = _current_state_reply_payload(session, SAFETY_BLOCK_MESSAGE)
+        blocked_reply["blocked_by_safety"] = True
+        safety = _build_turn_safety_checks(
+            session,
+            user_prompt=user_prompt,
+            reply_payload=blocked_reply,
+            input_safety=input_safety,
+        )
+        safety["middleware"] = {
+            "name": self.name,
+            "hook": "before_agent",
+            "blocked": bool(input_safety.get("blocked")),
+        }
+        return {
+            "blocked": bool(input_safety.get("blocked")),
+            "reply": blocked_reply,
+            "safety": safety,
+        }
+
+    def after_agent(
+        self,
+        *,
+        session: "SessionState",
+        user_prompt: str,
+        reply_payload: dict,
+        input_safety: Optional[dict[str, Any]] = None,
+    ) -> dict[str, Any]:
+        safety = _build_turn_safety_checks(
+            session,
+            user_prompt=user_prompt,
+            reply_payload=reply_payload,
+            input_safety=input_safety,
+        )
+        blocked = _generated_content_should_be_held(safety)
+        safety["middleware"] = {
+            "name": self.name,
+            "hook": "after_agent",
+            "blocked": blocked,
+        }
+        if blocked:
+            safety["generated_output_blocked"] = True
+            safety["blocked"] = True
+            safety["status"] = "blocked"
+        return {
+            "blocked": blocked,
+            "safety": safety,
+        }
+
+
+guardrail_middleware = AppGuardrailMiddleware()
+
+
+def _artistic_panel_state_text_for_safety(value: Any) -> str:
+    if not isinstance(value, dict):
+        return ""
+    parts: list[str] = []
+    selections = value.get("selections")
+    if isinstance(selections, dict):
+        parts.extend(_clean_text(v) for v in selections.values())
+    parts.append(_clean_text(value.get("note")))
+    return " ".join(part for part in parts if part)
+
+
+def _combine_user_prompt_parts(*parts: Any) -> str:
+    return "\n".join(_clean_text(part) for part in parts if _clean_text(part))
+
+
+def _build_manual_save_safety_checks(
+    session: "SessionState",
+    *,
+    emotion_profile: str,
+    artistic_profile: str,
+    code: str,
+) -> dict[str, Any]:
+    checks: dict[str, Any] = {
+        "manual_emotion_profile": _moderate_text(
+            "manual_emotion_profile",
+            emotion_profile,
+            block_user_input=True,
+        ),
+        "manual_artistic_profile": _moderate_text(
+            "manual_artistic_profile",
+            artistic_profile,
+            block_user_input=True,
+        ),
+        "manual_code": _moderate_text(
+            "manual_code",
+            code,
+            block_user_input=True,
+        ),
+        "generated_graph": _moderate_generated_output(
+            "generated_graph",
+            _version_graph_text_for_safety(session),
+        ),
+        "skip_evaluation": True,
+    }
+    return _merge_safety_checks(checks)
+
+
+def _current_state_reply_payload(session: "SessionState", message: str) -> dict[str, Any]:
+    current = session.current_version
+    return {
+        "message": message,
+        "commit_message": "Blocked unsafe user input",
+        "emotion_profile": current.emotion_profile,
+        "emotion_confidence": current.emotion_confidence,
+        "emotion_gaps": current.emotion_gaps,
+        "artistic_profile": current.artistic_profile,
+        "artistic_confidence": current.artistic_confidence,
+        "code": current.code,
+        "should_create_version": False,
+        "offers_artistic_alternatives": False,
+        "artistic_options": [],
+    }
 
 
 def _build_artistic_option_preview_code(option_text: str, emotion_profile: str = "") -> str:
@@ -2527,6 +3062,10 @@ def api_history():
             "edges": edges,
             "branch_heads": dict(session.branch_heads),
             "active_branch": session.active_branch,
+            "safety": _moderate_generated_output(
+                "generated_graph",
+                _version_graph_text_for_safety(session),
+            ),
         }
     )
 
@@ -2541,13 +3080,46 @@ def api_set_phase():
 
     session = get_or_create_session(sid)
     collab_style = _clean_text(data.get("collab_style")) or "iterate"
-    if "artistic_panel_state" in data:
-        _save_artistic_panel_state(session, data.get("artistic_panel_state"))
     if target_phase not in PHASE_ORDER:
         return jsonify({"error": "Invalid phase"}), 400
 
+    raw_artistic_panel_state = data.get("artistic_panel_state")
+    direct_artistic_profile = _clean_text(data.get("artistic_profile"))
+    phase_request_text = _combine_user_prompt_parts(
+        f"Phase change request: {target_phase}",
+        direct_artistic_profile,
+        _artistic_panel_state_text_for_safety(raw_artistic_panel_state),
+    )
+    input_guard = guardrail_middleware.before_agent(
+        session=session,
+        user_prompt=phase_request_text,
+    )
+    if input_guard["blocked"]:
+        assistant_text = SAFETY_BLOCK_MESSAGE
+        _append_chat(session, "assistant", "system", assistant_text)
+        turn_safety = input_guard["safety"]
+        logger = session_loggers.get(session.session_id)
+        if logger:
+            logger.log_turn(
+                user_message=phase_request_text,
+                phase=session.phase,
+                ai_response=assistant_text,
+                ai_context="",
+                safety_checks=turn_safety,
+            )
+        return jsonify(
+            {
+                "error": assistant_text,
+                "phase": session.phase,
+                "state": serialize_state(session),
+                "safety": turn_safety,
+            }
+        ), 400
+
+    if "artistic_panel_state" in data:
+        _save_artistic_panel_state(session, raw_artistic_panel_state)
+
     if session.phase == PHASE_ARTISTIC and target_phase == PHASE_CODE:
-        direct_artistic_profile = _clean_text(data.get("artistic_profile"))
         direct_artistic_confidence = _normalize_confidence(data.get("artistic_confidence") or "")
         if not direct_artistic_profile:
             direct_artistic_profile, direct_artistic_confidence = _get_pending_artistic_transition_payload(
@@ -2613,8 +3185,7 @@ def api_set_phase():
 def api_chat():
     data = request.get_json(silent=True) or {}
     session = get_or_create_session(data.get("session_id"))
-    if "artistic_panel_state" in data:
-        _save_artistic_panel_state(session, data.get("artistic_panel_state"))
+    raw_artistic_panel_state = data.get("artistic_panel_state")
     direct_artistic_profile = _clean_text(data.get("artistic_profile"))
     direct_artistic_confidence = _normalize_confidence(data.get("artistic_confidence") or "")
     intent_hint = _clean_text(data.get("intent_hint"))
@@ -2630,14 +3201,20 @@ def api_chat():
     if not message and not image and not audio:
         return jsonify({"error": "Message, image, or audio is required."}), 400
 
-    if message:
-        _append_chat(session, "user", "text", message)
-    if image:
-        _append_chat(session, "user", "image", image)
-    if audio:
-        _append_chat(session, "user", "audio", audio)
+    effective_message = ""
+    user_prompt_for_safety = ""
 
-    def _chat_response(reply_payload: dict, raw_response_text: str, created_version: Optional[VersionNode]):
+    def _chat_response(
+        reply_payload: dict,
+        raw_response_text: str,
+        created_version: Optional[VersionNode],
+        safety_checks: Optional[dict[str, Any]] = None,
+    ):
+        turn_safety = safety_checks or _build_turn_safety_checks(
+            session,
+            user_prompt=user_prompt_for_safety or effective_message or message or "",
+            reply_payload=reply_payload,
+        )
         logger = session_loggers.get(session.session_id)
         if logger:
             prev_ai_message = ""
@@ -2646,12 +3223,13 @@ def api_chat():
                     prev_ai_message = entry.content
                     break
             logger.log_turn(
-                user_message=message or "",
+                user_message=user_prompt_for_safety or effective_message or message or "",
                 phase=session.phase,
                 ai_response=reply_payload.get("message", ""),
                 ai_context=prev_ai_message,
                 has_image=bool(image),
                 has_audio=bool(audio),
+                safety_checks=turn_safety,
             )
         return jsonify(
             {
@@ -2662,7 +3240,21 @@ def api_chat():
                 "created_version_id": created_version.id if created_version else None,
                 "state": serialize_state(session),
                 "raw_response": raw_response_text,
+                "safety": turn_safety,
             }
+        )
+
+    def _hold_generated_output(safety_checks: dict[str, Any]):
+        safety_checks["generated_output_blocked"] = True
+        assistant_text = SAFETY_OUTPUT_BLOCK_MESSAGE
+        _append_chat(session, "assistant", "system", assistant_text)
+        hold_reply = _current_state_reply_payload(session, assistant_text)
+        hold_reply["blocked_by_safety"] = True
+        return _chat_response(
+            hold_reply,
+            raw_response_text="",
+            created_version=None,
+            safety_checks=safety_checks,
         )
 
     # Build effective message from all inputs: typed text + audio transcript + image hint.
@@ -2676,6 +3268,37 @@ def api_chat():
     if image:
         parts.append("I also shared an image.")
     effective_message = " ".join(parts)
+    user_prompt_for_safety = _combine_user_prompt_parts(
+        effective_message,
+        direct_artistic_profile,
+        _artistic_panel_state_text_for_safety(raw_artistic_panel_state),
+    )
+
+    input_guard = guardrail_middleware.before_agent(
+        session=session,
+        user_prompt=user_prompt_for_safety,
+    )
+    input_safety = input_guard["safety"]["input_prompt"]
+    if input_guard["blocked"]:
+        assistant_text = SAFETY_BLOCK_MESSAGE
+        _append_chat(session, "assistant", "system", assistant_text)
+        blocked_reply = input_guard["reply"]
+        turn_safety = input_guard["safety"]
+        return _chat_response(
+            blocked_reply,
+            raw_response_text="",
+            created_version=None,
+            safety_checks=turn_safety,
+        )
+
+    if "artistic_panel_state" in data:
+        _save_artistic_panel_state(session, raw_artistic_panel_state)
+    if message:
+        _append_chat(session, "user", "text", message)
+    if image:
+        _append_chat(session, "user", "image", image)
+    if audio:
+        _append_chat(session, "user", "audio", audio)
 
     pending = session.pending_artistic_decision
     actions = (
@@ -2868,6 +3491,27 @@ def api_chat():
                     user_feedback=feedback,
                     proposed_artistic_profile=pending.proposed_artistic_profile,
                 )
+                options_reply_payload = {
+                    "message": options_payload["message"],
+                    "commit_message": options_payload["commit_message"],
+                    "emotion_profile": options_payload["emotion_profile"] or current.emotion_profile,
+                    "emotion_confidence": options_payload["emotion_confidence"] or current.emotion_confidence,
+                    "emotion_gaps": options_payload["emotion_gaps"] or current.emotion_gaps,
+                    "artistic_profile": options_payload["recommended_artistic_profile"],
+                    "artistic_confidence": options_payload["artistic_confidence"] or current.artistic_confidence,
+                    "code": current.code,
+                    "should_create_version": False,
+                    "offers_artistic_alternatives": True,
+                    "artistic_options": list(options_payload["artistic_options"]),
+                }
+                options_guard = guardrail_middleware.after_agent(
+                    session=session,
+                    user_prompt=user_prompt_for_safety or effective_message or message or "",
+                    reply_payload=options_reply_payload,
+                    input_safety=input_safety,
+                )
+                if options_guard["blocked"]:
+                    return _hold_generated_output(options_guard["safety"])
                 pending.proposed_artistic_profile = options_payload["recommended_artistic_profile"]
                 pending.proposed_emotion_profile = options_payload["emotion_profile"]
                 pending.proposed_emotion_confidence = options_payload["emotion_confidence"]
@@ -2884,23 +3528,7 @@ def api_chat():
                 _append_chat(session, "assistant", "text", assistant_text)
                 _append_llm_event(session, human_msg, session.current_version_id)
                 _append_llm_event(session, assistant_msg, session.current_version_id)
-                return _chat_response(
-                    {
-                        "message": assistant_text,
-                        "commit_message": pending.proposed_commit_message,
-                        "emotion_profile": pending.proposed_emotion_profile,
-                        "emotion_confidence": pending.proposed_emotion_confidence,
-                        "emotion_gaps": pending.proposed_emotion_gaps,
-                        "artistic_profile": pending.proposed_artistic_profile,
-                        "artistic_confidence": pending.proposed_artistic_confidence,
-                        "code": current.code,
-                        "should_create_version": False,
-                        "offers_artistic_alternatives": True,
-                        "artistic_options": list(pending.alternatives),
-                    },
-                    raw_response_text=raw_options_text,
-                    created_version=None,
-                )
+                return _chat_response(options_reply_payload, raw_options_text, None)
 
             selected_artistic_profile = None
             if decision == "accept":
@@ -2961,6 +3589,27 @@ def api_chat():
             new_artistic = selected_artistic_profile
             new_artistic_conf = pending.proposed_artistic_confidence or current.artistic_confidence
             created_version = None
+            selected_reply_payload = {
+                "message": "I saved that artistic direction.",
+                "commit_message": pending.proposed_commit_message,
+                "emotion_profile": new_emotion,
+                "emotion_confidence": new_conf,
+                "emotion_gaps": new_gaps,
+                "artistic_profile": new_artistic,
+                "artistic_confidence": new_artistic_conf,
+                "code": current.code,
+                "should_create_version": False,
+                "offers_artistic_alternatives": False,
+                "artistic_options": [],
+            }
+            selected_guard = guardrail_middleware.after_agent(
+                session=session,
+                user_prompt=user_prompt_for_safety or effective_message or message or "",
+                reply_payload=selected_reply_payload,
+                input_safety=input_safety,
+            )
+            if selected_guard["blocked"]:
+                return _hold_generated_output(selected_guard["safety"])
 
             if _has_artistic_change(current.artistic_profile, new_artistic) or _has_emotional_state_change(
                 current,
@@ -3042,6 +3691,27 @@ def api_chat():
             user_feedback=user_text_for_model,
             proposed_artistic_profile=proposed_profile,
         )
+        options_reply_payload = {
+            "message": options_payload["message"],
+            "commit_message": options_payload["commit_message"],
+            "emotion_profile": options_payload["emotion_profile"] or current.emotion_profile,
+            "emotion_confidence": options_payload["emotion_confidence"] or current.emotion_confidence,
+            "emotion_gaps": options_payload["emotion_gaps"] or current.emotion_gaps,
+            "artistic_profile": options_payload["recommended_artistic_profile"],
+            "artistic_confidence": options_payload["artistic_confidence"] or current.artistic_confidence,
+            "code": current.code,
+            "should_create_version": False,
+            "offers_artistic_alternatives": True,
+            "artistic_options": list(options_payload["artistic_options"]),
+        }
+        options_guard = guardrail_middleware.after_agent(
+            session=session,
+            user_prompt=user_prompt_for_safety or effective_message or message or "",
+            reply_payload=options_reply_payload,
+            input_safety=input_safety,
+        )
+        if options_guard["blocked"]:
+            return _hold_generated_output(options_guard["safety"])
         _update_current_emotion_state(
             current,
             emotion_profile=options_payload["emotion_profile"] or current.emotion_profile,
@@ -3066,23 +3736,7 @@ def api_chat():
         _append_chat(session, "assistant", "text", options_payload["message"])
         _append_llm_event(session, human_msg, session.current_version_id)
         _append_llm_event(session, assistant_msg, session.current_version_id)
-        return _chat_response(
-            {
-                "message": options_payload["message"],
-                "commit_message": options_payload["commit_message"],
-                "emotion_profile": options_payload["emotion_profile"] or current.emotion_profile,
-                "emotion_confidence": options_payload["emotion_confidence"] or current.emotion_confidence,
-                "emotion_gaps": options_payload["emotion_gaps"] or current.emotion_gaps,
-                "artistic_profile": options_payload["recommended_artistic_profile"],
-                "artistic_confidence": options_payload["artistic_confidence"] or current.artistic_confidence,
-                "code": current.code,
-                "should_create_version": False,
-                "offers_artistic_alternatives": True,
-                "artistic_options": list(options_payload["artistic_options"]),
-            },
-            raw_response_text=raw_options_text,
-            created_version=None,
-        )
+        return _chat_response(options_reply_payload, raw_options_text, None)
 
     user_text_for_model = user_text_for_model or effective_message
 
@@ -3157,6 +3811,15 @@ def api_chat():
                     "I held off on applying code because the generated sketch came back incomplete. "
                     f"Reason: {code_issue} Ask me to try generating the sketch again and I will retry."
                 )
+
+    generated_guard = guardrail_middleware.after_agent(
+        session=session,
+        user_prompt=user_prompt_for_safety or effective_message or message or "",
+        reply_payload=sanitized,
+        input_safety=input_safety,
+    )
+    if generated_guard["blocked"]:
+        return _hold_generated_output(generated_guard["safety"])
 
     should_stage_artistic_decision = session.phase == PHASE_CODE and offers_artistic_alternatives
 
@@ -3293,6 +3956,31 @@ def api_save_version():
         old, emotion_profile, artistic_profile, code, source="user"
     )
 
+    manual_safety = _build_manual_save_safety_checks(
+        session,
+        emotion_profile=emotion_profile,
+        artistic_profile=artistic_profile,
+        code=code,
+    )
+    if manual_safety.get("blocked"):
+        _append_chat(session, "assistant", "system", SAFETY_BLOCK_MESSAGE)
+        logger = session_loggers.get(session.session_id)
+        if logger:
+            logger.log_turn(
+                user_message="Manual version save attempt",
+                phase=session.phase,
+                ai_response=SAFETY_BLOCK_MESSAGE,
+                ai_context="",
+                safety_checks=manual_safety,
+            )
+        return jsonify(
+            {
+                "error": SAFETY_BLOCK_MESSAGE,
+                "state": serialize_state(session),
+                "safety": manual_safety,
+            }
+        ), 400
+
     create_version(
         session,
         emotion_profile=emotion_profile,
@@ -3308,9 +3996,25 @@ def api_save_version():
         _unlock_phase(session, PHASE_ARTISTIC)
     if code or (artistic_profile and _confidence_allows_advance(old.artistic_confidence)):
         _unlock_phase(session, PHASE_CODE)
-    _append_chat(session, "assistant", "system", "Saved a new version from your manual edits.")
+    saved_message = "Saved a new version from your manual edits."
+    _append_chat(session, "assistant", "system", saved_message)
+    manual_safety = _build_manual_save_safety_checks(
+        session,
+        emotion_profile=emotion_profile,
+        artistic_profile=artistic_profile,
+        code=code,
+    )
+    logger = session_loggers.get(session.session_id)
+    if logger:
+        logger.log_turn(
+            user_message="Manual version save",
+            phase=session.phase,
+            ai_response=saved_message,
+            ai_context="",
+            safety_checks=manual_safety,
+        )
 
-    return jsonify({"ok": True, "state": serialize_state(session)})
+    return jsonify({"ok": True, "state": serialize_state(session), "safety": manual_safety})
 
 
 @app.route("/api/survey", methods=["POST"])
