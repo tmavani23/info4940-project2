@@ -221,6 +221,249 @@ button.ghost {
   position: relative;
 }
 
+/* First-time scaffolding: instruction popup (no skip link; examples stay in #messages) */
+.composer-scaffold-instruction-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  box-sizing: border-box;
+}
+
+.composer-scaffold-instruction-overlay[hidden] {
+  display: none !important;
+}
+
+.composer-scaffold-instruction-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 22, 18, 0.48);
+}
+
+.composer-scaffold-instruction-card {
+  position: relative;
+  z-index: 1;
+  width: min(420px, calc(100vw - 28px));
+  max-height: min(70vh, 480px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  margin: auto;
+  border-radius: 24px;
+  padding: 22px 22px 18px;
+  background: linear-gradient(165deg, #fffdf8 0%, #faf5ee 50%, #f3ebe0 100%);
+  border: 1px solid rgba(139, 110, 88, 0.38);
+  box-shadow:
+    0 24px 56px rgba(62, 48, 36, 0.2),
+    0 2px 0 rgba(255, 255, 255, 0.65) inset;
+}
+
+.composer-scaffold-instruction-card.composer-scaffold-instruction-card--enter {
+  animation: composerScaffoldInstructionIn 0.34s cubic-bezier(0.22, 0.9, 0.35, 1) both;
+}
+
+@keyframes composerScaffoldInstructionIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.composer-scaffold-instruction-title {
+  margin: 0 0 12px;
+  font-size: 1.28rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #3d342c;
+}
+
+.composer-scaffold-instruction-body {
+  font-size: 15px;
+  line-height: 1.55;
+  color: #4a3f35;
+}
+
+.composer-scaffold-instruction-body p {
+  margin: 0 0 12px;
+}
+
+.composer-scaffold-instruction-body p:last-child {
+  margin-bottom: 0;
+}
+
+.composer-scaffold-instruction-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.composer-scaffold-instruction-actions .primary {
+  border-radius: 14px;
+  padding: 10px 22px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.chat-pane.composer-scaffold-active #messages {
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+/* Artistic: example phrasing lives in the studio panel, not #messages */
+.artistic-studio-scaffolding-host:empty {
+  display: none;
+}
+
+.artistic-studio-scaffolding-host:not(:empty) {
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.artistic-studio .artistic-studio-scaffolding-host .scaffolding-in-messages-wrap {
+  margin-top: 0;
+}
+
+/* Composer scaffolding: examples appear as a card inside #messages (non-artistic phases) */
+.scaffolding-in-messages-wrap {
+  margin-top: 12px;
+  padding: 16px 18px 18px;
+  border-radius: 20px;
+  background: linear-gradient(165deg, #fffdf8 0%, #faf5ee 52%, #f3ebe4 100%);
+  border: 1px solid rgba(139, 110, 88, 0.28);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.14);
+}
+
+.scaffolding-in-messages-wrap.scaffolding-example-spotlight {
+  animation: scaffoldingExampleSpotlight 1.35s ease-out 1;
+  outline: 2px solid rgba(217, 119, 87, 0.5);
+  outline-offset: 3px;
+}
+
+@keyframes scaffoldingExampleSpotlight {
+  0% {
+    box-shadow: 0 0 0 0 rgba(217, 119, 87, 0.35);
+    outline-color: rgba(217, 119, 87, 0.65);
+  }
+  100% {
+    box-shadow: 0 0 0 12px rgba(217, 119, 87, 0);
+    outline-color: rgba(217, 119, 87, 0.35);
+  }
+}
+
+.scaffolding-in-messages-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6b9bc9;
+  margin-bottom: 12px;
+}
+
+.scaffolding-in-messages-note {
+  margin: 12px 0 0 0;
+  font-size: 12px;
+  font-style: italic;
+  color: #6b9bc9;
+  line-height: 1.45;
+}
+
+.scaffolding-in-messages-example.message.assistant {
+  align-items: flex-start;
+}
+
+.scaffolding-in-messages-example .avatar.scaffolding-example-avatar {
+  background: linear-gradient(145deg, #e07a5a, #c45038);
+  color: #fff;
+  border: none;
+  font-size: 15px;
+  line-height: 1;
+  box-shadow: 0 4px 14px rgba(196, 80, 56, 0.35);
+}
+
+.scaffolding-in-messages-example .bubble.scaffolding-example-bubble {
+  background: #2a282e;
+  border: none;
+  color: #faf7f2;
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  font-size: 14px;
+  line-height: 1.55;
+  border-radius: 16px;
+  border-bottom-left-radius: 6px;
+}
+
+.scaffolding-in-messages-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.scaffolding-in-messages-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b9bc9;
+  min-width: 2.75em;
+}
+
+button.scaffolding-msg-arrow {
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 12px;
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 700;
+  background: #f5f0e8;
+  border: 1px solid rgba(45, 40, 36, 0.12);
+  color: #1c1917;
+}
+
+button.scaffolding-msg-arrow:hover:not(:disabled) {
+  background: #efe8de;
+  border-color: rgba(45, 40, 36, 0.22);
+}
+
+button.scaffolding-msg-use {
+  margin-left: auto;
+  border-radius: 14px;
+  padding: 10px 18px;
+  font-weight: 700;
+  font-size: 13px;
+  background: linear-gradient(135deg, #d97757, #c45a42);
+  border: none;
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(196, 90, 66, 0.3);
+}
+
+button.scaffolding-msg-use:hover:not(:disabled) {
+  filter: brightness(1.04);
+}
+
+.template-row .template-scroll-hint {
+  color: #9b6848;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.template-row .scaffolding-microtext {
+  color: #9b6848;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.template-row .suggestion-next-btn {
+  background: rgba(179, 120, 85, 0.12);
+  border-color: rgba(179, 120, 85, 0.55);
+  color: #7a4020;
+}
+
 .messages {
   flex: 1;
   overflow-y: auto;
@@ -228,6 +471,49 @@ button.ghost {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.messages-scroll-hint {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  align-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(111, 152, 223, 0.7);
+  background: rgba(24, 34, 56, 0.92);
+  color: #d8e8ff;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 8px 18px rgba(5, 10, 18, 0.38);
+  cursor: pointer;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.messages-scroll-hint::after {
+  content: none;
+}
+
+.messages-scroll-hint.hidden {
+  opacity: 0;
+  transform: translateY(-42%);
+  pointer-events: none;
+}
+
+.messages-scroll-hint:not(.hidden) {
+  animation: chatScrollHintPulse 1s ease-out 1;
+}
+
+@keyframes chatScrollHintPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(143, 180, 255, 0.44); }
+  100% { box-shadow: 0 0 0 9px rgba(143, 180, 255, 0); }
 }
 
 .message {
@@ -486,6 +772,37 @@ button.ghost {
   gap: 8px;
 }
 
+.template-scroll-hint {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #86abf2;
+  text-align: left;
+  padding-left: 2px;
+}
+
+.messages.scaffolding-attention {
+  box-shadow: inset 0 0 0 2px rgba(143, 180, 255, 0.55), 0 0 0 3px rgba(143, 180, 255, 0.16);
+  border-radius: 8px;
+  animation: scaffoldingMessagesPulse 0.9s ease-out 1;
+}
+
+@keyframes scaffoldingMessagesPulse {
+  0%   { box-shadow: inset 0 0 0 2px rgba(143, 180, 255, 0.7), 0 0 0 0 rgba(143, 180, 255, 0.34); }
+  100% { box-shadow: inset 0 0 0 2px rgba(143, 180, 255, 0.55), 0 0 0 12px rgba(143, 180, 255, 0); }
+}
+
+.scaffolding-return-signal {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9bc0ff;
+  background: rgba(95, 141, 247, 0.1);
+  border: 1px solid rgba(95, 141, 247, 0.28);
+  border-radius: 8px;
+  padding: 5px 9px;
+  text-align: center;
+}
+
 .template-row.scrollable {
   overflow-y: auto;
   overflow-x: hidden;
@@ -595,21 +912,30 @@ button.ghost {
   align-items: center;
   gap: 3px;
   padding: 0 11px;
-  background: rgba(95, 141, 247, 0.07);
-  border: 1px solid #4a6898;
+  background: rgba(95, 141, 247, 0.18);
+  border: 1px solid #6f98df;
   border-radius: 10px;
-  color: #7aaeff;
-  font-size: 16px;
-  font-weight: 700;
+  color: #b9d5ff;
+  font-size: 13px;
+  font-weight: 800;
   cursor: pointer;
   transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
   white-space: nowrap;
 }
 
 .suggestion-next-btn:hover {
-  color: #a8ccff;
-  border-color: #6a9aee;
-  background: rgba(95, 141, 247, 0.14);
+  color: #e8f3ff;
+  border-color: #9dc0ff;
+  background: rgba(95, 141, 247, 0.3);
+}
+
+.suggestion-next-btn.prominent {
+  animation: scaffoldingSeeMorePulse 0.9s ease-out 1;
+}
+
+@keyframes scaffoldingSeeMorePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(143, 180, 255, 0.45); }
+  100% { box-shadow: 0 0 0 8px rgba(143, 180, 255, 0); }
 }
 
 .suggestion-count {
@@ -620,14 +946,38 @@ button.ghost {
 }
 
 .scaffolding-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   font-size: 11px;
   color: #8fb4ff;
   background: rgba(95, 141, 247, 0.08);
   border: 1px solid rgba(95, 141, 247, 0.22);
   border-radius: 8px;
   padding: 5px 10px;
-  text-align: center;
   animation: scaffoldingBannerLife 3.5s ease forwards;
+}
+
+.scaffolding-banner-text {
+  flex: 1;
+  text-align: left;
+}
+
+.scaffolding-banner-close {
+  border: 1px solid rgba(143, 180, 255, 0.45);
+  background: rgba(95, 141, 247, 0.16);
+  color: #d6e8ff;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.scaffolding-banner-close:hover {
+  background: rgba(95, 141, 247, 0.28);
+  border-color: rgba(143, 180, 255, 0.75);
 }
 
 @keyframes scaffoldingBannerLife {
@@ -635,14 +985,15 @@ button.ghost {
   10%  { opacity: 1; transform: translateY(0); }
   55%  { opacity: 1; box-shadow: 0 0 0 3px rgba(95, 141, 247, 0.12); }
   72%  { box-shadow: 0 0 0 0 rgba(95, 141, 247, 0); }
-  82%  { opacity: 1; }
-  100% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 .scaffolding-microtext {
-  font-size: 10px;
-  font-style: italic;
-  color: #4a6080;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #7fa9f4;
   text-align: right;
   padding-right: 2px;
   animation: scaffoldingMicrotextIn 0.4s ease forwards;
@@ -706,6 +1057,18 @@ button.ghost {
 
 .scaffolding-example-chip.highlight {
   animation: scaffoldingPulse 0.7s ease-out forwards;
+}
+
+.scaffolding-rim-highlight {
+  border: 1px solid rgba(143, 180, 255, 0.52);
+  border-radius: 12px;
+  padding: 4px;
+  animation: scaffoldingRimPulse 0.9s ease-out 1;
+}
+
+@keyframes scaffoldingRimPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(143, 180, 255, 0.4); }
+  100% { box-shadow: 0 0 0 8px rgba(143, 180, 255, 0); }
 }
 
 .implement-cta {
@@ -1021,6 +1384,16 @@ body.artistic-modal-active .input-bar {
 .artistic-guidance.ready {
   border-color: rgba(77, 212, 166, 0.26);
   background: rgba(18, 33, 31, 0.92);
+}
+
+.artistic-studio .artistic-guidance.ready {
+  color: #141210;
+  background: linear-gradient(165deg, #fffdf8 0%, #f5efe6 100%);
+  border-color: rgba(120, 106, 92, 0.32);
+}
+
+.artistic-studio .artistic-guidance.ready strong {
+  color: #090807;
 }
 
 .artistic-guidance.loading {
@@ -2862,6 +3235,20 @@ button.primary:hover:not(:disabled),
   color: #6f665d;
 }
 
+.template-scroll-hint {
+  color: #a06b48;
+}
+
+.messages.scaffolding-attention {
+  box-shadow: inset 0 0 0 2px rgba(179, 120, 85, 0.52), 0 0 0 3px rgba(179, 120, 85, 0.14);
+}
+
+.scaffolding-return-signal {
+  color: #93552e;
+  background: rgba(179, 120, 85, 0.08);
+  border-color: rgba(179, 120, 85, 0.3);
+}
+
 .template-chip {
   background: linear-gradient(180deg, #fbf6ef, #f1e9de);
   border-color: rgba(214, 201, 184, 0.95);
@@ -2882,15 +3269,15 @@ button.primary:hover:not(:disabled),
 }
 
 .suggestion-next-btn {
-  background: rgba(179, 120, 85, 0.07);
-  border-color: rgba(179, 120, 85, 0.45);
-  color: #8f5e3a;
+  background: rgba(179, 120, 85, 0.16);
+  border-color: rgba(179, 120, 85, 0.7);
+  color: #8a4f2b;
 }
 
 .suggestion-next-btn:hover {
-  color: #7a4020;
-  border-color: rgba(179, 120, 85, 0.65);
-  background: rgba(179, 120, 85, 0.13);
+  color: #6f3514;
+  border-color: rgba(179, 120, 85, 0.85);
+  background: rgba(179, 120, 85, 0.25);
 }
 
 .scaffolding-banner {
@@ -2899,17 +3286,34 @@ button.primary:hover:not(:disabled),
   border-color: rgba(179, 120, 85, 0.22);
 }
 
+.scaffolding-banner-close {
+  border-color: rgba(179, 120, 85, 0.5);
+  background: rgba(179, 120, 85, 0.16);
+  color: #8a4c26;
+}
+
+.scaffolding-banner-close:hover {
+  border-color: rgba(179, 120, 85, 0.78);
+  background: rgba(179, 120, 85, 0.28);
+}
+
 @keyframes scaffoldingBannerLife {
   0%   { opacity: 0; transform: translateY(-3px); }
   10%  { opacity: 1; transform: translateY(0); }
   55%  { opacity: 1; box-shadow: 0 0 0 3px rgba(179, 120, 85, 0.1); }
   72%  { box-shadow: 0 0 0 0 rgba(179, 120, 85, 0); }
-  82%  { opacity: 1; }
-  100% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 .scaffolding-microtext {
-  color: #b0a088;
+  color: #9f6a48;
+}
+
+.messages-scroll-hint {
+  border-color: rgba(179, 120, 85, 0.75);
+  background: rgba(249, 244, 236, 0.95);
+  color: #7a3f1d;
+  box-shadow: 0 8px 16px rgba(124, 83, 55, 0.22);
 }
 
 .scaffolding-section-divider {
@@ -2941,6 +3345,10 @@ button.primary:hover:not(:disabled),
 
 .scaffolding-example-chip.highlight {
   animation: scaffoldingPulseWarm 0.7s ease-out forwards;
+}
+
+.scaffolding-rim-highlight {
+  border-color: rgba(179, 120, 85, 0.58);
 }
 
 .preview-strip,
@@ -3204,11 +3612,26 @@ button.primary:hover:not(:disabled),
   box-shadow: 0 14px 28px rgba(154, 114, 81, 0.16);
 }
 
-.stage-node.complete,
-.artistic-guidance.ready {
+/* Selected chips: warm background from rule above; override dark-theme `color: #fff` from earlier sheet. */
+.art-pref-chip.selected {
+  color: #3a342f;
+}
+
+.stage-node.complete {
   background: linear-gradient(180deg, rgba(217, 119, 87, 0.08), rgba(250, 245, 238, 0.96));
   border-color: rgba(217, 119, 87, 0.22);
   box-shadow: 0 10px 24px rgba(113, 96, 72, 0.1);
+}
+
+.artistic-studio .artistic-guidance.ready {
+  color: #141210;
+  background: linear-gradient(165deg, #fffdf8 0%, #f5efe6 100%);
+  border-color: rgba(120, 106, 92, 0.32);
+  box-shadow: 0 8px 22px rgba(62, 48, 36, 0.08);
+}
+
+.artistic-studio .artistic-guidance.ready strong {
+  color: #090807;
 }
 
 .stage-node.locked {
@@ -3613,6 +4036,27 @@ body.artistic-modal-active .artistic-studio {
     </div>
   </div>
 
+  <div
+    id="composerScaffoldingOverlay"
+    class="composer-scaffold-instruction-overlay"
+    hidden
+    aria-labelledby="composerScaffoldInstructionTitle"
+  >
+    <div class="composer-scaffold-instruction-scrim"></div>
+    <div
+      id="composerScaffoldInstructionCard"
+      class="composer-scaffold-instruction-card"
+      role="dialog"
+      aria-modal="true"
+    >
+      <h2 id="composerScaffoldInstructionTitle" class="composer-scaffold-instruction-title">Need a little inspiration?</h2>
+      <div id="composerScaffoldInstructionBody" class="composer-scaffold-instruction-body"></div>
+      <div class="composer-scaffold-instruction-actions">
+        <button type="button" id="composerScaffoldInstructionGotItBtn" class="primary">Got it</button>
+      </div>
+    </div>
+  </div>
+
   <div id="fullscreenBackdrop" class="fullscreen-backdrop" hidden></div>
   <div id="artisticStudioBackdrop" class="artistic-modal-backdrop" hidden></div>
 
@@ -3623,6 +4067,9 @@ body.artistic-modal-active .artistic-studio {
         <button class="pane-expand-btn" type="button" data-pane-target="chat">Expand</button>
       </div>
       <div id="messages" class="messages"></div>
+      <button id="messagesScrollHint" class="messages-scroll-hint hidden" type="button" aria-label="Scroll to latest messages" title="Scroll down">
+        ↓
+      </button>
 
       <div class="input-wrap">
         <button id="openArtisticModalBtn" class="ghost artistic-inline-open" type="button" hidden>Open Artistic Discovery</button>
@@ -3644,6 +4091,8 @@ body.artistic-modal-active .artistic-studio {
           <p id="artisticStudioCopy" class="artistic-copy">
             Pick a few visual preferences, add your own note, and I’ll turn them into three artwork directions with previews.
           </p>
+
+          <div id="artisticStudioScaffoldingHost" class="artistic-studio-scaffolding-host" aria-live="polite"></div>
 
           <div id="artisticStudioPage1" class="artistic-studio-page">
             <div id="artPreferenceGroups" class="art-pref-grid"></div>
@@ -5442,15 +5891,255 @@ function sendTemplateMessage(text) {
 
 let scaffoldingIndex = 0;
 let lastScaffoldingKey = null;
-const scaffoldingBannerShownPhases = new Set(); // banner shown at most once per phase per session
-const scaffoldingScrolledPhases = new Set();    // user has clicked › at least once for this phase
+let lastScaffoldingExamplesMsgKey = null;
+let lastScaffoldingExamplesSessionId = null;
+let lastArtisticStudioScaffoldKey = null;
+let pendingScaffoldingExampleSpotlight = false;
+const scaffoldingScrolledPhases = new Set(); // user has clicked › at least once for this phase
+let composerScaffoldingInstructionOpen = false;
+let composerScaffoldInstructionOverlayKey = null;
+
+function composerScaffoldIntroDismissedStorageKey(sid) {
+  return sid ? `emotion-sketch-scaffold-intro-dismissed:${sid}` : "";
+}
+
+/** Per server session_id (sessionStorage): show intro modal once; after dismiss, spotlight only until a new session. */
+function hasDismissedComposerScaffoldInstructionThisSession() {
+  const sid = sessionId || (appState && appState.session_id);
+  if (!sid) return false;
+  try {
+    return sessionStorage.getItem(composerScaffoldIntroDismissedStorageKey(sid)) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function markComposerScaffoldInstructionDismissedThisSession() {
+  const sid = sessionId || (appState && appState.session_id);
+  if (!sid) return;
+  try {
+    sessionStorage.setItem(composerScaffoldIntroDismissedStorageKey(sid), "true");
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+function fillComposerScaffoldInstructionCard(variant = "chat") {
+  const body = $("composerScaffoldInstructionBody");
+  if (!body) return;
+  body.innerHTML = "";
+  const p1 = document.createElement("p");
+  p1.textContent =
+    "To make chatting easier, we sometimes surface example wordings you can borrow or rewrite, plus quick-reply buttons above the chat box.";
+  const p2 = document.createElement("p");
+  p2.textContent =
+    variant === "studio"
+      ? "Examples appear in this Artistic Discovery panel — use the arrow to flip through them one at a time."
+      : "Examples appear in the chat behind this window — use the arrow there to flip through them one at a time.";
+  body.appendChild(p1);
+  body.appendChild(p2);
+}
+
+function openComposerScaffoldingInstructionOverlay(options = {}) {
+  const { pulseMessages: doPulse = true, variant = "chat" } = options;
+  const overlay = $("composerScaffoldingOverlay");
+  const instCard = $("composerScaffoldInstructionCard");
+  const chatPanel = $("chatPanel");
+  if (!overlay || !instCard) return;
+  composerScaffoldingInstructionOpen = true;
+  composerScaffoldInstructionOverlayKey = "intro";
+  overlay.hidden = false;
+  chatPanel?.classList.add("composer-scaffold-active");
+  fillComposerScaffoldInstructionCard(variant);
+  instCard.classList.remove("composer-scaffold-instruction-card--enter");
+  window.requestAnimationFrame(() => {
+    void instCard.offsetWidth;
+    instCard.classList.add("composer-scaffold-instruction-card--enter");
+  });
+  if (doPulse) {
+    pulseMessagesForScaffolding();
+  }
+}
+
+function spotlightScaffoldingExamplesWrap(wrapEl) {
+  if (!wrapEl) return;
+  wrapEl.classList.remove("scaffolding-example-spotlight");
+  void wrapEl.offsetWidth;
+  wrapEl.classList.add("scaffolding-example-spotlight");
+  setTimeout(() => wrapEl.classList.remove("scaffolding-example-spotlight"), 1400);
+}
+
+function dismissComposerScaffoldInstruction() {
+  composerScaffoldInstructionOverlayKey = null;
+  markComposerScaffoldInstructionDismissedThisSession();
+  const ov = $("composerScaffoldingOverlay");
+  const card = $("composerScaffoldInstructionCard");
+  if (ov) ov.hidden = true;
+  if (card) card.classList.remove("composer-scaffold-instruction-card--enter");
+  $("chatPanel")?.classList.remove("composer-scaffold-active");
+  composerScaffoldingInstructionOpen = false;
+  if (appState) {
+    renderTemplateRow(appState.phase, appState.pending_artistic_decision, appState.scaffolding_state);
+    updateComposerPanels(appState);
+    renderMessages(appState.messages || []);
+  }
+}
+
+function bindComposerScaffoldInstruction() {
+  $("composerScaffoldInstructionGotItBtn")?.addEventListener("click", dismissComposerScaffoldInstruction);
+  $("composerScaffoldingOverlay")
+    ?.querySelector(".composer-scaffold-instruction-scrim")
+    ?.addEventListener("click", dismissComposerScaffoldInstruction);
+}
+
+function getComposerScaffoldingExampleItems(phase, scaffoldingState) {
+  const sc = String(scaffoldingState || "off").toLowerCase();
+  if (sc === "off" || sc === "removed") return [];
+  const pool =
+    phase === "artistic_discovery"
+      ? SCAFFOLDING_MESSAGES.artistic_discovery || []
+      : SCAFFOLDING_MESSAGES[phase] || SCAFFOLDING_MESSAGES.emotional_discovery;
+  const count = sc === "reduced" ? 2 : 4;
+  return pool.slice(0, count);
+}
+
+function shouldShowComposerScaffoldingExamplesInMessages(phase, scaffoldingState) {
+  if (phase === "artistic_discovery") return false;
+  return getComposerScaffoldingExampleItems(phase, scaffoldingState).length > 0;
+}
+
+function shouldShowArtisticScaffoldingInStudio(state) {
+  if (!state || state.phase !== "artistic_discovery") return false;
+  return getComposerScaffoldingExampleItems("artistic_discovery", state.scaffolding_state).length > 0;
+}
+
+function appendComposerScaffoldingExamplesBlock(container) {
+  if (!appState) return;
+  const phase = appState.phase;
+  const items = getComposerScaffoldingExampleItems(phase, appState.scaffolding_state);
+  if (!items.length) return;
+  if (scaffoldingIndex >= items.length) scaffoldingIndex = 0;
+
+  const wrap = document.createElement("div");
+  wrap.className = "scaffolding-in-messages-wrap";
+  wrap.setAttribute("role", "region");
+  wrap.setAttribute("aria-label", "Example phrasing ideas");
+
+  const label = document.createElement("div");
+  label.className = "scaffolding-in-messages-label";
+  label.textContent = "Example phrasing";
+
+  const row = document.createElement("div");
+  row.className = "message assistant scaffolding-in-messages-example";
+
+  const avatar = document.createElement("div");
+  avatar.className = "avatar assistant-avatar scaffolding-example-avatar";
+  avatar.textContent = "✦";
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble scaffolding-example-bubble";
+  bubble.textContent = items[scaffoldingIndex];
+
+  const note = document.createElement("p");
+  note.className = "scaffolding-in-messages-note";
+  note.textContent =
+    phase === "artistic_discovery"
+      ? "General example — adapt it into your Artistic note (step 1) or Your Own Idea (step 2), then save or continue when it feels right."
+      : "General example — adapt it to your own experience.";
+
+  const toolbar = document.createElement("div");
+  toolbar.className = "scaffolding-in-messages-toolbar";
+
+  const counter = document.createElement("span");
+  counter.className = "scaffolding-in-messages-count";
+  counter.textContent = `${scaffoldingIndex + 1} / ${items.length}`;
+
+  const next = document.createElement("button");
+  next.type = "button";
+  next.className = "scaffolding-msg-arrow";
+  next.setAttribute("aria-label", "Next example");
+  next.textContent = "›";
+
+  const useBtn = document.createElement("button");
+  useBtn.type = "button";
+  useBtn.className = "scaffolding-msg-use primary";
+  useBtn.textContent = "Use this wording";
+  useBtn.addEventListener("click", () => {
+    const text = items[scaffoldingIndex];
+    if (phase === "artistic_discovery") {
+      const onPrefsPage = artisticStudioPage === 1;
+      const ta = onPrefsPage ? $("artPreferenceNote") : $("customArtIdea");
+      if (!ta) return;
+      ta.value = text;
+      ta.focus();
+      if (onPrefsPage) {
+        refreshArtisticDraftUi(appState);
+        return;
+      }
+      updateCustomArtIdeaEditingState();
+      const visible = getVisibleArtisticOptionState(appState);
+      updateContinueFromArtisticState(appState, visible);
+      refreshArtisticDraftUi(appState);
+      return;
+    }
+    const input = $("chatInput");
+    if (!input) return;
+    input.value = text;
+    input.focus();
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
+    updateSendButtonState();
+  });
+
+  next.addEventListener("click", () => {
+    scaffoldingScrolledPhases.add(phase);
+    scaffoldingIndex = (scaffoldingIndex + 1) % items.length;
+    renderMessages(appState.messages || []);
+    if (phase === "artistic_discovery") {
+      renderArtisticStudio(appState);
+    }
+  });
+
+  next.disabled = items.length <= 1;
+
+  toolbar.appendChild(counter);
+  toolbar.appendChild(next);
+  toolbar.appendChild(useBtn);
+
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+
+  wrap.appendChild(label);
+  wrap.appendChild(row);
+  wrap.appendChild(note);
+  wrap.appendChild(toolbar);
+  container.appendChild(wrap);
+}
+
+function pulseMessagesForScaffolding() {
+  const messages = $("messages");
+  if (!messages) return;
+  messages.classList.add("scaffolding-attention");
+  setTimeout(() => messages.classList.remove("scaffolding-attention"), 1200);
+}
 
 function renderTemplateRow(phase, pendingArtDecision, scaffoldingState) {
+  const overlay = $("composerScaffoldingOverlay");
+  const instCard = $("composerScaffoldInstructionCard");
+  const chatPanel = $("chatPanel");
+  composerScaffoldingInstructionOpen = false;
+  if (overlay) overlay.hidden = true;
+  if (instCard) instCard.classList.remove("composer-scaffold-instruction-card--enter");
+  chatPanel?.classList.remove("composer-scaffold-active");
+
   const row = $("templateRow");
+
   if (!row) return;
   row.innerHTML = "";
   row.classList.remove("scrollable");
-  if (phase === "artistic_discovery") return;
+  if (phase === "artistic_discovery") {
+    return;
+  }
 
   // --- Section 1: Contextual suggested reply chips (shown as-is) ---
   const hasDecisionChoices = !!(pendingArtDecision && !pendingArtDecision.awaiting_modify_details);
@@ -5471,6 +6160,13 @@ function renderTemplateRow(phase, pendingArtDecision, scaffoldingState) {
   }
   const descriptors = dedupeTemplateDescriptors(templates);
   row.classList.toggle("scrollable", descriptors.length > 2);
+  const suggestionNodes = [];
+  if (descriptors.length > 2) {
+    const templateHint = document.createElement("div");
+    templateHint.className = "template-scroll-hint";
+    templateHint.textContent = "Scroll down for more suggestions ↓";
+    suggestionNodes.push(templateHint);
+  }
   descriptors.forEach((template) => {
     const btn = document.createElement("button");
     btn.className = "template-chip";
@@ -5489,100 +6185,39 @@ function renderTemplateRow(phase, pendingArtDecision, scaffoldingState) {
       input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
       updateSendButtonState();
     });
-    row.appendChild(btn);
+    suggestionNodes.push(btn);
   });
 
-  // --- Section 2: General example chips (scaffolding, paginated) ---
   const showScaffolding = scaffoldingState && scaffoldingState !== "off" && scaffoldingState !== "removed";
-  if (!showScaffolding) return;
+  if (!showScaffolding) {
+    suggestionNodes.forEach((node) => row.appendChild(node));
+    return;
+  }
 
   const key = `${phase}:${scaffoldingState}`;
   const isNew = key !== lastScaffoldingKey;
   if (isNew) {
     scaffoldingIndex = 0;
     lastScaffoldingKey = key;
-    scaffoldingScrolledPhases.delete(phase); // reset microtext on new scaffolding activation
   }
 
-  const messages = SCAFFOLDING_MESSAGES[phase] || SCAFFOLDING_MESSAGES.emotional_discovery;
-  const count = scaffoldingState === "reduced" ? 2 : 4;
-  const items = messages.slice(0, count);
-  if (scaffoldingIndex >= items.length) scaffoldingIndex = 0;
+  const exampleItems = getComposerScaffoldingExampleItems(phase, scaffoldingState);
+  if (scaffoldingIndex >= exampleItems.length) scaffoldingIndex = 0;
 
-  // Animated banner — once per phase per session, auto-dismisses after 3.5s
-  if (isNew && !scaffoldingBannerShownPhases.has(phase)) {
-    scaffoldingBannerShownPhases.add(phase);
-    const banner = document.createElement("div");
-    banner.className = "scaffolding-banner";
-    banner.textContent = "✨ Examples below — click to use or scroll through";
-    setTimeout(() => banner.remove(), 3500);
-    row.appendChild(banner);
+  const showInstructionPopup =
+    !!(overlay && instCard) && !hasDismissedComposerScaffoldInstructionThisSession();
+
+  if (showInstructionPopup) {
+    openComposerScaffoldingInstructionOverlay({ pulseMessages: true, variant: "chat" });
+    return;
   }
 
-  // Divider
-  const divider = document.createElement("div");
-  divider.className = "scaffolding-section-divider";
-  row.appendChild(divider);
-
-  // Label + disclaimer
-  const header = document.createElement("div");
-  header.className = "scaffolding-section-header";
-  header.innerHTML =
-    `<span class="scaffolding-section-label">Need inspiration? Examples</span>` +
-    `<span class="scaffolding-section-note">General examples — adapt them to your own experience</span>`;
-  row.appendChild(header);
-
-  // Paginated example chip
-  const chipRow = document.createElement("div");
-  chipRow.className = "suggestion-row";
-
-  const chip = document.createElement("button");
-  chip.className = "template-chip scaffolding-example-chip";
-  chip.type = "button";
-  const textEl = document.createElement("span");
-  textEl.className = "scaffolding-eg-text";
-  textEl.textContent = items[scaffoldingIndex];
-  chip.appendChild(textEl);
-  chip.addEventListener("click", () => {
-    const input = $("chatInput");
-    input.value = items[scaffoldingIndex];
-    input.focus();
-    input.style.height = "auto";
-    input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
-    updateSendButtonState();
-  });
-  if (isNew) {
-    requestAnimationFrame(() => {
-      chip.classList.add("highlight");
-      chip.addEventListener("animationend", () => chip.classList.remove("highlight"), { once: true });
-    });
+  if (isNew && hasDismissedComposerScaffoldInstructionThisSession()) {
+    pendingScaffoldingExampleSpotlight = true;
   }
 
-  const nextBtn = document.createElement("button");
-  nextBtn.className = "suggestion-next-btn";
-  nextBtn.type = "button";
-  const counter = document.createElement("span");
-  counter.className = "suggestion-count";
-  counter.textContent = `${scaffoldingIndex + 1}/${items.length}`;
-  nextBtn.appendChild(counter);
-  nextBtn.appendChild(document.createTextNode(" ›"));
-  nextBtn.addEventListener("click", () => {
-    scaffoldingScrolledPhases.add(phase);
-    scaffoldingIndex = (scaffoldingIndex + 1) % items.length;
-    renderTemplateRow(phase, pendingArtDecision, scaffoldingState);
-  });
-
-  chipRow.appendChild(chip);
-  chipRow.appendChild(nextBtn);
-  row.appendChild(chipRow);
-
-  // Microtext — shown until user clicks › for the first time in this stage visit
-  if (!scaffoldingScrolledPhases.has(phase)) {
-    const micro = document.createElement("div");
-    micro.className = "scaffolding-microtext";
-    micro.textContent = "scroll for more →";
-    row.appendChild(micro);
-  }
+  composerScaffoldInstructionOverlayKey = null;
+  suggestionNodes.forEach((node) => row.appendChild(node));
 }
 
 function shouldShowSuggestedPrompts(state) {
@@ -5995,6 +6630,10 @@ function renderArtisticStudio(state) {
     optionPanel.hidden = true;
     guidance.hidden = true;
     loading.hidden = true;
+    const scaffoldHostClosed = $("artisticStudioScaffoldingHost");
+    if (scaffoldHostClosed) {
+      scaffoldHostClosed.innerHTML = "";
+    }
     syncArtisticLoadingOverlayPosition();
     return;
   }
@@ -6066,14 +6705,45 @@ function renderArtisticStudio(state) {
     shouldRevealGeneratedArtOptions = false;
     revealGeneratedArtOptions();
   }
+
+  const scaffoldHost = $("artisticStudioScaffoldingHost");
+  if (scaffoldHost) {
+    const artKey =
+      showModal && state && shouldShowArtisticScaffoldingInStudio(state)
+        ? `artistic_discovery:${String(state.scaffolding_state || "off")}`
+        : null;
+    const keyChangedForArt = artKey != null && artKey !== lastArtisticStudioScaffoldKey;
+    scaffoldHost.innerHTML = "";
+    if (artKey) {
+      if (keyChangedForArt) {
+        lastArtisticStudioScaffoldKey = artKey;
+        if (artKey !== lastScaffoldingExamplesMsgKey) {
+          lastScaffoldingExamplesMsgKey = artKey;
+          scaffoldingIndex = 0;
+        }
+      }
+      appendComposerScaffoldingExamplesBlock(scaffoldHost);
+      if (!hasDismissedComposerScaffoldInstructionThisSession() && keyChangedForArt) {
+        openComposerScaffoldingInstructionOverlay({ pulseMessages: false, variant: "studio" });
+      } else if (hasDismissedComposerScaffoldInstructionThisSession() && keyChangedForArt) {
+        const wrap = scaffoldHost.querySelector(".scaffolding-in-messages-wrap");
+        if (wrap) {
+          requestAnimationFrame(() => spotlightScaffoldingExamplesWrap(wrap));
+        }
+      }
+    } else {
+      lastArtisticStudioScaffoldKey = null;
+    }
+  }
 }
 
 function updateComposerPanels(state) {
   const showSuggestedPrompts = shouldShowSuggestedPrompts(state);
   const templateLabel = $("templateLabel");
   const templateRow = $("templateRow");
-  if (templateLabel) templateLabel.hidden = !showSuggestedPrompts;
-  if (templateRow) templateRow.hidden = !showSuggestedPrompts;
+  const hideTemplatesForInstruction = showSuggestedPrompts && composerScaffoldingInstructionOpen;
+  if (templateLabel) templateLabel.hidden = !showSuggestedPrompts || hideTemplatesForInstruction;
+  if (templateRow) templateRow.hidden = !showSuggestedPrompts || hideTemplatesForInstruction;
 }
 
 function getConfidenceVisual(confidence) {
@@ -7696,12 +8366,24 @@ function renderMessages(messages) {
   container.innerHTML = "";
   const actualMessages = Array.isArray(messages) ? messages : [];
   const hasPendingUi = !!pendingOutgoingMessage || pendingAssistantTyping;
+  const showScaffoldBlock =
+    appState &&
+    shouldShowComposerScaffoldingExamplesInMessages(appState.phase, appState.scaffolding_state);
+  const scaffoldMsgKey =
+    showScaffoldBlock && appState
+      ? `${appState.phase}:${String(appState.scaffolding_state || "off")}`
+      : "";
+  if (showScaffoldBlock && scaffoldMsgKey && scaffoldMsgKey !== lastScaffoldingExamplesMsgKey) {
+    lastScaffoldingExamplesMsgKey = scaffoldMsgKey;
+    scaffoldingIndex = 0;
+  }
 
-  if (!actualMessages.length && !hasPendingUi) {
+  if (!actualMessages.length && !hasPendingUi && !showScaffoldBlock) {
     const hint = document.createElement("div");
     hint.className = "empty-hint";
     hint.textContent = "Share a personal moment, upload an image, or record audio to begin.";
     container.appendChild(hint);
+    updateMessagesScrollHint();
     return;
   }
 
@@ -7724,7 +8406,37 @@ function renderMessages(messages) {
     container.appendChild(createTypingIndicatorRow());
   }
 
+  if (showScaffoldBlock) {
+    appendComposerScaffoldingExamplesBlock(container);
+    if (pendingScaffoldingExampleSpotlight) {
+      pendingScaffoldingExampleSpotlight = false;
+      const wrap = container.querySelector(".scaffolding-in-messages-wrap");
+      if (wrap) {
+        requestAnimationFrame(() => spotlightScaffoldingExamplesWrap(wrap));
+      }
+    }
+  } else if (pendingScaffoldingExampleSpotlight) {
+    pendingScaffoldingExampleSpotlight = false;
+  }
+
   container.scrollTop = container.scrollHeight;
+  updateMessagesScrollHint();
+}
+
+function updateMessagesScrollHint() {
+  const container = $("messages");
+  const hint = $("messagesScrollHint");
+  if (!container || !hint) return;
+  const remaining = container.scrollHeight - (container.scrollTop + container.clientHeight);
+  const shouldShow = remaining > 24;
+  hint.classList.toggle("hidden", !shouldShow);
+}
+
+function scrollMessagesToBottom() {
+  const container = $("messages");
+  if (!container) return;
+  container.scrollTop = container.scrollHeight;
+  updateMessagesScrollHint();
 }
 
 function buildPreviewBridgeScript() {
@@ -8044,6 +8756,13 @@ function getVersionById(versionId) {
 function renderState(state) {
   const nextPhase = state && state.phase ? state.phase : "";
   const previousPhase = lastRenderedPhase;
+  if (state && state.session_id !== lastScaffoldingExamplesSessionId) {
+    lastScaffoldingExamplesSessionId = state.session_id;
+    lastScaffoldingExamplesMsgKey = null;
+    lastScaffoldingKey = null;
+    lastArtisticStudioScaffoldKey = null;
+    scaffoldingIndex = 0;
+  }
   if (
     hasHydratedInitialState &&
     nextPhase === "artistic_discovery" &&
@@ -8659,7 +9378,7 @@ window.addEventListener("message", (event) => {
   row.className = "message system";
   row.innerHTML = `<div class="bubble">${escapeHtml(msg)}</div>`;
   $("messages").appendChild(row);
-  $("messages").scrollTop = $("messages").scrollHeight;
+  scrollMessagesToBottom();
 });
 
 function bindById(id, eventName, handler) {
@@ -8712,6 +9431,11 @@ function initializeApp() {
         closeAppNotice();
         return;
       }
+      const composerInst = $("composerScaffoldingOverlay");
+      if (composerInst && !composerInst.hidden) {
+        dismissComposerScaffoldInstruction();
+        return;
+      }
       if (appState && appState.phase === "artistic_discovery" && !artisticModalDismissed) {
         closeArtisticModal();
         return;
@@ -8742,6 +9466,8 @@ function initializeApp() {
     ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
     updateSendButtonState();
   });
+  bindById("messages", "scroll", updateMessagesScrollHint);
+  bindById("messagesScrollHint", "click", scrollMessagesToBottom);
 
   bindById("artPreferenceNote", "input", () => {
     refreshArtisticDraftUi();
@@ -8864,6 +9590,7 @@ function initializeApp() {
   bindById("tourNextBtn", "click", nextTourStep);
   bindById("tourBackBtn", "click", previousTourStep);
   bindById("tourSkipBtn", "click", skipOrCollabStep);
+  bindComposerScaffoldInstruction();
 
   fetchState()
     .then(() => {

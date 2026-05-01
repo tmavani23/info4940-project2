@@ -1266,22 +1266,56 @@ def _phase_index(phase: str) -> int:
         return 0
 
 
-def _compute_scaffolding_state(scores: list[int]) -> str:
-    """off → full → reduced → removed based on accumulated per-stage scores."""
-    low_count = sum(1 for s in scores if s <= 2)
-    if low_count < 3:
-        return "off"
-    consecutive_high = 0
-    for s in reversed(scores):
-        if s >= 3:
-            consecutive_high += 1
+def _compute_scaffolding_state(scores: list[int], phase: str) -> str:
+    """Replay scores: off → full → reduced ↔ full (never back to off once scaffolding has activated).
+
+    off → full: cumulative scores ≤ 2 while off (highs while off do not reset).
+      - emotional_discovery & code_generation: 2 lows.
+      - artistic_discovery: 1 low.
+
+    full → reduced: 2 cumulative scores ≥ 3 since entering full.
+
+    reduced → full: 4 cumulative scores ≤ 3 since entering reduced.
+    """
+    low_threshold = 1 if phase == PHASE_ARTISTIC else 2
+    mode = "off"
+    low_since_off = 0
+    high_since_full = 0
+    le3_since_reduced = 0
+
+    for score in scores:
+        if mode == "off":
+            if score <= 2:
+                low_since_off += 1
+            if low_since_off >= low_threshold:
+                mode = "full"
+                high_since_full = 0
+                le3_since_reduced = 0
+        elif mode == "full":
+            if score >= 3:
+                high_since_full += 1
+            if high_since_full >= 2:
+                mode = "reduced"
+                le3_since_reduced = 0
         else:
-            break
-    if consecutive_high >= 5:
-        return "removed"
-    if consecutive_high >= 3:
+            if score <= 3:
+                le3_since_reduced += 1
+            if le3_since_reduced >= 4:
+                mode = "full"
+                high_since_full = 0
+                le3_since_reduced = 0
+
+    if mode == "off":
+        return "off"
+    if mode == "reduced":
         return "reduced"
     return "full"
+
+
+def _reset_scaffolding_for_phase(session: SessionState, phase: str) -> None:
+    """Clear per-stage score history and scaffolding when (re)entering a stage."""
+    session.phase_scores[phase] = []
+    session.scaffolding_state[phase] = "off"
 
 
 def _unlock_phase(session: SessionState, phase: str) -> None:
@@ -1472,11 +1506,8 @@ class SessionLogger:
             self._write()
         if (safety_checks or {}).get("blocked") or (safety_checks or {}).get("skip_evaluation"):
             return
-        threading.Thread(
-            target=self._evaluate_and_update,
-            args=(turn_index, user_message, phase, ai_context, session_id, active_scores),
-            daemon=True,
-        ).start()
+        # Evaluate immediately so scaffolding state is available in the same /api/chat response.
+        self._evaluate_and_update(turn_index, user_message, phase, ai_context, session_id, active_scores)
 
     def _evaluate_and_update(
         self,
@@ -1509,7 +1540,7 @@ class SessionLogger:
                 )
                 return
             active_scores.append(evaluation["score"])
-            new_state = _compute_scaffolding_state(active_scores)
+            new_state = _compute_scaffolding_state(active_scores, phase)
             session.scaffolding_state[phase] = new_state
             print(
                 f"[SCAFFOLD] session={session_id[:8]} phase={phase} "
@@ -3204,8 +3235,7 @@ def api_set_phase():
     _unlock_phase(session, target_phase)
     first_visit = _mark_phase_visited(session, target_phase)
     session.phase = target_phase
-    session.phase_scores[target_phase] = []
-    session.scaffolding_state[target_phase] = "off"
+    _reset_scaffolding_for_phase(session, target_phase)
     print(
         f"[SCAFFOLD] session={session.session_id[:8]} → entered phase={target_phase} "
         f"(scores reset, scaffolding=off)",
@@ -3418,6 +3448,7 @@ def api_chat():
                         )
                     _unlock_phase(session, PHASE_ARTISTIC)
                     first_visit = _mark_phase_visited(session, PHASE_ARTISTIC)
+                    _reset_scaffolding_for_phase(session, PHASE_ARTISTIC)
                     session.phase = PHASE_ARTISTIC
                     transition_message = _phase_transition_message(
                         PHASE_ARTISTIC,
@@ -3910,6 +3941,7 @@ def api_chat():
             alternatives=artistic_options,
             awaiting_modify_details=False,
         )
+        _reset_scaffolding_for_phase(session, PHASE_ARTISTIC)
         session.phase = PHASE_ARTISTIC
         _unlock_phase(session, PHASE_ARTISTIC)
         _mark_phase_visited(session, PHASE_ARTISTIC)
