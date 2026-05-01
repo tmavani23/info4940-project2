@@ -55,7 +55,22 @@
       }
     }
   ],
-  "survey": null,
+  "survey": {
+    "type": "demographic_fairness",
+    "submitted_at": "2026-05-01T01:46:38.120280+00:00",
+    "age_range": null,
+    "gender": null,
+    "ai_experience": null,
+    "skipped": {
+      "age_range": true,
+      "gender": true,
+      "ai_experience": true
+    },
+    "privacy_notes": [
+      "Data not linked to personally identifiable information",
+      "Used only for internal tracking and quality assurance"
+    ]
+  },
   "stage_feedback": {
     "emotional_discovery": {
       "phase": "emotional_discovery",

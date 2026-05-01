@@ -3856,6 +3856,15 @@ const TOUR_STEPS = [
     ],
   },
   {
+    target: "#stageFeedbackToggleBtn",
+    placement: "top",
+    padding: 12,
+    title: "Feedback",
+    body: [
+      "This feedback section asks a few quick questions at each stage to understand your experience. Your responses help detect when more guidance or support may be useful, and help us evaluate fairness and usability over time.",
+    ],
+  },
+  {
     target: "#templateRow",
     placement: "top",
     padding: 14,
@@ -6813,11 +6822,18 @@ function renderTourStep() {
   });
 }
 
+function getAppTourStepIndexByTitle(title, fallback) {
+  const idx = getTourConfig("app").steps.findIndex((step) => step.title === title);
+  return idx >= 0 ? idx : fallback;
+}
+
 function getAppTourStartStep() {
   if (!appState) return -1;
-  if (appState.phase === "code_generation") return 8;
+  if (appState.phase === "code_generation") {
+    return getAppTourStepIndexByTitle("Use The Profile To Stay Aligned", 9);
+  }
   const hasMessages = Array.isArray(appState.messages) && appState.messages.length > 0;
-  if (hasMessages) return 2;
+  if (hasMessages) return getAppTourStepIndexByTitle("Stage Flow", 2);
   return -1;
 }
 

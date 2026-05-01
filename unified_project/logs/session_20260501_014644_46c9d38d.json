@@ -1,0 +1,22 @@
+{
+  "session_id": "46c9d38d-1812-46f1-bf2c-acc3c4e45f06",
+  "started_at": "2026-05-01T01:46:44.046863+00:00",
+  "turns": [],
+  "survey": {
+    "type": "demographic_fairness",
+    "submitted_at": "2026-05-01T01:57:06.147232+00:00",
+    "age_range": null,
+    "gender": null,
+    "ai_experience": null,
+    "skipped": {
+      "age_range": true,
+      "gender": true,
+      "ai_experience": true
+    },
+    "privacy_notes": [
+      "Data not linked to personally identifiable information",
+      "Used only for internal tracking and quality assurance"
+    ]
+  },
+  "stage_feedback": {}
+}
