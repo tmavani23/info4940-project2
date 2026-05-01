@@ -2867,28 +2867,6 @@ body.artistic-modal-active .input-bar {
   border-radius: 10px;
 }
 
-.stage-feedback-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  margin: 0 0 7px;
-}
-
-.stage-feedback-tab {
-  min-width: 0;
-  min-height: 28px;
-  padding: 5px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-}
-
-.stage-feedback-tab.active {
-  background: rgba(217, 119, 87, 0.14);
-  border-color: rgba(217, 119, 87, 0.42);
-  color: #8f563c;
-  font-weight: 700;
-}
-
 .stage-feedback-scale-note {
   color: var(--muted);
   font-size: 11px;
@@ -2915,9 +2893,34 @@ body.artistic-modal-active .input-bar {
 }
 
 .stage-feedback-panel.attention {
-  border-color: rgba(217, 119, 87, 0.46);
-  background: rgba(217, 119, 87, 0.1);
-  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.12);
+  border-color: rgba(217, 119, 87, 0.62);
+  background: rgba(217, 119, 87, 0.12);
+  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.14), 0 12px 28px rgba(142, 80, 46, 0.14);
+  animation: stageFeedbackAttentionPulse 1.85s ease-out 1;
+}
+
+@keyframes stageFeedbackAttentionPulse {
+  0% {
+    border-color: rgba(217, 119, 87, 0.78);
+    background: rgba(217, 119, 87, 0.2);
+    box-shadow: 0 0 0 0 rgba(217, 119, 87, 0.28), 0 12px 28px rgba(142, 80, 46, 0.18);
+  }
+  45% {
+    border-color: rgba(217, 119, 87, 0.7);
+    background: rgba(217, 119, 87, 0.15);
+    box-shadow: 0 0 0 8px rgba(217, 119, 87, 0.08), 0 12px 28px rgba(142, 80, 46, 0.16);
+  }
+  100% {
+    border-color: rgba(217, 119, 87, 0.62);
+    background: rgba(217, 119, 87, 0.12);
+    box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.14), 0 12px 28px rgba(142, 80, 46, 0.14);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-feedback-panel.attention {
+    animation: none;
+  }
 }
 
 .stage-feedback-head {
@@ -4393,6 +4396,7 @@ const STORAGE_KEY_HISTORY_TUTORIAL = "emotion-sketch-seen-history-tutorial";
 const STORAGE_KEY_ARTISTIC_EDIT_TUTORIAL = "emotion-sketch-seen-artistic-edit-tutorial";
 const STORAGE_KEY_COLLAB_STYLE = "emotion-sketch-collab-style";
 const STORAGE_KEY_STAGE_FEEDBACK_PROMPT_PREFIX = "emotion-sketch-stage-feedback-prompted";
+const STAGE_FEEDBACK_ATTENTION_MS = 2200;
 const BRANCH_COLORS = ["#d97757", "#c69a4e", "#1f8b80", "#c56e73", "#9a7a68", "#6b948f", "#d4aa63"];
 const ART_DECISION_ACCEPT = "Art Direction Decision: Accept";
 const ART_DECISION_MODIFY = "Art Direction Decision: Modify";
@@ -4876,6 +4880,7 @@ let artisticOptionSelectionPending = false;
 let shouldRevealGeneratedArtOptions = false;
 let artisticStudioPage = 1;
 let isArtisticStageFeedbackExpanded = false;
+let isArtisticStageFeedbackPanelVisible = false;
 let hasHydratedInitialState = false;
 let lastRenderedPhase = "";
 let appNoticeSecondaryHandler = null;
@@ -6719,6 +6724,7 @@ function renderArtisticStudio(state) {
   studio.style.display = showModal ? "flex" : "none";
   studio.setAttribute("aria-hidden", showModal ? "false" : "true");
   if (!showModal) {
+    isArtisticStageFeedbackPanelVisible = false;
     pageOne.hidden = false;
     pageTwo.hidden = true;
     optionPanel.hidden = true;
@@ -6755,12 +6761,18 @@ function renderArtisticStudio(state) {
     persistArtisticStudioStageFeedbackDraft();
     if (feedbackPanel) feedbackPanel.hidden = true;
     if (gateHint) gateHint.hidden = true;
+    isArtisticStageFeedbackPanelVisible = false;
   } else if (feedbackPanel) {
     const showFeedbackPanel = !artisticFeedbackSaved || isArtisticStageFeedbackExpanded;
+    const wasFeedbackPanelVisible = isArtisticStageFeedbackPanelVisible;
     feedbackPanel.hidden = !showFeedbackPanel;
     if (showFeedbackPanel) {
       renderArtisticStudioStageFeedbackForm();
+      if (!wasFeedbackPanelVisible) {
+        requestAnimationFrame(() => highlightStageFeedbackPanel(feedbackPanel));
+      }
     }
+    isArtisticStageFeedbackPanelVisible = showFeedbackPanel;
     if (gateHint) {
       if (!artisticFeedbackSaved) {
         gateHint.hidden = false;
@@ -6770,6 +6782,8 @@ function renderArtisticStudio(state) {
         gateHint.hidden = true;
       }
     }
+  } else {
+    isArtisticStageFeedbackPanelVisible = false;
   }
 
   optionPanel.hidden = !isOptionsPage || !hasVisibleOptions;
@@ -7675,12 +7689,10 @@ function expandArtisticStageFeedbackInStudio(options = {}) {
   renderArtisticStudioStageFeedbackForm();
   setArtisticStudioStageFeedbackStatus(options.auto ? "Optional feedback available." : "");
   if (panel) {
+    isArtisticStageFeedbackPanelVisible = true;
     requestAnimationFrame(() => {
       panel.scrollIntoView({ behavior: options.smooth ? "smooth" : "auto", block: "nearest" });
-      if (options.auto) {
-        panel.classList.add("attention");
-        window.setTimeout(() => panel.classList.remove("attention"), 1800);
-      }
+      highlightStageFeedbackPanel(panel);
     });
   }
   syncStageFeedbackToggleAppearance();
@@ -7692,6 +7704,7 @@ function collapseArtisticStageFeedbackInStudio() {
   isArtisticStageFeedbackExpanded = false;
   const panel = $("artisticStudioStageFeedbackPanel");
   if (panel) panel.hidden = true;
+  isArtisticStageFeedbackPanelVisible = false;
   syncStageFeedbackToggleAppearance();
 }
 
@@ -7742,14 +7755,11 @@ function renderStageFeedbackForm() {
   const body = $("stageFeedbackBody");
   const title = $("stageFeedbackTitle");
   if (!body) return;
-  const phase = getStageFeedbackPhase(activeStageFeedbackPhase);
+  const phase = getStageFeedbackPhase(appState?.phase || activeStageFeedbackPhase);
   activeStageFeedbackPhase = phase;
   const config = STAGE_FEEDBACK_CONFIG[phase];
   if (title) title.textContent = config.title;
   const answers = stageFeedbackAnswers[phase] || normalizeStageFeedbackAnswers(phase, appState?.stage_feedback || {});
-  const tabs = Object.entries(STAGE_FEEDBACK_CONFIG).map(([phaseId, item]) => (
-    `<button class="stage-feedback-tab${phaseId === phase ? " active" : ""}" type="button" onclick="setStageFeedbackPhase('${phaseId}')">${item.label}</button>`
-  )).join("");
   const fields = config.questions.map((question) => {
     const value = answers[question.key] || "";
     return `
@@ -7762,18 +7772,10 @@ function renderStageFeedbackForm() {
     `;
   }).join("");
   body.innerHTML = `
-    <div class="stage-feedback-tabs">${tabs}</div>
     <form class="tour-demographic-form" id="stageFeedbackForm" onsubmit="return false;">
       ${fields}
     </form>
   `;
-}
-
-function setStageFeedbackPhase(phase) {
-  persistStageFeedbackDraft();
-  activeStageFeedbackPhase = getStageFeedbackPhase(phase);
-  setStageFeedbackStatus("");
-  renderStageFeedbackForm();
 }
 
 function persistStageFeedbackDraft() {
@@ -7791,13 +7793,28 @@ function setStageFeedbackStatus(message) {
   if (status) status.textContent = message || "";
 }
 
+function highlightStageFeedbackPanel(panel) {
+  if (!panel) return;
+  const existingTimer = Number.parseInt(panel.dataset.attentionTimer || "", 10);
+  if (Number.isFinite(existingTimer)) {
+    window.clearTimeout(existingTimer);
+  }
+  panel.classList.remove("attention");
+  void panel.offsetWidth;
+  panel.classList.add("attention");
+  const timer = window.setTimeout(() => {
+    panel.classList.remove("attention");
+    delete panel.dataset.attentionTimer;
+  }, STAGE_FEEDBACK_ATTENTION_MS);
+  panel.dataset.attentionTimer = String(timer);
+}
+
 function focusStageFeedbackPanel(options = {}) {
   const panel = $("stageFeedbackPanel");
   if (!panel) return;
   panel.scrollIntoView({ behavior: options.smooth ? "smooth" : "auto", block: "nearest" });
   if (options.attention) {
-    panel.classList.add("attention");
-    window.setTimeout(() => panel.classList.remove("attention"), 1800);
+    highlightStageFeedbackPanel(panel);
   }
 }
 
@@ -7831,7 +7848,7 @@ function expandStageFeedbackPanel(phase = null, options = {}) {
   } else {
     setStageFeedbackStatus("");
   }
-  focusStageFeedbackPanel({ attention: !!options.auto, smooth: !!options.smooth });
+  focusStageFeedbackPanel({ attention: true, smooth: !!options.smooth });
 }
 
 function collapseStageFeedbackPanel() {
@@ -9060,9 +9077,7 @@ function renderState(state) {
   sessionId = state.session_id;
   demographicSurveyAnswers = normalizeDemographicSurveyAnswers(state.survey);
   stageFeedbackAnswers = normalizeStageFeedbackState(state.stage_feedback);
-  if (!$("stageFeedbackForm")) {
-    activeStageFeedbackPhase = getStageFeedbackPhase(state.phase);
-  }
+  activeStageFeedbackPhase = getStageFeedbackPhase(state.phase);
   syncArtisticPanelFromState(state);
   syncArtisticOptionSnapshot(state);
   if (nextPhase === "artistic_discovery" && previousPhase !== "artistic_discovery") {
